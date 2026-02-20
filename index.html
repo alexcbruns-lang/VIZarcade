@@ -104,11 +104,13 @@
       color: #000;
       background: var(--c3);
       border: none;
-      cursor: pointer;
+      cursor: pointer !important;
       clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
       transition: all 0.2s;
       text-decoration: none;
       display: inline-block;
+      -webkit-appearance: none;
+      appearance: none;
     }
 
     .login-btn:hover {
@@ -265,7 +267,7 @@
 <div id="login-screen">
   <div class="login-logo">SYNTHWAVE</div>
   <div class="login-sub">Spotify Visual Experience</div>
-  <a id="login-btn" class="login-btn" href="#">Connect Spotify</a>
+  <button id="login-btn" class="login-btn">Connect Spotify</button>
 </div>
 
 <!-- Visualizer UI overlay -->
@@ -329,7 +331,17 @@ function getToken() {
   return null;
 }
 
-document.getElementById('login-btn').href = getAuthURL();
+const loginBtn = document.getElementById('login-btn');
+loginBtn.style.cursor = 'pointer';
+loginBtn.addEventListener('click', () => {
+  if (CLIENT_ID === 'YOUR_CLIENT_ID' || !CLIENT_ID) {
+    alert('26a0Fe0f Client ID not set! Please replace YOUR_CLIENT_ID in index.html with your Spotify Client ID.');
+    return;
+  }
+  const url = getAuthURL();
+  console.log('Navigating to:', url);
+  window.location.href = url;
+});
 
 // ─── CURSOR ───────────────────────────────────────────────────────────────────
 const cursor = document.getElementById('cursor');
