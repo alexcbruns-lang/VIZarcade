@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Connecting...</title>
+  <style>
+    body {
+      background: #000008;
+      color: #06ffd8;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      font-size: 1.2rem;
+      letter-spacing: 0.2em;
+    }
+  </style>
+</head>
+<body>
+  <div>CONNECTING TO SPOTIFY...</div>
+  <script>
+    // Spotify returns the token in the hash fragment
+    // Pass it back to the main page
+    if (window.location.hash) {
+      window.location.href = '/' + window.location.hash;
+    } else {
+      window.location.href = '/';
+    }
+  </script>
+</body>
+</html>
