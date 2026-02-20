@@ -300,55 +300,101 @@ const SCOPES = [
   'user-modify-playback-state'
 ].join(' ');
 
-// ─── AUTH ─────────────────────────────────────────────────────────────────────
-function getAuthURL() {
-  const params = new URLSearchParams({
-    client_id: CLIENT_ID,
-    response_type: 'token',
-    redirect_uri: REDIRECT_URI,
-    scope: SCOPES,
-    show_dialog: true
-  });
-  return `https://accounts.spotify.com/authorize?${params}`;
+// ─── PKCE AUTH ────────────────────────────────────────────────────────────────
+function generateRandomString(length) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array).map(x => chars[x % chars.length]).join('');
 }
 
-function getToken() {
-  const hash = window.location.hash.substring(1);
-  console.log('[Auth] hash present:', !!hash);
-  console.log('[Auth] pathname:', window.location.pathname);
-  if (hash) {
-    const p = new URLSearchParams(hash);
-    const t = p.get('access_token');
-    if (t) {
-      console.log('[Auth] Token found! Saving to localStorage.');
-      localStorage.setItem('sp_token', t);
-      localStorage.setItem('sp_token_ts', Date.now());
-      window.history.replaceState({}, document.title, '/');
-      return t;
-    } else {
-      console.log('[Auth] Hash present but no access_token. Hash was:', hash.substring(0,80));
-    }
+async function generateCodeChallenge(verifier) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+async function redirectToSpotify() {
+  const verifier = generateRandomString(64);
+  const challenge = await generateCodeChallenge(verifier);
+  localStorage.setItem('pkce_verifier', verifier);
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: REDIRECT_URI,
+    scope: SCOPES,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+    show_dialog: true
+  });
+  window.location.href = 'https://accounts.spotify.com/authorize?' + params;
+}
+
+async function exchangeCodeForToken(code) {
+  const verifier = localStorage.getItem('pkce_verifier');
+  const body = new URLSearchParams({
+    client_id: CLIENT_ID,
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: REDIRECT_URI,
+    code_verifier: verifier
+  });
+  const res = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  });
+  const data = await res.json();
+  console.log('[Auth] Token exchange response:', data);
+  if (data.access_token) {
+    localStorage.setItem('sp_token', data.access_token);
+    localStorage.setItem('sp_token_ts', Date.now());
+    if (data.refresh_token) localStorage.setItem('sp_refresh_token', data.refresh_token);
+    localStorage.removeItem('pkce_verifier');
+    return data.access_token;
   }
+  return null;
+}
+
+async function refreshAccessToken() {
+  const refreshToken = localStorage.getItem('sp_refresh_token');
+  if (!refreshToken) return null;
+  const body = new URLSearchParams({
+    client_id: CLIENT_ID,
+    grant_type: 'refresh_token',
+    refresh_token: refreshToken
+  });
+  const res = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  });
+  const data = await res.json();
+  if (data.access_token) {
+    localStorage.setItem('sp_token', data.access_token);
+    localStorage.setItem('sp_token_ts', Date.now());
+    return data.access_token;
+  }
+  return null;
+}
+
+function getStoredToken() {
   const stored = localStorage.getItem('sp_token');
   const ts = parseInt(localStorage.getItem('sp_token_ts') || '0');
-  if (stored && Date.now() - ts < 3600000) {
-    console.log('[Auth] Using stored token');
-    return stored;
-  }
-  console.log('[Auth] No token available.');
+  if (stored && Date.now() - ts < 3500000) return stored;
   return null;
 }
 
 const loginBtn = document.getElementById('login-btn');
 loginBtn.style.cursor = 'pointer';
-loginBtn.addEventListener('click', () => {
+loginBtn.addEventListener('click', async () => {
   if (CLIENT_ID === 'YOUR_CLIENT_ID' || !CLIENT_ID) {
-    alert('26a0Fe0f Client ID not set! Please replace YOUR_CLIENT_ID in index.html with your Spotify Client ID.');
+    alert('Client ID not set! Please replace YOUR_CLIENT_ID in index.html with your Spotify Client ID.');
     return;
   }
-  const url = getAuthURL();
-  console.log('Navigating to:', url);
-  window.location.href = url;
+  await redirectToSpotify();
 });
 
 // ─── CURSOR ───────────────────────────────────────────────────────────────────
@@ -722,7 +768,13 @@ async function spotifyGet(endpoint) {
   const res = await fetch('https://api.spotify.com/v1/' + endpoint, {
     headers: { Authorization: 'Bearer ' + token }
   });
-  if (res.status === 401) { logout(); return null; }
+  if (res.status === 401) {
+    // Try to refresh token first
+    const newToken = await refreshAccessToken();
+    if (newToken) { token = newToken; }
+    else { logout(); }
+    return null;
+  }
   if (!res.ok) return null;
   return res.json();
 }
@@ -798,14 +850,45 @@ function startPolling() {
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-token = getToken();
+// ─── INIT WITH PKCE ──────────────────────────────────────────────────────────
+async function init() {
+  // Check if Spotify redirected back with an auth code
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  const error = urlParams.get('error');
 
-if (token) {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('ui').style.display = 'block';
-  document.getElementById('fs-btn').style.display = 'block';
-  startPolling();
+  if (error) {
+    console.error('[Auth] Spotify returned error:', error);
+    return;
+  }
+
+  if (code) {
+    console.log('[Auth] Got auth code, exchanging for token...');
+    // Clean URL immediately
+    window.history.replaceState({}, document.title, '/');
+    token = await exchangeCodeForToken(code);
+    if (!token) {
+      console.error('[Auth] Token exchange failed');
+      return;
+    }
+    console.log('[Auth] Token obtained successfully!');
+  } else {
+    token = getStoredToken();
+    if (!token) {
+      // Try refresh
+      token = await refreshAccessToken();
+    }
+  }
+
+  if (token) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('ui').style.display = 'block';
+    document.getElementById('fs-btn').style.display = 'block';
+    startPolling();
+  }
 }
+
+init();
 
 // Fullscreen
 document.getElementById('fs-btn').addEventListener('click', () => {
