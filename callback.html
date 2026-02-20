@@ -21,12 +21,29 @@
 <body>
   <div>CONNECTING TO SPOTIFY...</div>
   <script>
-    // Spotify returns the token in the hash fragment
-    // Pass it back to the main page
-    if (window.location.hash) {
-      window.location.href = '/' + window.location.hash;
+    // Spotify returns token in the hash: /callback#access_token=...
+    const hash = window.location.hash.substring(1);
+    if (hash) {
+      const params = new URLSearchParams(hash);
+      const token = params.get('access_token');
+      const expiresIn = params.get('expires_in');
+      if (token) {
+        localStorage.setItem('sp_token', token);
+        localStorage.setItem('sp_token_ts', Date.now());
+        // Redirect to root without the hash
+        window.location.replace('/');
+      } else {
+        document.body.innerHTML = '<div style="color:#ff006e;font-family:monospace;padding:2rem;">AUTH ERROR: No token in response. <a href="/" style="color:#06ffd8">Try again</a></div>';
+      }
     } else {
-      window.location.href = '/';
+      // No hash — Spotify might have returned an error
+      const params = new URLSearchParams(window.location.search);
+      const error = params.get('error');
+      if (error) {
+        document.body.innerHTML = '<div style="color:#ff006e;font-family:monospace;padding:2rem;">SPOTIFY ERROR: ' + error + '. <a href="/" style="color:#06ffd8">Try again</a></div>';
+      } else {
+        window.location.replace('/');
+      }
     }
   </script>
 </body>
