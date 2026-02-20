@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/callback", "destination": "/callback.html" }
+    { "source": "/callback", "destination": "/index.html" }
   ]
 }
