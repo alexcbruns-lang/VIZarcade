@@ -3,185 +3,87 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Spotify Visualizer</title>
+  <title>Synthwave — Spotify Visual Experience</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --c1: #ff006e; --c2: #8338ec; --c3: #06ffd8; --c4: #ffbe0b; --bg: #000008;
-    }
-    html, body {
-      width: 100%; height: 100%;
-      background: var(--bg);
-      overflow: hidden;
-      font-family: 'Orbitron', monospace;
-      color: #fff;
-      cursor: none;
-    }
-    .cursor {
-      position: fixed; width: 12px; height: 12px;
-      background: var(--c3); border-radius: 50%;
-      pointer-events: none; z-index: 9999;
-      mix-blend-mode: screen; transition: transform 0.1s;
-      box-shadow: 0 0 20px var(--c3);
-    }
-    canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+    :root { --c1: #ff006e; --c2: #8338ec; --c3: #06ffd8; --c4: #ffbe0b; --bg: #000008; }
+    html, body { width:100%; height:100%; background:var(--bg); overflow:hidden; font-family:'Orbitron',monospace; color:#fff; cursor:none; }
+    .cursor { position:fixed; width:12px; height:12px; background:var(--c3); border-radius:50%; pointer-events:none; z-index:9999; mix-blend-mode:screen; box-shadow:0 0 20px var(--c3); }
+    canvas { position:fixed; top:0; left:0; width:100%; height:100%; z-index:1; }
 
     /* LOGIN */
-    #login-screen {
-      position: fixed; inset: 0; z-index: 100;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: var(--bg);
-    }
-    #login-screen::before {
-      content: ''; position: absolute; inset: 0;
-      background:
-        radial-gradient(ellipse 80% 50% at 20% 50%, rgba(131,56,236,0.15) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 40% at 80% 50%, rgba(255,0,110,0.12) 0%, transparent 60%);
-    }
-    .login-logo {
-      font-size: clamp(2rem, 6vw, 5rem); font-weight: 900;
-      letter-spacing: 0.2em; text-transform: uppercase;
-      background: linear-gradient(135deg, var(--c3), var(--c2), var(--c1));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text; margin-bottom: 0.3em; position: relative; z-index: 1;
-    }
-    .login-sub {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: clamp(0.7rem, 1.5vw, 1rem);
-      color: rgba(255,255,255,0.4); letter-spacing: 0.3em;
-      text-transform: uppercase; margin-bottom: 4rem; position: relative; z-index: 1;
-    }
-    .login-btn {
-      position: relative; z-index: 1; padding: 1.1rem 3.5rem;
-      font-family: 'Orbitron', monospace; font-size: 0.9rem; font-weight: 700;
-      letter-spacing: 0.2em; text-transform: uppercase; color: #000;
-      background: var(--c3); border: none; cursor: pointer !important;
-      clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
-      transition: all 0.2s; -webkit-appearance: none; appearance: none;
-    }
-    .login-btn:hover { background: #fff; transform: scale(1.05); box-shadow: 0 0 40px var(--c3); }
+    #login-screen { position:fixed; inset:0; z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg); }
+    #login-screen::before { content:''; position:absolute; inset:0; background: radial-gradient(ellipse 80% 50% at 20% 50%, rgba(131,56,236,0.15) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 50%, rgba(255,0,110,0.12) 0%, transparent 60%); }
+    .login-logo { font-size:clamp(2rem,6vw,5rem); font-weight:900; letter-spacing:0.2em; text-transform:uppercase; background:linear-gradient(135deg,var(--c3),var(--c2),var(--c1)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:0.3em; position:relative; z-index:1; }
+    .login-sub { font-family:'Share Tech Mono',monospace; font-size:clamp(0.7rem,1.5vw,1rem); color:rgba(255,255,255,0.4); letter-spacing:0.3em; text-transform:uppercase; margin-bottom:4rem; position:relative; z-index:1; }
+    .login-btn { position:relative; z-index:1; padding:1.1rem 3.5rem; font-family:'Orbitron',monospace; font-size:0.9rem; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:#000; background:var(--c3); border:none; cursor:pointer!important; clip-path:polygon(12px 0%,100% 0%,calc(100% - 12px) 100%,0% 100%); transition:all 0.2s; -webkit-appearance:none; appearance:none; }
+    .login-btn:hover { background:#fff; transform:scale(1.05); box-shadow:0 0 40px var(--c3); }
+    .scan-lines { position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px); pointer-events:none; z-index:200; }
 
-    .scan-lines {
-      position: fixed; inset: 0;
-      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
-      pointer-events: none; z-index: 200;
-    }
+    /* UI */
+    #ui { position:fixed; z-index:50; inset:0; pointer-events:none; display:none; }
+    #track-info { position:absolute; bottom:2.5rem; left:2.5rem; max-width:380px; }
+    #track-name { font-size:clamp(1rem,2.5vw,1.6rem); font-weight:700; letter-spacing:0.05em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 0 30px currentColor; }
+    #artist-name { font-family:'Share Tech Mono',monospace; font-size:clamp(0.7rem,1.2vw,0.9rem); color:rgba(255,255,255,0.5); letter-spacing:0.2em; margin-top:0.3rem; }
+    #stats { position:absolute; top:2rem; right:2.5rem; text-align:right; font-family:'Share Tech Mono',monospace; font-size:0.75rem; color:rgba(255,255,255,0.35); letter-spacing:0.15em; line-height:1.8; }
+    .stat-val { color:rgba(255,255,255,0.7); }
+    #progress-wrap { position:absolute; bottom:0; left:0; right:0; height:3px; background:rgba(255,255,255,0.05); }
+    #progress-bar { height:100%; background:linear-gradient(90deg,var(--c2),var(--c1)); width:0%; transition:width 1s linear; box-shadow:0 0 10px var(--c1); }
+    #mode-tag { position:absolute; top:2rem; left:2.5rem; font-family:'Share Tech Mono',monospace; font-size:0.7rem; letter-spacing:0.25em; color:var(--c3); opacity:0.6; }
+    #album-art { position:absolute; bottom:2.5rem; right:2.5rem; width:80px; height:80px; border:1px solid rgba(255,255,255,0.1); opacity:0.7; transition:opacity 0.5s; }
+    #album-art:hover { opacity:1; }
 
-    /* VISUALIZER UI */
-    #ui { position: fixed; z-index: 50; inset: 0; pointer-events: none; display: none; }
-    #track-info { position: absolute; bottom: 2.5rem; left: 2.5rem; max-width: 380px; }
-    #track-name {
-      font-size: clamp(1rem, 2.5vw, 1.6rem); font-weight: 700;
-      letter-spacing: 0.05em; white-space: nowrap; overflow: hidden;
-      text-overflow: ellipsis; text-shadow: 0 0 30px currentColor;
-    }
-    #artist-name {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: clamp(0.7rem, 1.2vw, 0.9rem);
-      color: rgba(255,255,255,0.5); letter-spacing: 0.2em; margin-top: 0.3rem;
-    }
-    #stats {
-      position: absolute; top: 2rem; right: 2.5rem; text-align: right;
-      font-family: 'Share Tech Mono', monospace; font-size: 0.75rem;
-      color: rgba(255,255,255,0.35); letter-spacing: 0.15em; line-height: 1.8;
-    }
-    .stat-val { color: rgba(255,255,255,0.7); }
-    #progress-wrap { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: rgba(255,255,255,0.05); }
-    #progress-bar { height: 100%; background: linear-gradient(90deg, var(--c2), var(--c1)); width: 0%; transition: width 1s linear; box-shadow: 0 0 10px var(--c1); }
-    #mode-tag { position: absolute; top: 2rem; left: 2.5rem; font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; letter-spacing: 0.25em; color: var(--c3); opacity: 0.6; }
-    #album-art { position: absolute; bottom: 2.5rem; right: 2.5rem; width: 80px; height: 80px; border: 1px solid rgba(255,255,255,0.1); opacity: 0.7; transition: opacity 0.5s; }
-    #album-art:hover { opacity: 1; }
+    /* AI thinking indicator */
+    #ai-thinking { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-family:'Share Tech Mono',monospace; font-size:0.8rem; letter-spacing:0.3em; color:rgba(255,255,255,0.5); display:none; animation:pulse 1.2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
 
-    /* SONG TRANSITION OVERLAY */
-    #song-splash {
-      position: fixed; inset: 0; z-index: 80;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      pointer-events: none;
-      opacity: 0; transition: opacity 0.6s ease;
-    }
-    #song-splash.visible { opacity: 1; }
-    #splash-track {
-      font-size: clamp(1.8rem, 5vw, 4.5rem);
-      font-weight: 900; letter-spacing: 0.08em;
-      text-transform: uppercase; text-align: center;
-      line-height: 1.1;
-      text-shadow: 0 0 60px currentColor, 0 0 120px currentColor;
-      max-width: 85vw;
-      transform: translateY(20px); transition: transform 0.8s cubic-bezier(0.16,1,0.3,1);
-    }
-    #song-splash.visible #splash-track { transform: translateY(0); }
-    #splash-artist {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: clamp(0.8rem, 2vw, 1.2rem);
-      letter-spacing: 0.4em; text-transform: uppercase;
-      color: rgba(255,255,255,0.55); margin-top: 1rem;
-      transform: translateY(15px); transition: transform 0.9s cubic-bezier(0.16,1,0.3,1) 0.1s;
-    }
-    #song-splash.visible #splash-artist { transform: translateY(0); }
-    #splash-vibe {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: clamp(0.6rem, 1.2vw, 0.85rem);
-      letter-spacing: 0.5em; text-transform: uppercase;
-      margin-top: 2rem; opacity: 0.4;
-      transform: translateY(10px); transition: transform 1s cubic-bezier(0.16,1,0.3,1) 0.2s;
-    }
-    #song-splash.visible #splash-vibe { transform: translateY(0); }
+    /* SONG SPLASH */
+    #song-splash { position:fixed; inset:0; z-index:80; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; opacity:0; transition:opacity 0.6s ease; }
+    #song-splash.visible { opacity:1; }
+    #splash-track { font-size:clamp(1.8rem,5vw,4.5rem); font-weight:900; letter-spacing:0.08em; text-transform:uppercase; text-align:center; line-height:1.1; text-shadow:0 0 60px currentColor, 0 0 120px currentColor; max-width:85vw; transform:translateY(20px); transition:transform 0.8s cubic-bezier(0.16,1,0.3,1); }
+    #song-splash.visible #splash-track { transform:translateY(0); }
+    #splash-artist { font-family:'Share Tech Mono',monospace; font-size:clamp(0.8rem,2vw,1.2rem); letter-spacing:0.4em; text-transform:uppercase; color:rgba(255,255,255,0.55); margin-top:1rem; transform:translateY(15px); transition:transform 0.9s cubic-bezier(0.16,1,0.3,1) 0.1s; }
+    #song-splash.visible #splash-artist { transform:translateY(0); }
+    #splash-vibe { font-family:'Share Tech Mono',monospace; font-size:clamp(0.6rem,1.2vw,0.85rem); letter-spacing:0.5em; text-transform:uppercase; margin-top:2rem; opacity:0.5; transform:translateY(10px); transition:transform 1s cubic-bezier(0.16,1,0.3,1) 0.2s; max-width:70vw; text-align:center; line-height:1.8; }
+    #song-splash.visible #splash-vibe { transform:translateY(0); }
 
-    /* Dissolve overlay */
-    #dissolve {
-      position: fixed; inset: 0; z-index: 75;
-      background: #000; opacity: 0; pointer-events: none;
-      transition: opacity 0.8s ease;
-    }
-    #dissolve.fade-in { opacity: 1; }
-    #dissolve.fade-out { opacity: 0; }
+    /* DISSOLVE */
+    #dissolve { position:fixed; inset:0; z-index:75; background:#000; opacity:0; pointer-events:none; transition:opacity 0.8s ease; }
+    #dissolve.fade-in { opacity:1; }
 
-    #fs-btn {
-      position: fixed; bottom: 2.5rem; right: calc(80px + 3.5rem); z-index: 60;
-      background: none; border: 1px solid rgba(255,255,255,0.15);
-      color: rgba(255,255,255,0.4); font-family: 'Share Tech Mono', monospace;
-      font-size: 0.65rem; letter-spacing: 0.15em; padding: 0.4rem 0.8rem;
-      cursor: pointer; transition: all 0.2s; display: none; pointer-events: all;
-    }
-    #fs-btn:hover { border-color: var(--c3); color: var(--c3); }
-    .hidden { display: none !important; }
+    #fs-btn { position:fixed; bottom:2.5rem; right:calc(80px + 3.5rem); z-index:60; background:none; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.4); font-family:'Share Tech Mono',monospace; font-size:0.65rem; letter-spacing:0.15em; padding:0.4rem 0.8rem; cursor:pointer; transition:all 0.2s; display:none; pointer-events:all; }
+    #fs-btn:hover { border-color:var(--c3); color:var(--c3); }
   </style>
 </head>
 <body>
-
 <div class="cursor" id="cursor"></div>
 <div class="scan-lines"></div>
 <canvas id="bg-canvas"></canvas>
 <canvas id="main-canvas"></canvas>
 
-<!-- Login -->
 <div id="login-screen">
   <div class="login-logo">SYNTHWAVE</div>
   <div class="login-sub">Spotify Visual Experience</div>
   <button id="login-btn" class="login-btn">Connect Spotify</button>
 </div>
 
-<!-- Dissolve layer -->
 <div id="dissolve"></div>
 
-<!-- Song splash -->
 <div id="song-splash">
   <div id="splash-track"></div>
   <div id="splash-artist"></div>
   <div id="splash-vibe"></div>
 </div>
 
-<!-- Visualizer UI -->
 <div id="ui">
   <div id="mode-tag">LIVE VISUAL ENGINE</div>
+  <div id="ai-thinking">✦ AI READING SONG...</div>
   <div id="stats">
     BPM <span class="stat-val" id="stat-bpm">—</span><br>
     ENERGY <span class="stat-val" id="stat-energy">—</span><br>
-    KEY <span class="stat-val" id="stat-key">—</span><br>
-    MOOD <span class="stat-val" id="stat-mood">—</span>
+    VIBE <span class="stat-val" id="stat-mood">—</span>
   </div>
   <div id="track-info">
     <div id="track-name">—</div>
@@ -190,602 +92,469 @@
   <img id="album-art" src="" alt="" />
   <div id="progress-wrap"><div id="progress-bar"></div></div>
 </div>
-
 <button id="fs-btn">⛶ FULLSCREEN</button>
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-const CLIENT_ID = window.SPOTIFY_CLIENT_ID || 'c4a8270f8bc6453490fc8bf4b9de5c42';
+const CLIENT_ID = 'c4a8270f8bc6453490fc8bf4b9de5c42';
+// API key handled server-side via /api/theme
 const REDIRECT_URI = window.location.origin + '/callback';
-const SCOPES = [
-  'user-read-currently-playing',
-  'user-read-playback-state',
-  'streaming',
-  'user-modify-playback-state'
-].join(' ');
+const SCOPES = ['user-read-currently-playing','user-read-playback-state','streaming','user-modify-playback-state'].join(' ');
 
 // ─── PKCE AUTH ────────────────────────────────────────────────────────────────
-function generateRandomString(length) {
+function generateRandomString(n) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const array = new Uint8Array(length);
-  crypto.getRandomValues(array);
-  return Array.from(array).map(x => chars[x % chars.length]).join('');
+  const arr = new Uint8Array(n); crypto.getRandomValues(arr);
+  return Array.from(arr).map(x => chars[x % chars.length]).join('');
 }
-async function generateCodeChallenge(verifier) {
-  const data = new TextEncoder().encode(verifier);
+async function generateCodeChallenge(v) {
+  const data = new TextEncoder().encode(v);
   const digest = await crypto.subtle.digest('SHA-256', data);
-  return btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 }
 async function redirectToSpotify() {
   const verifier = generateRandomString(64);
   const challenge = await generateCodeChallenge(verifier);
   localStorage.setItem('pkce_verifier', verifier);
-  const params = new URLSearchParams({
-    client_id: CLIENT_ID, response_type: 'code', redirect_uri: REDIRECT_URI,
-    scope: SCOPES, code_challenge_method: 'S256', code_challenge: challenge, show_dialog: true
-  });
+  const params = new URLSearchParams({ client_id:CLIENT_ID, response_type:'code', redirect_uri:REDIRECT_URI, scope:SCOPES, code_challenge_method:'S256', code_challenge:challenge, show_dialog:true });
   window.location.href = 'https://accounts.spotify.com/authorize?' + params;
 }
 async function exchangeCodeForToken(code) {
   const verifier = localStorage.getItem('pkce_verifier');
-  const res = await fetch('https://accounts.spotify.com/api/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: CLIENT_ID, grant_type: 'authorization_code', code, redirect_uri: REDIRECT_URI, code_verifier: verifier })
-  });
+  const res = await fetch('https://accounts.spotify.com/api/token', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:new URLSearchParams({ client_id:CLIENT_ID, grant_type:'authorization_code', code, redirect_uri:REDIRECT_URI, code_verifier:verifier }) });
   const data = await res.json();
-  if (data.access_token) {
-    localStorage.setItem('sp_token', data.access_token);
-    localStorage.setItem('sp_token_ts', Date.now());
-    if (data.refresh_token) localStorage.setItem('sp_refresh_token', data.refresh_token);
-    localStorage.removeItem('pkce_verifier');
-    return data.access_token;
-  }
+  if (data.access_token) { localStorage.setItem('sp_token',data.access_token); localStorage.setItem('sp_token_ts',Date.now()); if(data.refresh_token) localStorage.setItem('sp_refresh_token',data.refresh_token); localStorage.removeItem('pkce_verifier'); return data.access_token; }
   return null;
 }
 async function refreshAccessToken() {
-  const refreshToken = localStorage.getItem('sp_refresh_token');
-  if (!refreshToken) return null;
-  const res = await fetch('https://accounts.spotify.com/api/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: CLIENT_ID, grant_type: 'refresh_token', refresh_token: refreshToken })
-  });
+  const rt = localStorage.getItem('sp_refresh_token'); if(!rt) return null;
+  const res = await fetch('https://accounts.spotify.com/api/token', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:new URLSearchParams({ client_id:CLIENT_ID, grant_type:'refresh_token', refresh_token:rt }) });
   const data = await res.json();
-  if (data.access_token) {
-    localStorage.setItem('sp_token', data.access_token);
-    localStorage.setItem('sp_token_ts', Date.now());
-    return data.access_token;
-  }
+  if (data.access_token) { localStorage.setItem('sp_token',data.access_token); localStorage.setItem('sp_token_ts',Date.now()); return data.access_token; }
   return null;
 }
 function getStoredToken() {
-  const stored = localStorage.getItem('sp_token');
-  const ts = parseInt(localStorage.getItem('sp_token_ts') || '0');
-  if (stored && Date.now() - ts < 3500000) return stored;
-  return null;
+  const t = localStorage.getItem('sp_token'), ts = parseInt(localStorage.getItem('sp_token_ts')||'0');
+  return (t && Date.now()-ts < 3500000) ? t : null;
 }
 
 // ─── CURSOR ───────────────────────────────────────────────────────────────────
 const cursor = document.getElementById('cursor');
-document.addEventListener('mousemove', e => {
-  cursor.style.left = (e.clientX - 6) + 'px';
-  cursor.style.top = (e.clientY - 6) + 'px';
-});
+document.addEventListener('mousemove', e => { cursor.style.left=(e.clientX-6)+'px'; cursor.style.top=(e.clientY-6)+'px'; });
 
-// ─── CANVAS SETUP ─────────────────────────────────────────────────────────────
-const bgCanvas = document.getElementById('bg-canvas');
-const bgCtx = bgCanvas.getContext('2d');
-const canvas = document.getElementById('main-canvas');
-const ctx = canvas.getContext('2d');
-function resize() { bgCanvas.width = canvas.width = window.innerWidth; bgCanvas.height = canvas.height = window.innerHeight; }
-resize();
-window.addEventListener('resize', resize);
+// ─── CANVAS ───────────────────────────────────────────────────────────────────
+const bgCanvas = document.getElementById('bg-canvas'), bgCtx = bgCanvas.getContext('2d');
+const canvas = document.getElementById('main-canvas'), ctx = canvas.getContext('2d');
+function resize() { bgCanvas.width=canvas.width=window.innerWidth; bgCanvas.height=canvas.height=window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
 
-// ─── VISUAL THEMES ────────────────────────────────────────────────────────────
-// Each theme defines: palette, particle behavior, bg style, shape style, label
-const THEMES = {
-  // High energy, high valence — euphoric EDM
-  euphoric: {
-    label: 'EUPHORIC',
-    palette: ['#ff006e','#ffbe0b','#06ffd8','#ff4500'],
-    bgColor: '#000008',
-    particleShape: 'trail',
-    geoSides: [3, 4, 6],
-    gridColor: 'rgba(255,255,255,0.025)',
-    orbIntensity: 0.13,
-    waveAmp: 1.2,
-    beatFlash: 0.18,
-  },
-  // High energy, low valence — dark/tense
-  tense: {
-    label: 'INTENSE',
-    palette: ['#f72585','#ff0a54','#560bad','#ff477e'],
-    bgColor: '#080003',
-    particleShape: 'sharp',
-    geoSides: [3, 4, 3],
-    gridColor: 'rgba(247,37,133,0.04)',
-    orbIntensity: 0.1,
-    waveAmp: 1.5,
-    beatFlash: 0.25,
-  },
-  // Low energy, high valence — chill/dreamy
-  chill: {
-    label: 'DREAMY',
-    palette: ['#06ffd8','#4cc9f0','#4361ee','#a8dadc'],
-    bgColor: '#00030d',
-    particleShape: 'float',
-    geoSides: [6, 8, 6],
-    gridColor: 'rgba(6,255,216,0.02)',
-    orbIntensity: 0.08,
-    waveAmp: 0.7,
-    beatFlash: 0.08,
-  },
-  // Low energy, low valence — melancholy/deep
-  melancholy: {
-    label: 'DEEP',
-    palette: ['#4361ee','#7209b7','#3a0ca3','#9d4edd'],
-    bgColor: '#010008',
-    particleShape: 'drift',
-    geoSides: [6, 8, 12],
-    gridColor: 'rgba(67,97,238,0.03)',
-    orbIntensity: 0.07,
-    waveAmp: 0.6,
-    beatFlash: 0.06,
-  },
-  // Mid energy, high tempo — driving/hypnotic
-  hypnotic: {
-    label: 'HYPNOTIC',
-    palette: ['#06ffd8','#f72585','#ffbe0b','#7209b7'],
-    bgColor: '#000508',
-    particleShape: 'spiral',
-    geoSides: [4, 8, 4],
-    gridColor: 'rgba(6,255,216,0.03)',
-    orbIntensity: 0.11,
-    waveAmp: 1.0,
-    beatFlash: 0.14,
-  },
-  // Very high tempo, high energy — frantic
-  frantic: {
-    label: 'FRANTIC',
-    palette: ['#ff006e','#ff4500','#ffbe0b','#fff'],
-    bgColor: '#080000',
-    particleShape: 'burst',
-    geoSides: [3, 3, 4],
-    gridColor: 'rgba(255,0,110,0.05)',
-    orbIntensity: 0.15,
-    waveAmp: 1.8,
-    beatFlash: 0.3,
-  },
+// ─── AI THEME ENGINE ─────────────────────────────────────────────────────────
+// Theme object shape:
+// { label, palette[4], bgColor, particleShape, geoSides[], waveAmp, beatFlash, orbIntensity, gridColor, symbols[], splashDesc }
+// symbols: array of shape names our renderer understands: 'heart','star','circle','triangle','diamond','lightning','note','infinity','flower','spiral'
+
+const DEFAULT_THEME = {
+  label:'LOADING', palette:['#ff006e','#8338ec','#06ffd8','#ffbe0b'],
+  bgColor:'#000008', particleShape:'trail', geoSides:[4,6,8],
+  waveAmp:1.0, beatFlash:0.15, orbIntensity:0.1,
+  gridColor:'rgba(255,255,255,0.025)', symbols:[], splashDesc:''
 };
 
-let currentTheme = THEMES.euphoric;
-let targetTheme = THEMES.euphoric;
-let themeMix = 1; // 0 = old theme, 1 = new theme (used for smooth interpolation)
+let currentTheme = {...DEFAULT_THEME};
+let aiThemeCache = {}; // trackId -> theme
 
-function pickTheme(energy, valence, bpm) {
-  if (bpm > 145 && energy > 0.75) return THEMES.frantic;
-  if (energy > 0.65 && valence > 0.55) return THEMES.euphoric;
-  if (energy > 0.6 && valence < 0.45) return THEMES.tense;
-  if (energy < 0.45 && valence > 0.55) return THEMES.chill;
-  if (energy < 0.45 && valence < 0.45) return THEMES.melancholy;
-  return THEMES.hypnotic;
+async function fetchAITheme(trackName, artistName, genres) {
+  // Calls our secure Vercel serverless function — API key never exposed in browser
+  try {
+    const res = await fetch('/api/theme', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trackName, artistName, genres })
+    });
+    if (!res.ok) throw new Error('API error ' + res.status);
+    const theme = await res.json();
+    return {
+      label: theme.label || 'UNKNOWN VIBE',
+      palette: Array.isArray(theme.palette) && theme.palette.length===4 ? theme.palette : DEFAULT_THEME.palette,
+      bgColor: theme.bgColor || '#000008',
+      particleShape: theme.particleShape || 'trail',
+      geoSides: Array.isArray(theme.geoSides) ? theme.geoSides : [4,6,8],
+      waveAmp: typeof theme.waveAmp==='number' ? Math.min(2,Math.max(0.4,theme.waveAmp)) : 1.0,
+      beatFlash: typeof theme.beatFlash==='number' ? Math.min(0.35,Math.max(0.05,theme.beatFlash)) : 0.15,
+      orbIntensity: typeof theme.orbIntensity==='number' ? theme.orbIntensity : 0.1,
+      gridColor: theme.gridColor || 'rgba(255,255,255,0.025)',
+      symbols: Array.isArray(theme.symbols) ? theme.symbols.slice(0,3) : [],
+      splashDesc: theme.splashDesc || '',
+    };
+  } catch(e) {
+    console.error('[AI] Theme fetch error:', e);
+    return null;
+  }
 }
 
+// ─── COLOR HELPERS ────────────────────────────────────────────────────────────
 function pc(i) { return currentTheme.palette[i % currentTheme.palette.length]; }
-function hexToRGB(hex) {
-  return { r: parseInt(hex.slice(1,3),16), g: parseInt(hex.slice(3,5),16), b: parseInt(hex.slice(5,7),16) };
-}
-function rgbStr(hex, a=1) {
-  const {r,g,b} = hexToRGB(hex); return `rgba(${r},${g},${b},${a})`;
+function hexToRGB(hex) { return { r:parseInt(hex.slice(1,3),16), g:parseInt(hex.slice(3,5),16), b:parseInt(hex.slice(5,7),16) }; }
+function rgbStr(hex,a=1) { const {r,g,b}=hexToRGB(hex); return `rgba(${r},${g},${b},${a})`; }
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let state = { bpm:120, energy:0.5, beatInterval:500, lastBeat:0, trackId:null, progress:0, duration:1, trackName:'', artistName:'', albumArt:'', analysisStart:0 };
+let smooth = { energy:0.5, bpm:120, beatPulse:0 };
+
+// ─── SPECIAL SYMBOLS ─────────────────────────────────────────────────────────
+let floatingSymbols = [];
+
+class FloatingSymbol {
+  constructor(type) {
+    this.type = type;
+    this.x = Math.random() * canvas.width;
+    this.y = canvas.height + 50;
+    this.size = Math.random() * 30 + 15;
+    this.vx = (Math.random()-0.5) * 0.8;
+    this.vy = -(Math.random() * 1.2 + 0.4);
+    this.rot = Math.random() * Math.PI * 2;
+    this.rotSpeed = (Math.random()-0.5) * 0.03;
+    this.life = 1;
+    this.decay = Math.random() * 0.003 + 0.001;
+    this.colorIdx = Math.floor(Math.random()*4);
+    this.pulsePhase = Math.random() * Math.PI * 2;
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy;
+    this.rot += this.rotSpeed; this.life -= this.decay;
+  }
+  draw(ctx, t) {
+    if (this.life <= 0) return;
+    const pulse = 1 + Math.sin(t*0.002 + this.pulsePhase)*0.15;
+    const s = this.size * pulse;
+    ctx.save();
+    ctx.translate(this.x, this.y); ctx.rotate(this.rot);
+    ctx.globalAlpha = this.life * 0.7;
+    ctx.fillStyle = pc(this.colorIdx);
+    ctx.strokeStyle = pc(this.colorIdx);
+    ctx.shadowBlur = 20; ctx.shadowColor = pc(this.colorIdx);
+    drawSymbolShape(ctx, this.type, s);
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+    ctx.restore();
+  }
 }
 
-// ─── MUSIC STATE ──────────────────────────────────────────────────────────────
-let state = {
-  bpm: 120, energy: 0.5, valence: 0.5, danceability: 0.5,
-  loudness: -10, key: 0, mode: 1, beatInterval: 500,
-  lastBeat: 0, trackId: null, progress: 0, duration: 1,
-  trackName: '', artistName: '', albumArt: '',
-  analysisStart: 0,
-};
-let smooth = { energy: 0.5, bpm: 120, beatPulse: 0 };
+function drawSymbolShape(ctx, type, s) {
+  ctx.lineWidth = 2;
+  switch(type) {
+    case 'heart':
+      ctx.beginPath();
+      ctx.moveTo(0, -s*0.3);
+      ctx.bezierCurveTo(s*0.5, -s*0.8, s*1.0, s*0.1, 0, s*0.7);
+      ctx.bezierCurveTo(-s*1.0, s*0.1, -s*0.5, -s*0.8, 0, -s*0.3);
+      ctx.fill(); break;
+    case 'star':
+      ctx.beginPath();
+      for(let i=0;i<5;i++){
+        const a1=(i*4*Math.PI/5)-Math.PI/2, a2=((i*4+2)*Math.PI/5)-Math.PI/2;
+        i===0?ctx.moveTo(Math.cos(a1)*s,Math.sin(a1)*s):ctx.lineTo(Math.cos(a1)*s,Math.sin(a1)*s);
+        ctx.lineTo(Math.cos(a2)*s*0.4,Math.sin(a2)*s*0.4);
+      }
+      ctx.closePath(); ctx.fill(); break;
+    case 'diamond':
+      ctx.beginPath(); ctx.moveTo(0,-s); ctx.lineTo(s*0.6,0); ctx.lineTo(0,s); ctx.lineTo(-s*0.6,0); ctx.closePath(); ctx.fill(); break;
+    case 'lightning':
+      ctx.beginPath(); ctx.moveTo(s*0.2,-s); ctx.lineTo(-s*0.1,0); ctx.lineTo(s*0.3,0); ctx.lineTo(-s*0.2,s); ctx.lineTo(s*0.1,0); ctx.lineTo(-s*0.1,0);
+      ctx.strokeStyle=ctx.fillStyle; ctx.lineWidth=s*0.25; ctx.stroke(); break;
+    case 'note':
+      ctx.beginPath(); ctx.arc(0,s*0.4,s*0.35,0,Math.PI*2); ctx.fill();
+      ctx.fillRect(s*0.3,-s*0.5,s*0.12,s*0.95); break;
+    case 'infinity':
+      ctx.beginPath(); ctx.moveTo(0,0);
+      for(let i=0;i<=100;i++){const tt=i/100*Math.PI*2;ctx.lineTo(Math.sin(tt)*s/(1+Math.cos(tt)*Math.cos(tt)),Math.sin(tt)*Math.cos(tt)*s/(1+Math.cos(tt)*Math.cos(tt)));}
+      ctx.strokeStyle=ctx.fillStyle; ctx.lineWidth=s*0.2; ctx.stroke(); break;
+    case 'flower':
+      for(let i=0;i<6;i++){ctx.beginPath();const a=i*Math.PI/3;ctx.ellipse(Math.cos(a)*s*0.4,Math.sin(a)*s*0.4,s*0.3,s*0.15,a,0,Math.PI*2);ctx.fill();}
+      ctx.beginPath();ctx.arc(0,0,s*0.2,0,Math.PI*2);ctx.fill(); break;
+    case 'spiral':
+      ctx.beginPath();
+      for(let i=0;i<60;i++){const tt=i/60*Math.PI*4;const r=tt/(Math.PI*4)*s;ctx.lineTo(Math.cos(tt)*r,Math.sin(tt)*r);}
+      ctx.strokeStyle=ctx.fillStyle; ctx.lineWidth=2; ctx.stroke(); break;
+    case 'crown':
+      ctx.beginPath(); ctx.moveTo(-s,-s*0.2); ctx.lineTo(-s,s*0.4); ctx.lineTo(s,s*0.4); ctx.lineTo(s,-s*0.2); ctx.lineTo(s*0.5,s*0.1); ctx.lineTo(0,-s*0.6); ctx.lineTo(-s*0.5,s*0.1); ctx.closePath(); ctx.fill(); break;
+    case 'flame':
+      ctx.beginPath(); ctx.moveTo(0,s); ctx.bezierCurveTo(s*0.8,s*0.3,s*0.6,-s*0.2,0,-s); ctx.bezierCurveTo(-s*0.6,-s*0.2,-s*0.8,s*0.3,0,s); ctx.fill(); break;
+    case 'snowflake':
+      for(let i=0;i<6;i++){ctx.save();ctx.rotate(i*Math.PI/3);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,-s);ctx.strokeStyle=ctx.fillStyle;ctx.lineWidth=2;ctx.stroke();ctx.beginPath();ctx.moveTo(-s*0.3,-s*0.5);ctx.lineTo(s*0.3,-s*0.5);ctx.stroke();ctx.restore();} break;
+    case 'moon':
+      ctx.beginPath(); ctx.arc(0,0,s,0.4,Math.PI*2-0.4); ctx.arc(s*0.3,0,s*0.75,Math.PI*2-0.4,0.4,true); ctx.closePath(); ctx.fill(); break;
+    default:
+      ctx.beginPath(); ctx.arc(0,0,s*0.5,0,Math.PI*2); ctx.fill();
+  }
+}
+
+function spawnSymbols(symbols, count=1) {
+  if (!symbols || symbols.length === 0) return;
+  for(let i=0;i<count;i++) {
+    const type = symbols[Math.floor(Math.random()*symbols.length)];
+    floatingSymbols.push(new FloatingSymbol(type));
+  }
+}
 
 // ─── PARTICLES ────────────────────────────────────────────────────────────────
 class Particle {
   constructor() { this.reset(true); }
   reset(init=false) {
-    this.x = Math.random() * canvas.width;
-    this.y = init ? Math.random() * canvas.height : canvas.height + 10;
-    this.vx = (Math.random()-0.5) * 1.5;
-    this.vy = -(Math.random() * 2 + 0.5);
-    this.life = 1; this.decay = Math.random() * 0.005 + 0.002;
-    this.size = Math.random() * 3 + 1;
-    this.colorIdx = Math.floor(Math.random() * 4);
-    this.trail = [];
-    this.angle = Math.random() * Math.PI * 2;
-    this.spiralR = Math.random() * 50;
+    this.x=Math.random()*canvas.width;
+    this.y=init?Math.random()*canvas.height:canvas.height+10;
+    this.vx=(Math.random()-0.5)*1.5; this.vy=-(Math.random()*2+0.5);
+    this.life=1; this.decay=Math.random()*0.005+0.002;
+    this.size=Math.random()*3+1; this.colorIdx=Math.floor(Math.random()*4);
+    this.trail=[]; this.angle=Math.random()*Math.PI*2; this.spiralR=Math.random()*50;
   }
-  update(energy, t) {
-    const shape = currentTheme.particleShape;
-    const speed = 1 + energy * 3;
-    if (shape === 'spiral') {
-      this.angle += 0.05;
-      this.x += Math.cos(this.angle) * 1.5 + this.vx * 0.3;
-      this.y += this.vy * speed * 0.5 - Math.sin(this.angle) * 0.8;
-    } else if (shape === 'float') {
-      this.x += Math.sin(t * 0.001 + this.spiralR) * 0.8 + this.vx * 0.3;
-      this.y += this.vy * speed * 0.4;
-    } else if (shape === 'drift') {
-      this.x += Math.sin(t * 0.0005 + this.spiralR) * 0.5 + this.vx * 0.2;
-      this.y += this.vy * speed * 0.3;
-    } else if (shape === 'burst') {
-      this.x += this.vx * speed * 1.5;
-      this.y += this.vy * speed * 1.5;
-    } else {
-      this.x += this.vx * speed;
-      this.y += this.vy * speed;
-    }
-    this.trail.push({x: this.x, y: this.y});
-    if (this.trail.length > 12) this.trail.shift();
-    this.life -= this.decay;
-    if (this.life <= 0 || this.y < -50 || this.x < -100 || this.x > canvas.width+100) this.reset();
+  update(energy,t) {
+    const shape=currentTheme.particleShape, speed=1+energy*3;
+    if(shape==='spiral'){this.angle+=0.05;this.x+=Math.cos(this.angle)*1.5+this.vx*0.3;this.y+=this.vy*speed*0.5-Math.sin(this.angle)*0.8;}
+    else if(shape==='float'){this.x+=Math.sin(t*0.001+this.spiralR)*0.8+this.vx*0.3;this.y+=this.vy*speed*0.4;}
+    else if(shape==='drift'){this.x+=Math.sin(t*0.0005+this.spiralR)*0.5+this.vx*0.2;this.y+=this.vy*speed*0.3;}
+    else if(shape==='burst'){this.x+=this.vx*speed*1.5;this.y+=this.vy*speed*1.5;}
+    else if(shape==='sharp'){this.x+=this.vx*speed*1.2;this.y+=this.vy*speed*1.2;}
+    else{this.x+=this.vx*speed;this.y+=this.vy*speed;}
+    this.trail.push({x:this.x,y:this.y}); if(this.trail.length>12) this.trail.shift();
+    this.life-=this.decay;
+    if(this.life<=0||this.y<-50||this.x<-100||this.x>canvas.width+100) this.reset();
   }
   draw(ctx) {
-    if (this.trail.length < 2) return;
-    ctx.beginPath();
-    ctx.moveTo(this.trail[0].x, this.trail[0].y);
-    for (let i = 1; i < this.trail.length; i++) ctx.lineTo(this.trail[i].x, this.trail[i].y);
-    ctx.strokeStyle = rgbStr(pc(this.colorIdx), this.life * 0.6);
-    ctx.lineWidth = this.size * this.life;
-    ctx.shadowBlur = 15; ctx.shadowColor = pc(this.colorIdx);
-    ctx.stroke(); ctx.shadowBlur = 0;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI*2);
-    ctx.fillStyle = rgbStr(pc(this.colorIdx), this.life);
-    ctx.fill();
+    if(this.trail.length<2) return;
+    ctx.beginPath(); ctx.moveTo(this.trail[0].x,this.trail[0].y);
+    for(let i=1;i<this.trail.length;i++) ctx.lineTo(this.trail[i].x,this.trail[i].y);
+    ctx.strokeStyle=rgbStr(pc(this.colorIdx),this.life*0.6);
+    ctx.lineWidth=this.size*this.life; ctx.shadowBlur=15; ctx.shadowColor=pc(this.colorIdx);
+    ctx.stroke(); ctx.shadowBlur=0;
+    ctx.beginPath(); ctx.arc(this.x,this.y,this.size*this.life,0,Math.PI*2);
+    ctx.fillStyle=rgbStr(pc(this.colorIdx),this.life); ctx.fill();
   }
 }
-
-const PARTICLE_COUNT = 120;
-const particles = Array.from({length: PARTICLE_COUNT}, () => new Particle());
+const particles = Array.from({length:120},()=>new Particle());
 
 // ─── GEO SHAPES ───────────────────────────────────────────────────────────────
 class GeoShape {
-  constructor() { this.reset(); }
-  reset() {
-    this.x = Math.random() * canvas.width;
-    this.y = Math.random() * canvas.height;
-    this.size = Math.random() * 80 + 20;
-    this.rot = Math.random() * Math.PI * 2;
-    this.rotSpeed = (Math.random()-0.5) * 0.02;
-    const sides = currentTheme.geoSides;
-    this.sides = sides[Math.floor(Math.random()*sides.length)];
-    this.colorIdx = Math.floor(Math.random()*4);
-    this.alpha = Math.random() * 0.15 + 0.03;
-    this.vx = (Math.random()-0.5) * 0.3;
-    this.vy = (Math.random()-0.5) * 0.3;
-    this.pulsePhase = Math.random() * Math.PI * 2;
+  constructor(){this.reset();}
+  reset(){
+    this.x=Math.random()*canvas.width; this.y=Math.random()*canvas.height;
+    this.size=Math.random()*80+20; this.rot=Math.random()*Math.PI*2;
+    this.rotSpeed=(Math.random()-0.5)*0.02;
+    const sides=currentTheme.geoSides||[4,6,8];
+    this.sides=sides[Math.floor(Math.random()*sides.length)];
+    this.colorIdx=Math.floor(Math.random()*4); this.alpha=Math.random()*0.15+0.03;
+    this.vx=(Math.random()-0.5)*0.3; this.vy=(Math.random()-0.5)*0.3;
+    this.pulsePhase=Math.random()*Math.PI*2;
   }
-  update(energy) {
-    this.rot += this.rotSpeed * (1 + energy);
-    this.x += this.vx; this.y += this.vy;
-    if (this.x < -200 || this.x > canvas.width+200) this.vx *= -1;
-    if (this.y < -200 || this.y > canvas.height+200) this.vy *= -1;
-  }
-  draw(ctx, t, beatPulse) {
-    const pulse = 1 + Math.sin(t * 0.002 + this.pulsePhase) * 0.1 + beatPulse * 0.3;
-    const s = this.size * pulse;
-    ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rot);
+  update(energy){this.rot+=this.rotSpeed*(1+energy);this.x+=this.vx;this.y+=this.vy;if(this.x<-200||this.x>canvas.width+200)this.vx*=-1;if(this.y<-200||this.y>canvas.height+200)this.vy*=-1;}
+  draw(ctx,t,bp){
+    const pulse=1+Math.sin(t*0.002+this.pulsePhase)*0.1+bp*0.3;
+    const s=this.size*pulse;
+    ctx.save();ctx.translate(this.x,this.y);ctx.rotate(this.rot);
     ctx.beginPath();
-    for (let i = 0; i < this.sides; i++) {
-      const angle = (i / this.sides) * Math.PI * 2 - Math.PI/2;
-      i === 0 ? ctx.moveTo(Math.cos(angle)*s, Math.sin(angle)*s)
-              : ctx.lineTo(Math.cos(angle)*s, Math.sin(angle)*s);
-    }
+    for(let i=0;i<this.sides;i++){const a=(i/this.sides)*Math.PI*2-Math.PI/2;i===0?ctx.moveTo(Math.cos(a)*s,Math.sin(a)*s):ctx.lineTo(Math.cos(a)*s,Math.sin(a)*s);}
     ctx.closePath();
-    ctx.strokeStyle = rgbStr(pc(this.colorIdx), this.alpha * 3);
-    ctx.lineWidth = 1.5; ctx.shadowBlur = 20; ctx.shadowColor = pc(this.colorIdx);
-    ctx.stroke(); ctx.fillStyle = rgbStr(pc(this.colorIdx), this.alpha);
-    ctx.fill(); ctx.shadowBlur = 0; ctx.restore();
+    ctx.strokeStyle=rgbStr(pc(this.colorIdx),this.alpha*3); ctx.lineWidth=1.5;
+    ctx.shadowBlur=20; ctx.shadowColor=pc(this.colorIdx);
+    ctx.stroke(); ctx.fillStyle=rgbStr(pc(this.colorIdx),this.alpha);
+    ctx.fill(); ctx.shadowBlur=0; ctx.restore();
   }
 }
-
-const GEO_COUNT = 18;
-const geoShapes = Array.from({length: GEO_COUNT}, () => new GeoShape());
+const geoShapes = Array.from({length:18},()=>new GeoShape());
 
 // ─── WAVEFORM ─────────────────────────────────────────────────────────────────
-let wavePoints = Array(128).fill(0);
-let waveTargets = Array(128).fill(0);
-function updateWave(energy, bpm, t) {
-  const freq = bpm / 60;
-  for (let i = 0; i < wavePoints.length; i++) {
-    const x = i / wavePoints.length;
-    waveTargets[i] =
-      Math.sin(x * Math.PI * 8 + t * freq * 0.01) * energy * 0.4 +
-      Math.sin(x * Math.PI * 16 + t * freq * 0.007) * energy * 0.2 +
-      Math.sin(x * Math.PI * 3 + t * 0.003) * 0.1;
-    wavePoints[i] += (waveTargets[i] - wavePoints[i]) * 0.12;
+let wavePoints=Array(128).fill(0), waveTargets=Array(128).fill(0);
+function updateWave(energy,bpm,t){
+  const freq=bpm/60;
+  for(let i=0;i<wavePoints.length;i++){
+    const x=i/wavePoints.length;
+    waveTargets[i]=Math.sin(x*Math.PI*8+t*freq*0.01)*energy*0.4+Math.sin(x*Math.PI*16+t*freq*0.007)*energy*0.2+Math.sin(x*Math.PI*3+t*0.003)*0.1;
+    wavePoints[i]+=(waveTargets[i]-wavePoints[i])*0.12;
   }
 }
-function drawWave(ctx, w, h, t, beatPulse) {
-  const cy = h / 2;
-  const amp = h * 0.12 * currentTheme.waveAmp * (1 + beatPulse * 0.8);
-  for (let layer = 0; layer < 3; layer++) {
+function drawWave(ctx,w,h,t,bp){
+  const cy=h/2, amp=h*0.12*(currentTheme.waveAmp||1)*(1+bp*0.8);
+  for(let layer=0;layer<3;layer++){
     ctx.beginPath();
-    for (let i = 0; i <= wavePoints.length; i++) {
-      const idx = Math.min(i, wavePoints.length-1);
-      const x = (i / wavePoints.length) * w;
-      const y = cy + wavePoints[idx] * amp + Math.sin(t*0.001 + layer*0.3) * 20;
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = rgbStr(pc(layer), (0.6 - layer*0.15) * smooth.energy);
-    ctx.lineWidth = 2 - layer*0.5;
-    ctx.shadowBlur = 25; ctx.shadowColor = pc(layer);
-    ctx.stroke(); ctx.shadowBlur = 0;
+    for(let i=0;i<=wavePoints.length;i++){const idx=Math.min(i,wavePoints.length-1);const x=i/wavePoints.length*w;const y=cy+wavePoints[idx]*amp+Math.sin(t*0.001+layer*0.3)*20;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.strokeStyle=rgbStr(pc(layer),(0.6-layer*0.15)*smooth.energy);
+    ctx.lineWidth=2-layer*0.5; ctx.shadowBlur=25; ctx.shadowColor=pc(layer);
+    ctx.stroke(); ctx.shadowBlur=0;
   }
 }
 
 // ─── BEAT RINGS ───────────────────────────────────────────────────────────────
-let beatRings = [];
-function spawnBeatRing() {
-  beatRings.push({
-    x: canvas.width/2 + (Math.random()-0.5)*200,
-    y: canvas.height/2 + (Math.random()-0.5)*200,
-    r: 0, maxR: Math.random() * 300 + 150,
-    life: 1, colorIdx: Math.floor(Math.random()*4),
-  });
-}
-function updateDrawRings(ctx) {
-  beatRings = beatRings.filter(r => r.life > 0);
-  for (const ring of beatRings) {
-    ring.r += (ring.maxR - ring.r) * 0.08;
-    ring.life -= 0.025;
-    ctx.beginPath(); ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI*2);
-    ctx.strokeStyle = rgbStr(pc(ring.colorIdx), ring.life * 0.5);
-    ctx.lineWidth = 2 * ring.life;
-    ctx.shadowBlur = 30; ctx.shadowColor = pc(ring.colorIdx);
-    ctx.stroke(); ctx.shadowBlur = 0;
-  }
+let beatRings=[];
+function spawnBeatRing(){beatRings.push({x:canvas.width/2+(Math.random()-0.5)*200,y:canvas.height/2+(Math.random()-0.5)*200,r:0,maxR:Math.random()*300+150,life:1,colorIdx:Math.floor(Math.random()*4)});}
+function updateDrawRings(ctx){
+  beatRings=beatRings.filter(r=>r.life>0);
+  for(const ring of beatRings){ring.r+=(ring.maxR-ring.r)*0.08;ring.life-=0.025;ctx.beginPath();ctx.arc(ring.x,ring.y,ring.r,0,Math.PI*2);ctx.strokeStyle=rgbStr(pc(ring.colorIdx),ring.life*0.5);ctx.lineWidth=2*ring.life;ctx.shadowBlur=30;ctx.shadowColor=pc(ring.colorIdx);ctx.stroke();ctx.shadowBlur=0;}
 }
 
 // ─── BACKGROUND ───────────────────────────────────────────────────────────────
-function drawBackground(t, energy) {
-  const w = bgCanvas.width, h = bgCanvas.height;
-  bgCtx.clearRect(0, 0, w, h);
-  bgCtx.fillStyle = currentTheme.bgColor;
-  bgCtx.fillRect(0, 0, w, h);
-  const orbs = [
-    {x: 0.2 + Math.sin(t*0.0003)*0.1, y:0.5, c: pc(1)},
-    {x: 0.8 + Math.cos(t*0.0002)*0.1, y:0.4, c: pc(0)},
-    {x: 0.5, y: 0.8 + Math.sin(t*0.0004)*0.1, c: pc(2)},
-  ];
-  for (const orb of orbs) {
-    const grd = bgCtx.createRadialGradient(orb.x*w, orb.y*h, 0, orb.x*w, orb.y*h, w*0.4);
-    const {r,g,b} = hexToRGB(orb.c);
-    grd.addColorStop(0, `rgba(${r},${g},${b},${currentTheme.orbIntensity + energy*0.05})`);
-    grd.addColorStop(1, 'transparent');
-    bgCtx.fillStyle = grd; bgCtx.fillRect(0,0,w,h);
-  }
-  bgCtx.strokeStyle = currentTheme.gridColor;
-  bgCtx.lineWidth = 1;
-  const gridSize = 60;
-  for (let x = 0; x < w; x += gridSize) { bgCtx.beginPath(); bgCtx.moveTo(x,0); bgCtx.lineTo(x,h); bgCtx.stroke(); }
-  for (let y = 0; y < h; y += gridSize) { bgCtx.beginPath(); bgCtx.moveTo(0,y); bgCtx.lineTo(w,y); bgCtx.stroke(); }
+function drawBackground(t,energy){
+  const w=bgCanvas.width,h=bgCanvas.height;
+  bgCtx.clearRect(0,0,w,h); bgCtx.fillStyle=currentTheme.bgColor||'#000008'; bgCtx.fillRect(0,0,w,h);
+  const orbs=[{x:0.2+Math.sin(t*0.0003)*0.1,y:0.5,c:pc(1)},{x:0.8+Math.cos(t*0.0002)*0.1,y:0.4,c:pc(0)},{x:0.5,y:0.8+Math.sin(t*0.0004)*0.1,c:pc(2)}];
+  for(const orb of orbs){const grd=bgCtx.createRadialGradient(orb.x*w,orb.y*h,0,orb.x*w,orb.y*h,w*0.4);const {r,g,b}=hexToRGB(orb.c);grd.addColorStop(0,`rgba(${r},${g},${b},${(currentTheme.orbIntensity||0.1)+energy*0.05})`);grd.addColorStop(1,'transparent');bgCtx.fillStyle=grd;bgCtx.fillRect(0,0,w,h);}
+  bgCtx.strokeStyle=currentTheme.gridColor||'rgba(255,255,255,0.025)'; bgCtx.lineWidth=1;
+  for(let x=0;x<w;x+=60){bgCtx.beginPath();bgCtx.moveTo(x,0);bgCtx.lineTo(x,h);bgCtx.stroke();}
+  for(let y=0;y<h;y+=60){bgCtx.beginPath();bgCtx.moveTo(0,y);bgCtx.lineTo(w,y);bgCtx.stroke();}
 }
 
 // ─── SONG TRANSITION ─────────────────────────────────────────────────────────
-let isTransitioning = false;
+let isTransitioning=false;
+function delay(ms){return new Promise(r=>setTimeout(r,ms));}
 
-async function playSongTransition(trackName, artistName, theme) {
-  if (isTransitioning) return;
-  isTransitioning = true;
+async function playSongTransition(trackName,artistName,theme){
+  if(isTransitioning)return; isTransitioning=true;
+  const dissolve=document.getElementById('dissolve');
+  const splash=document.getElementById('song-splash');
+  document.getElementById('splash-track').textContent=trackName;
+  document.getElementById('splash-track').style.color=theme.palette[0];
+  document.getElementById('splash-artist').textContent=artistName;
+  document.getElementById('splash-vibe').textContent=(theme.label?'— '+theme.label+' —\n':'')+(theme.splashDesc||'');
 
-  const dissolve = document.getElementById('dissolve');
-  const splash = document.getElementById('song-splash');
-  const splashTrack = document.getElementById('splash-track');
-  const splashArtist = document.getElementById('splash-artist');
-  const splashVibe = document.getElementById('splash-vibe');
-
-  // Set splash text and color
-  splashTrack.textContent = trackName;
-  splashArtist.textContent = artistName;
-  splashVibe.textContent = '— ' + theme.label + ' —';
-  splashTrack.style.color = theme.palette[0];
-
-  // 1. Fade to black
-  dissolve.style.transition = 'opacity 0.8s ease';
-  dissolve.classList.add('fade-in');
+  dissolve.style.transition='opacity 0.8s ease'; dissolve.classList.add('fade-in');
   await delay(900);
-
-  // 2. Switch theme while black
-  currentTheme = theme;
-  for (const s of geoShapes) s.reset();
-  for (const p of particles) p.reset(true);
-  beatRings = [];
-
-  // 3. Show splash text
+  currentTheme={...theme};
+  for(const s of geoShapes)s.reset(); for(const p of particles)p.reset(true);
+  beatRings=[]; floatingSymbols=[];
   splash.classList.add('visible');
-
-  // 4. Fade back in from black
-  dissolve.style.transition = 'opacity 1.2s ease';
-  dissolve.classList.remove('fade-in');
+  dissolve.style.transition='opacity 1.2s ease'; dissolve.classList.remove('fade-in');
   await delay(1200);
-
-  // 5. Hold splash visible for a moment
-  await delay(2000);
-
-  // 6. Fade out splash
-  splash.style.transition = 'opacity 1s ease';
-  splash.style.opacity = '0';
+  await delay(2200);
+  splash.style.transition='opacity 1s ease'; splash.style.opacity='0';
   await delay(1000);
-  splash.classList.remove('visible');
-  splash.style.opacity = '';
-  splash.style.transition = '';
-
-  isTransitioning = false;
+  splash.classList.remove('visible'); splash.style.opacity=''; splash.style.transition='';
+  isTransitioning=false;
 }
 
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-
 // ─── RENDER LOOP ──────────────────────────────────────────────────────────────
-let lastT = 0;
-function render(t) {
-  requestAnimationFrame(render);
-  lastT = t;
-  const w = canvas.width, h = canvas.height;
-  smooth.energy += (state.energy - smooth.energy) * 0.05;
-  smooth.bpm += (state.bpm - smooth.bpm) * 0.02;
-  smooth.beatPulse *= 0.92;
-  const beatI = state.beatInterval;
-  if (t - state.lastBeat > beatI) {
-    state.lastBeat = t;
-    smooth.beatPulse = 1;
-    spawnBeatRing();
-    if (Math.random() < 0.3) spawnBeatRing();
+let lastT=0;
+function render(t){
+  requestAnimationFrame(render); lastT=t;
+  const w=canvas.width,h=canvas.height;
+  smooth.energy+=(state.energy-smooth.energy)*0.05;
+  smooth.bpm+=(state.bpm-smooth.bpm)*0.02;
+  smooth.beatPulse*=0.92;
+  if(t-state.lastBeat>state.beatInterval){
+    state.lastBeat=t; smooth.beatPulse=1;
+    spawnBeatRing(); if(Math.random()<0.3)spawnBeatRing();
+    // Spawn symbols on beat occasionally
+    if(currentTheme.symbols&&currentTheme.symbols.length>0&&Math.random()<0.15) spawnSymbols(currentTheme.symbols,1);
   }
-  drawBackground(t, smooth.energy);
-  ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = `rgba(0,0,8,${0.15 + (1-smooth.energy)*0.1})`;
-  ctx.fillRect(0, 0, w, h);
-  for (const s of geoShapes) { s.update(smooth.energy); s.draw(ctx, t, smooth.beatPulse); }
+  drawBackground(t,smooth.energy);
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle=`rgba(0,0,8,${0.15+(1-smooth.energy)*0.1})`; ctx.fillRect(0,0,w,h);
+  for(const s of geoShapes){s.update(smooth.energy);s.draw(ctx,t,smooth.beatPulse);}
   updateDrawRings(ctx);
-  updateWave(smooth.energy, smooth.bpm, t);
-  drawWave(ctx, w, h, t, smooth.beatPulse);
-  for (const p of particles) { p.update(smooth.energy, t); p.draw(ctx); }
-  if (smooth.beatPulse > 0.5) {
-    const r = smooth.beatPulse;
-    const grd = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w*0.4);
-    grd.addColorStop(0, rgbStr(pc(0), r * currentTheme.beatFlash));
-    grd.addColorStop(1, 'transparent');
-    ctx.fillStyle = grd; ctx.fillRect(0, 0, w, h);
-  }
-  if (state.duration > 0) {
-    const elapsed = (Date.now() - state.analysisStart) / 1000 + state.progress / 1000;
-    document.getElementById('progress-bar').style.width =
-      Math.min(100, (elapsed / (state.duration/1000)) * 100) + '%';
-  }
+  updateWave(smooth.energy,smooth.bpm,t); drawWave(ctx,w,h,t,smooth.beatPulse);
+  for(const p of particles){p.update(smooth.energy,t);p.draw(ctx);}
+  // Floating symbols
+  floatingSymbols=floatingSymbols.filter(s=>s.life>0);
+  for(const s of floatingSymbols){s.update();s.draw(ctx,t);}
+  if(smooth.beatPulse>0.5){const r=smooth.beatPulse;const grd=ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,w*0.4);grd.addColorStop(0,rgbStr(pc(0),r*(currentTheme.beatFlash||0.15)));grd.addColorStop(1,'transparent');ctx.fillStyle=grd;ctx.fillRect(0,0,w,h);}
+  if(state.duration>0){const elapsed=(Date.now()-state.analysisStart)/1000+state.progress/1000;document.getElementById('progress-bar').style.width=Math.min(100,(elapsed/(state.duration/1000))*100)+'%';}
 }
 requestAnimationFrame(render);
 
 // ─── SPOTIFY API ──────────────────────────────────────────────────────────────
-let token = null;
-
-async function spotifyGet(endpoint) {
-  const res = await fetch('https://api.spotify.com/v1/' + endpoint, {
-    headers: { Authorization: 'Bearer ' + token }
-  });
-  if (res.status === 401) {
-    const newToken = await refreshAccessToken();
-    if (newToken) { token = newToken; } else { logout(); }
-    return null;
-  }
-  if (!res.ok) return null;
-  if (res.status === 204 || res.headers.get('content-length') === '0') return null;
-  try { return await res.json(); } catch (e) { return null; }
+let token=null;
+async function spotifyGet(endpoint){
+  const res=await fetch('https://api.spotify.com/v1/'+endpoint,{headers:{Authorization:'Bearer '+token}});
+  if(res.status===401){const nt=await refreshAccessToken();if(nt){token=nt;}else{logout();}return null;}
+  if(!res.ok)return null;
+  if(res.status===204||res.headers.get('content-length')==='0')return null;
+  try{return await res.json();}catch(e){return null;}
 }
+function logout(){localStorage.removeItem('sp_token');localStorage.removeItem('sp_token_ts');document.getElementById('login-screen').style.display='flex';document.getElementById('ui').style.display='none';document.getElementById('fs-btn').style.display='none';}
 
-function logout() {
-  localStorage.removeItem('sp_token'); localStorage.removeItem('sp_token_ts');
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('ui').style.display = 'none';
-  document.getElementById('fs-btn').style.display = 'none';
-}
+async function loadTrackData(trackId, trackName, artistName, artistIds) {
+  // Show AI thinking indicator
+  const aiTag = document.getElementById('ai-thinking');
+  aiTag.style.display = 'block';
 
-const KEYS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-
-async function loadTrackFeatures(trackId, trackName, artistName) {
-  const features = await spotifyGet(`audio-features/${trackId}`);
-  if (!features) return;
-
-  state.bpm = features.tempo || 120;
-  state.energy = features.energy || 0.5;
-  state.valence = features.valence || 0.5;
-  state.danceability = features.danceability || 0.5;
-  state.loudness = features.loudness || -10;
-  state.key = features.key >= 0 ? features.key : 0;
-  state.mode = features.mode;
-  state.beatInterval = (60 / state.bpm) * 1000;
-
-  const newTheme = pickTheme(state.energy, state.valence, state.bpm);
-
-  // Update UI stats
-  document.getElementById('stat-bpm').textContent = Math.round(state.bpm);
-  document.getElementById('stat-energy').textContent = Math.round(state.energy * 100) + '%';
-  document.getElementById('stat-key').textContent = KEYS[state.key] + (state.mode ? ' maj' : ' min');
-  document.getElementById('stat-mood').textContent = newTheme.label;
-  document.getElementById('mode-tag').textContent = newTheme.label + ' — LIVE VISUAL ENGINE';
-
-  // Trigger cinematic transition
-  playSongTransition(trackName, artistName, newTheme);
-}
-
-let pollTimer = null;
-let lastTrackId = null;
-
-async function pollPlayback() {
-  const data = await spotifyGet('me/player/currently-playing');
-  if (!data || !data.item) return;
-  const track = data.item;
-  const trackId = track.id;
-  state.progress = data.progress_ms || 0;
-  state.duration = track.duration_ms || 1;
-  state.analysisStart = Date.now();
-
-  if (trackId !== lastTrackId) {
-    lastTrackId = trackId;
-    state.trackName = track.name;
-    state.artistName = track.artists.map(a => a.name).join(', ');
-    state.albumArt = track.album?.images?.[0]?.url || '';
-    document.getElementById('track-name').textContent = state.trackName;
-    document.getElementById('artist-name').textContent = state.artistName;
-    if (state.albumArt) document.getElementById('album-art').src = state.albumArt;
-    await loadTrackFeatures(trackId, state.trackName, state.artistName);
-  }
-}
-
-function startPolling() { pollPlayback(); pollTimer = setInterval(pollPlayback, 5000); }
-
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-const loginBtn = document.getElementById('login-btn');
-loginBtn.addEventListener('click', async () => {
-  if (CLIENT_ID === 'YOUR_CLIENT_ID' || !CLIENT_ID) {
-    alert('Client ID not set! Please replace YOUR_CLIENT_ID in index.html.');
+  // Check cache first
+  if (aiThemeCache[trackId]) {
+    aiTag.style.display = 'none';
+    playSongTransition(trackName, artistName, aiThemeCache[trackId]);
+    applyThemeToUI(aiThemeCache[trackId]);
     return;
   }
+
+  // Fetch artist genres from Spotify (still available)
+  let genres = [];
+  if (artistIds && artistIds.length > 0) {
+    const artistData = await spotifyGet(`artists?ids=${artistIds.slice(0,3).join(',')}`);
+    if (artistData && artistData.artists) {
+      genres = artistData.artists.flatMap(a => a.genres || []).slice(0, 8);
+    }
+  }
+
+  // Call Claude for AI theme
+  const theme = await fetchAITheme(trackName, artistName, genres);
+  aiTag.style.display = 'none';
+
+  if (theme) {
+    aiThemeCache[trackId] = theme;
+    applyThemeToUI(theme);
+    playSongTransition(trackName, artistName, theme);
+  } else {
+    // Fallback: basic theme without AI
+    playSongTransition(trackName, artistName, DEFAULT_THEME);
+  }
+}
+
+function applyThemeToUI(theme) {
+  document.getElementById('stat-mood').textContent = theme.label || '—';
+  document.getElementById('mode-tag').textContent = (theme.label||'LIVE') + ' — AI VISUAL ENGINE';
+}
+
+const KEYS=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+let pollTimer=null, lastTrackId=null;
+
+async function pollPlayback(){
+  const data=await spotifyGet('me/player/currently-playing');
+  if(!data||!data.item)return;
+  const track=data.item, trackId=track.id;
+  state.progress=data.progress_ms||0; state.duration=track.duration_ms||1; state.analysisStart=Date.now();
+  // Estimate BPM from genre/default since audio-features is restricted
+  if(trackId!==lastTrackId){
+    lastTrackId=trackId;
+    state.trackName=track.name;
+    state.artistName=track.artists.map(a=>a.name).join(', ');
+    state.albumArt=track.album?.images?.[0]?.url||'';
+    const artistIds=track.artists.map(a=>a.id);
+    document.getElementById('track-name').textContent=state.trackName;
+    document.getElementById('artist-name').textContent=state.artistName;
+    if(state.albumArt)document.getElementById('album-art').src=state.albumArt;
+    document.getElementById('stat-bpm').textContent='~'+state.bpm;
+    document.getElementById('stat-energy').textContent='AI';
+    await loadTrackData(trackId,state.trackName,state.artistName,artistIds);
+  }
+}
+
+function startPolling(){pollPlayback();pollTimer=setInterval(pollPlayback,5000);}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+document.getElementById('login-btn').addEventListener('click',async()=>{
+  if(!CLIENT_ID||CLIENT_ID==='YOUR_CLIENT_ID'){alert('Client ID not set!');return;}
   await redirectToSpotify();
 });
 
-async function init() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const code = urlParams.get('code');
-  const error = urlParams.get('error');
-  if (error) { console.error('[Auth] Spotify error:', error); return; }
-  if (code) {
-    window.history.replaceState({}, document.title, '/');
-    token = await exchangeCodeForToken(code);
-    if (!token) { console.error('[Auth] Token exchange failed'); return; }
-  } else {
-    token = getStoredToken();
-    if (!token) token = await refreshAccessToken();
-  }
-  if (token) {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('ui').style.display = 'block';
-    document.getElementById('fs-btn').style.display = 'block';
-    startPolling();
-  }
+async function init(){
+  const urlParams=new URLSearchParams(window.location.search);
+  const code=urlParams.get('code'),error=urlParams.get('error');
+  if(error){console.error('[Auth] Error:',error);return;}
+  if(code){window.history.replaceState({},document.title,'/');token=await exchangeCodeForToken(code);if(!token){console.error('[Auth] Exchange failed');return;}}
+  else{token=getStoredToken();if(!token)token=await refreshAccessToken();}
+  if(token){document.getElementById('login-screen').style.display='none';document.getElementById('ui').style.display='block';document.getElementById('fs-btn').style.display='block';startPolling();}
 }
 init();
 
-document.getElementById('fs-btn').addEventListener('click', () => {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-    document.getElementById('fs-btn').textContent = '✕ EXIT';
-  } else {
-    document.exitFullscreen();
-    document.getElementById('fs-btn').textContent = '⛶ FULLSCREEN';
-  }
+document.getElementById('fs-btn').addEventListener('click',()=>{
+  if(!document.fullscreenElement){document.documentElement.requestFullscreen();document.getElementById('fs-btn').textContent='✕ EXIT';}
+  else{document.exitFullscreen();document.getElementById('fs-btn').textContent='⛶ FULLSCREEN';}
 });
 </script>
 </body>
