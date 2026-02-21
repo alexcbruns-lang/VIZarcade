@@ -79,8 +79,20 @@ const REDIR=location.origin+'/callback';
 const SCOPE='user-read-currently-playing user-read-playback-state';
 function rnd(n){const a=new Uint8Array(n);crypto.getRandomValues(a);return btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'').slice(0,n)}
 async function sha256b64(s){const d=new TextEncoder().encode(s),h=await crypto.subtle.digest('SHA-256',d);return btoa(String.fromCharCode(...new Uint8Array(h))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'')}
-async function doLogin(){const v=rnd(64),c=await sha256b64(v);localStorage.setItem('pv',v);location.href='https://accounts.spotify.com/authorize?'+new URLSearchParams({client_id:CLIENT_ID,response_type:'code',redirect_uri:REDIR,scope:SCOPE,code_challenge_method:'S256',code_challenge:c,show_dialog:'true'})}
-async function exchToken(code){const v=localStorage.getItem('pv');const r=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:CLIENT_ID,grant_type:'authorization_code',code,redirect_uri:REDIR,code_verifier:v})});const d=await r.json();if(d.access_token){ls('at',d.access_token);ls('ats',Date.now());if(d.refresh_token)ls('rt',d.refresh_token);localStorage.removeItem('pv');return d.access_token}return null}
+async function doLogin(){const v=rnd(64),c=await sha256b64(v);localStorage.setItem('pv',v);console.log('[auth] doLogin — verifier saved, redirect_uri='+REDIR);location.href='https://accounts.spotify.com/authorize?'+new URLSearchParams({client_id:CLIENT_ID,response_type:'code',redirect_uri:REDIR,scope:SCOPE,code_challenge_method:'S256',code_challenge:c,show_dialog:'true'})}
+async function exchToken(code){
+  const v=localStorage.getItem('pv');
+  console.log('[auth] exchToken called, code='+code?.slice(0,8)+'... verifier='+(v?'present':'MISSING'));
+  if(!v){console.error('[auth] No code_verifier in localStorage — cannot exchange');return null;}
+  try{
+    const r=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:CLIENT_ID,grant_type:'authorization_code',code,redirect_uri:REDIR,code_verifier:v})});
+    const d=await r.json();
+    console.log('[auth] token response status='+r.status+' keys='+Object.keys(d).join(','));
+    if(d.access_token){ls('at',d.access_token);ls('ats',Date.now());if(d.refresh_token)ls('rt',d.refresh_token);localStorage.removeItem('pv');return d.access_token;}
+    console.error('[auth] No access_token in response:',JSON.stringify(d));
+    return null;
+  }catch(e){console.error('[auth] exchToken fetch failed:',e);return null;}
+}
 async function refreshAT(){const rt=lg('rt');if(!rt)return null;const r=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:CLIENT_ID,grant_type:'refresh_token',refresh_token:rt})});const d=await r.json();if(d.access_token){ls('at',d.access_token);ls('ats',Date.now());return d.access_token}return null}
 function getAT(){const t=lg('at'),s=parseInt(lg('ats')||0);return t&&Date.now()-s<3500000?t:null}
 const ls=(k,v)=>localStorage.setItem(k,v), lg=k=>localStorage.getItem(k);
@@ -1544,9 +1556,31 @@ document.getElementById('loginBtn').addEventListener('click',doLogin);
 document.getElementById('fsBtn').addEventListener('click',()=>{if(!document.fullscreenElement){document.documentElement.requestFullscreen();document.getElementById('fsBtn').textContent='✕ EXIT';}else{document.exitFullscreen();document.getElementById('fsBtn').textContent='⛶ FS';}});
 async function init(){
   const p=new URLSearchParams(location.search),code=p.get('code');
-  if(p.get('error'))return;
-  if(code){history.replaceState({},document.title,'/');token=await exchToken(code);if(!token)return;}
-  else{token=getAT();if(!token)token=await refreshAT();}
-  if(token){document.getElementById('login').style.display='none';document.getElementById('ui').style.display='block';document.getElementById('fsBtn').style.display='block';initScene();poll();setInterval(poll,5000);}
+  console.log('[auth] init() — code='+(code?code.slice(0,8)+'...':'none')+' search='+location.search);
+  if(p.get('error')){console.error('[auth] Spotify returned error:',p.get('error'));showLoginError('Spotify denied access: '+p.get('error'));return;}
+  if(code){
+    // Clear URL immediately so a refresh doesn't reuse the code
+    history.replaceState({},document.title,'/');
+    token=await exchToken(code);
+    if(!token){showLoginError('Token exchange failed — check console');return;}
+  } else {
+    token=getAT();
+    if(!token)token=await refreshAT();
+    console.log('[auth] No code in URL, existing token='+(token?'found':'none'));
+  }
+  if(token){
+    document.getElementById('login').style.display='none';
+    document.getElementById('ui').style.display='block';
+    document.getElementById('fsBtn').style.display='block';
+    initScene();poll();setInterval(poll,5000);
+  }
+}
+function showLoginError(msg){
+  const btn=document.getElementById('loginBtn');
+  btn.textContent='RETRY';
+  const err=document.createElement('div');
+  err.style.cssText='position:relative;z-index:1;color:#ff006e;font-size:0.65rem;letter-spacing:0.15em;margin-top:1rem;max-width:400px;text-align:center;';
+  err.textContent=msg;
+  btn.parentNode.insertBefore(err,btn.nextSibling);
 }
 </script></body></html>
