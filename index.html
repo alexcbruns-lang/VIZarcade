@@ -906,7 +906,6 @@ function drawClassicArcade(t){
 // ════════════════════════════════════════════════════
 // CENTERPIECE (no floating circles — specific objects only)
 // ════════════════════════════════════════════════════
-let cpRot=0, cpPhase=0, cpOrbit=0;
 
 function drawElectricForest(t){
   const w=W(),h=H();
@@ -943,7 +942,7 @@ function drawOmniaNightclub(t){
   if(SD.beams){for(const b of SD.beams){b.ph+=0.006*(1+SM.beatPulse*0.4);const bx=cx+Math.cos(b.angle+b.ph*0.3)*30;const by=SD.chandelierY;const endX=cx+Math.cos(b.angle+b.ph)*b.len;const endY=by+b.len*0.8;const bg=x0.createLinearGradient(bx,by,endX,endY);const bc=h2r(pc(b.ci));bg.addColorStop(0,`rgba(${bc.r},${bc.g},${bc.b},${0.08*(1+SM.beatPulse*0.5)})`);bg.addColorStop(1,'transparent');x0.strokeStyle=bg;x0.lineWidth=4;x0.beginPath();x0.moveTo(bx,by);x0.lineTo(endX,endY);x0.stroke();}}
   // Chandelier ball (massive disco/crystal)
   x0.save();x0.translate(cx,SD.chandelierY);x0.rotate(SD.chandelierRot);x0.shadowBlur=30*(1+SM.beatPulse*0.5);x0.shadowColor=pc(0);
-  const rows=10,cols=16;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const lat=(r/rows-0.5)*Math.PI,lon=c/cols*Math.PI*2+SD.chandelierRot;const tx=Math.cos(lat)*Math.cos(lon)*80,ty=Math.sin(lat)*80,tz=Math.cos(lat)*Math.sin(lon);if(tz<0.1)continue;const tsz=5+tz*4;ctx=x0;ctx.fillStyle=rgba(pc((r+c)%4),(0.4+tz*0.6)*0.9*(0.5+tz*0.5)*(1+SM.beatPulse*0.2));ctx.fillRect(tx-tsz/2,ty-tsz/2,tsz,tsz);}
+  const rows=10,cols=16;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const lat=(r/rows-0.5)*Math.PI,lon=c/cols*Math.PI*2+SD.chandelierRot;const tx=Math.cos(lat)*Math.cos(lon)*80,ty=Math.sin(lat)*80,tz=Math.cos(lat)*Math.sin(lon);if(tz<0.1)continue;const tsz=5+tz*4;x0.fillStyle=rgba(pc((r+c)%4),(0.4+tz*0.6)*0.9*(0.5+tz*0.5)*(1+SM.beatPulse*0.2));x0.fillRect(tx-tsz/2,ty-tsz/2,tsz,tsz);}
   x0.shadowBlur=0;x0.restore();
   // Crowd silhouettes
   if(SD.crowdPeople){for(const p of SD.crowdPeople){p.ph+=0.04*(1+SM.beatPulse*0.3);const swing=Math.sin(p.ph)*p.sz*0.3*(1+SM.beatPulse*0.4);x0.fillStyle=rgba(pc(p.ci),0.35*(1+SM.beatPulse*0.1));x0.fillRect(p.x-p.sz*0.15,p.y-p.sz*0.8+swing,p.sz*0.3,p.sz*0.8);x0.beginPath();x0.arc(p.x,p.y-p.sz*0.88+swing,p.sz*0.18,0,Math.PI*2);x0.fill();}}
@@ -1145,7 +1144,7 @@ function drawCenterpiece(ctx,t){
   if(!THEME.centerpiece||THEME.centerpieceScale===0)return;
   const w=W(),h=H(),cx=w/2,cy=h/2;
   const baseS=Math.min(w,h)*THEME.centerpieceScale*0.42;
-  cpPhase+=0.012;
+  cpPh+=0.012;
   switch(THEME.centerpieceBehavior){
     case 'rotate': cpRot+=0.01*(1+SM.energy*0.2); break;
     case 'spin_fast': cpRot+=0.07*(1+SM.energy); break;
@@ -1156,7 +1155,7 @@ function drawCenterpiece(ctx,t){
     case 'strobe': cpRot+=0.04; break;
     default: cpRot+=0.008;
   }
-  const pulseMult=THEME.centerpieceBehavior==='pulse_beat'?1+SM.beatPulse*0.3:THEME.centerpieceBehavior==='breathe'?1+Math.sin(cpPhase*0.5)*0.08:THEME.centerpieceBehavior==='strobe'?SM.beatPulse>0.5?1:0:1;
+  const pulseMult=THEME.centerpieceBehavior==='pulse_beat'?1+SM.beatPulse*0.3:THEME.centerpieceBehavior==='breathe'?1+Math.sin(cpPh*0.5)*0.08:THEME.centerpieceBehavior==='strobe'?SM.beatPulse>0.5?1:0:1;
   const orbX=THEME.centerpieceBehavior==='orbit_slow'?Math.cos(cpOrbit)*w*0.12:0;
   const orbY=THEME.centerpieceBehavior==='orbit_slow'?Math.sin(cpOrbit)*h*0.07:THEME.centerpieceBehavior==='rise_set'?Math.sin(t*0.0001)*h*0.12:0;
   const s=baseS*pulseMult; if(s<2)return;
@@ -1164,7 +1163,7 @@ function drawCenterpiece(ctx,t){
 
   const cp=THEME.centerpiece;
   if(cp==='sun'){
-    for(let r=0;r<16;r++){const a=r/16*Math.PI*2;const rL=s*(1.3+Math.sin(cpPhase+r)*0.15+SM.beatPulse*0.25);ctx.save();ctx.rotate(a);const rg=ctx.createLinearGradient(0,s*0.7,0,rL);rg.addColorStop(0,rgba(pc(0),0.7));rg.addColorStop(1,'transparent');ctx.fillStyle=rg;ctx.fillRect(-s*0.04,s*0.7,s*0.08,rL-s*0.7);ctx.restore();}
+    for(let r=0;r<16;r++){const a=r/16*Math.PI*2;const rL=s*(1.3+Math.sin(cpPh+r)*0.15+SM.beatPulse*0.25);ctx.save();ctx.rotate(a);const rg=ctx.createLinearGradient(0,s*0.7,0,rL);rg.addColorStop(0,rgba(pc(0),0.7));rg.addColorStop(1,'transparent');ctx.fillStyle=rg;ctx.fillRect(-s*0.04,s*0.7,s*0.08,rL-s*0.7);ctx.restore();}
     const og=ctx.createRadialGradient(0,0,s*0.2,0,0,s*1.6);og.addColorStop(0,rgba(pc(1),0.12));og.addColorStop(1,'transparent');ctx.fillStyle=og;ctx.beginPath();ctx.arc(0,0,s*1.6,0,Math.PI*2);ctx.fill();
     const sg=ctx.createRadialGradient(-s*0.2,-s*0.2,0,0,0,s);sg.addColorStop(0,'rgba(255,255,200,1)');sg.addColorStop(0.3,rgba(pc(1),0.9));sg.addColorStop(1,rgba(pc(0),0.5));
     ctx.fillStyle=sg;ctx.beginPath();ctx.arc(0,0,s,0,Math.PI*2);ctx.shadowBlur=s*0.7;ctx.shadowColor=pc(0);ctx.fill();ctx.shadowBlur=0;
@@ -1182,7 +1181,7 @@ function drawCenterpiece(ctx,t){
     ctx.save();ctx.scale(1,0.28);for(let ri=0;ri<3;ri++){ctx.beginPath();ctx.arc(0,0,s*(1.4+ri*0.22),0,Math.PI*2);ctx.strokeStyle=rgba(pc((ri+2)%4),0.25-ri*0.07);ctx.lineWidth=7+ri*3;ctx.stroke();}ctx.restore();
   }
   else if(cp==='disco_ball'){
-    const rows=14,cols=18;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const lat=(r/rows-0.5)*Math.PI,lon=c/cols*Math.PI*2+cpRot*3;const tx=Math.cos(lat)*Math.cos(lon)*s,ty=Math.sin(lat)*s,tz=Math.cos(lat)*Math.sin(lon);if(tz<0.1)continue;const tsz=4+tz*3;const tbr=0.3+Math.abs(Math.sin(lon+cpRot*2+lat))*0.7;ctx.fillStyle=rgba(pc((r+c)%4),tbr*0.9*(0.5+tz*0.5));ctx.fillRect(tx-tsz/2,ty-tsz/2,tsz,tsz);}
+    const rows=14,cols=18;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const lat=(r/rows-0.5)*Math.PI,lon=c/cols*Math.PI*2+cpRot*3;const tx=Math.cos(lat)*Math.cos(lon)*s,ty=Math.sin(lat)*s,tz=Math.cos(lat)*Math.sin(lon);if(tz<0.1)continue;const tsz=4+tz*3;const tbr=0.3+Math.abs(Math.sin(lon+cpRot*2+lat))*0.7;ctx.fillStyle=rgba(pc((r+c)%4),tbr*0.9*(0.5+tz*0.5));x0.fillRect(tx-tsz/2,ty-tsz/2,tsz,tsz);}
     for(let i=0;i<6;i++){const a=i/6*Math.PI*2+cpRot*1.5;ctx.beginPath();ctx.moveTo(Math.cos(a)*s*0.35,Math.sin(a)*s*0.35);ctx.lineTo(Math.cos(a)*s*4,Math.sin(a)*s*4);ctx.strokeStyle=rgba(pc(i%4),0.06*(1+SM.beatPulse*0.5));ctx.lineWidth=3;ctx.stroke();}
     ctx.restore();ctx.save();ctx.translate(cx+orbX,0);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,cy+orbY-s);ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;ctx.stroke();ctx.restore();ctx.save();ctx.translate(cx+orbX+SM.shake.x,cy+orbY+SM.shake.y);ctx.rotate(cpRot);
   }
@@ -1192,7 +1191,7 @@ function drawCenterpiece(ctx,t){
     ctx.beginPath();ctx.arc(0,s*0.28,s*0.28,0.25,Math.PI-0.25);ctx.strokeStyle='#1a1a1a';ctx.lineWidth=s*0.07;ctx.stroke();
   }
   else if(cp==='fireball'){
-    for(let layer=4;layer>0;layer--){const fl=1+Math.sin(cpPhase*3+layer)*0.15+SM.beatPulse*0.2;const fg=ctx.createRadialGradient(0,s*0.04*layer,0,0,0,s*fl*(0.6+layer*0.12));fg.addColorStop(0,'rgba(255,220,80,0.95)');fg.addColorStop(0.3,rgba(pc(1),0.7-layer*0.1));fg.addColorStop(1,'transparent');ctx.fillStyle=fg;ctx.beginPath();ctx.arc(0,0,s*fl*(0.5+layer*0.13),0,Math.PI*2);ctx.fill();}
+    for(let layer=4;layer>0;layer--){const fl=1+Math.sin(cpPh*3+layer)*0.15+SM.beatPulse*0.2;const fg=ctx.createRadialGradient(0,s*0.04*layer,0,0,0,s*fl*(0.6+layer*0.12));fg.addColorStop(0,'rgba(255,220,80,0.95)');fg.addColorStop(0.3,rgba(pc(1),0.7-layer*0.1));fg.addColorStop(1,'transparent');ctx.fillStyle=fg;ctx.beginPath();ctx.arc(0,0,s*fl*(0.5+layer*0.13),0,Math.PI*2);ctx.fill();}
   }
   else if(cp==='black_hole'){
     ctx.save();ctx.scale(1,0.25);for(let d=0;d<5;d++){const dr=s*(1.2+d*0.22)+SM.beatPulse*s*0.1;ctx.beginPath();ctx.arc(0,0,dr,0,Math.PI*2);ctx.strokeStyle=rgba(pc(d%4),0.5-d*0.08);ctx.lineWidth=12-d*2;ctx.stroke();}ctx.restore();
@@ -1235,7 +1234,7 @@ function drawCenterpiece(ctx,t){
     ctx.beginPath();ctx.moveTo(s*0.5,-s*0.1);ctx.lineTo(s*1.3,-s*0.05);ctx.lineTo(s*0.5,s*0.15);ctx.closePath();ctx.fill();
     ctx.fillStyle=rgba(pc(1),0.9);ctx.shadowBlur=15;ctx.shadowColor=pc(1);ctx.beginPath();ctx.arc(s*0.3,-s*0.15,s*0.12,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
     ctx.fillStyle='rgba(0,0,0,0.9)';ctx.beginPath();ctx.arc(s*0.33,-s*0.17,s*0.06,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=rgba(pc(0),0.9);for(let sp=0;sp<6;sp++){ctx.beginPath();ctx.moveTo(sp*s*0.2-s*0.4,-s*0.55);ctx.lineTo(sp*s*0.2-s*0.38,-s*(0.7+Math.sin(cpPhase+sp)*0.08));ctx.lineTo(sp*s*0.2-s*0.36,-s*0.55);ctx.closePath();ctx.fill();}
+    ctx.fillStyle=rgba(pc(0),0.9);for(let sp=0;sp<6;sp++){ctx.beginPath();ctx.moveTo(sp*s*0.2-s*0.4,-s*0.55);ctx.lineTo(sp*s*0.2-s*0.38,-s*(0.7+Math.sin(cpPh+sp)*0.08));ctx.lineTo(sp*s*0.2-s*0.36,-s*0.55);ctx.closePath();ctx.fill();}
   }
   else if(cp==='chandelier'){
     // Frame
