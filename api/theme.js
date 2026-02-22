@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  const { trackName, artistName, genres, titleKeywords, artistContext, sceneShortlist, forbiddenCenterpieces, sessionStreak, streakDesc, isExplicit, songDurationSecs } = req.body;
+  const { trackName, artistName, genres, titleKeywords, artistContext, sceneShortlist, forbiddenCenterpieces, availableCenterpieces, sessionStreak, streakDesc, isExplicit, songDurationSecs } = req.body;
   if (!trackName || !artistName) return res.status(400).json({ error: 'Missing fields' });
   const KEY = process.env.ANTHROPIC_API_KEY;
   if (!KEY) return res.status(500).json({ error: 'No API key' });
@@ -21,7 +21,9 @@ ${(sceneShortlist||[]).slice(0,12).join(', ')}
 Choose the best thematic fit. Do NOT pick outside this list.
 ══════════════════════════════════════
 
-⛔ FORBIDDEN CENTERPIECES (do not repeat): ${(forbiddenCenterpieces||[]).join(', ')||'none'}
+⛔ FORBIDDEN CENTERPIECES — not used in last 25 songs (strict — must pick from available): ${(forbiddenCenterpieces||[]).join(', ')||'none'}
+
+AVAILABLE centerpieces NOT in forbidden list — pick from these: ${availableCenterpieces||'all'}
 
 ═══ CENTERPIECE — CHOOSE ONE ═══
 Every centerpiece is a UNIQUE hand-drawn canvas illustration. Pick the one that best fits this song's identity.
