@@ -152,7 +152,7 @@ function enforceCP(c){
 }
 
 // ═══ INTEGRATED SCENES SET ═══
-const CP_INTEGRATED_SCENES=new Set(['WARP_SPEED','DEEP_SEA','STORM_CHASER','CARNIVAL','JUNKYARD','EGYPTIAN_TOMB','ELECTRIC_FOREST','PIRATE_SHIP','ACID_TRIP','NEON_CATHEDRAL','SPACE_STATION','LAVA_WORLD','DISCO_DIMENSION','CLASSIC_ARCADE','SUPERHERO','DAY_OF_DEAD','CHINESE_DRAGON','MOUNT_OLYMPUS','SUPER_MARIO','ATLANTIS','JUNGLE_RAVE','CYBER_GRID']);
+const CP_INTEGRATED_SCENES=new Set(['WARP_SPEED','DEEP_SEA','STORM_CHASER','CARNIVAL','JUNKYARD','EGYPTIAN_TOMB','ELECTRIC_FOREST','PIRATE_SHIP','ACID_TRIP','NEON_CATHEDRAL','SPACE_STATION','LAVA_WORLD','DISCO_DIMENSION','CLASSIC_ARCADE','SUPERHERO','DAY_OF_DEAD','CHINESE_DRAGON','MOUNT_OLYMPUS','SUPER_MARIO','ATLANTIS','JUNGLE_RAVE','CYBER_GRID','OMNIA_NIGHTCLUB']);
 
 // ═══ SURPRISE SYSTEM — 12–15 second multi-wave events ═══
 function flash(color,ms){const o=document.getElementById('surpriseOverlay');o.style.background=color;o.style.transition='opacity 0.08s';o.style.opacity='1';setTimeout(()=>{o.style.transition=`opacity ${ms}ms ease`;o.style.opacity='0';},100);}
@@ -1411,10 +1411,10 @@ function drawNeonCathedral(t){
     SD.cathedralInit=true;
     // Gargoyles: 2 on each side of main towers, and 2 on buttresses
     SD.gargoyles=[
-      {x:cx-w*0.31,y:h*0.28,side:-1,lunge:0,headAngle:0,wingFlare:0,ci:0},
-      {x:cx+w*0.31,y:h*0.28,side:1, lunge:0,headAngle:0,wingFlare:0,ci:1},
-      {x:cx-w*0.18,y:h*0.42,side:-1,lunge:0,headAngle:0,wingFlare:0,ci:2},
-      {x:cx+w*0.18,y:h*0.42,side:1, lunge:0,headAngle:0,wingFlare:0,ci:3},
+      {x:cx-w*0.31,y:h*0.32,side:-1,lunge:0,headAngle:0,wingFlare:0,ci:0,sz:90},
+      {x:cx+w*0.31,y:h*0.32,side:1, lunge:0,headAngle:0,wingFlare:0,ci:1,sz:90},
+      {x:cx-w*0.18,y:h*0.46,side:-1,lunge:0,headAngle:0,wingFlare:0,ci:2,sz:72},
+      {x:cx+w*0.18,y:h*0.46,side:1, lunge:0,headAngle:0,wingFlare:0,ci:3,sz:72},
     ];
     SD.ghosts=[];
     SD.ghostSpawnTimer=0;
@@ -1643,57 +1643,202 @@ function drawNeonCathedral(t){
 
   // ── GARGOYLES ───────────────────────────────────────
   for(const g of SD.gargoyles){
-    // Beat reaction — lunge forward and snap back
-    if(beat>0.55)g.lunge=Math.min(1,g.lunge+0.18);
-    else g.lunge*=0.88;
-    g.wingFlare=beat*0.6;
-    // Head slowly tracks centerpiece/ghosts
+    if(beat>0.5)g.lunge=Math.min(1,g.lunge+0.16);
+    else g.lunge*=0.9;
+    g.wingFlare+=(beat*0.7-g.wingFlare)*0.12;
     const cpX=cx,cpY=groundY-doorH*0.72;
     const dxa=cpX-g.x,dya=cpY-g.y;
-    const targetAngle=Math.atan2(dya,dxa);
-    g.headAngle+=(targetAngle-g.headAngle)*0.02;
+    g.headAngle+=(Math.atan2(dya,dxa)-g.headAngle)*0.018;
 
-    const lunge=g.lunge*18*g.side;
+    const lunge=g.lunge*22*g.side;
+    const gSz=g.sz||85; // larger than before
     x0.save();x0.translate(g.x+lunge,g.y);
 
-    // Body — crouched hunched form
-    neon(g.ci,0.7*(1+beat*0.15),12);x0.lineWidth=2;
-    // Haunches
-    x0.beginPath();x0.ellipse(0,10,16,10,0,0,Math.PI*2);x0.stroke();
-    // Torso leaning forward
-    x0.beginPath();x0.moveTo(0,0);x0.bezierCurveTo(-g.side*8,-18,-g.side*14,-28,-g.side*18,-30);x0.stroke();
-    // Arms gripping ledge
-    x0.beginPath();x0.moveTo(-g.side*8,-10);x0.lineTo(-g.side*22,0);x0.stroke();
-    x0.beginPath();x0.moveTo(-g.side*14,-20);x0.lineTo(-g.side*25,-12);x0.stroke();
-    // Wings — flare on beat
-    const wSpread=0.5+g.wingFlare*0.5;
-    neon(g.ci,0.45*(1+beat*0.2),8);x0.lineWidth=1.5;
+    // Full neon line style for this gargoyle
+    const gn=(alpha,blur)=>{
+      x0.strokeStyle=rgba(pc(g.ci),Math.min(1,alpha*(1+beat*0.2)));
+      x0.shadowBlur=blur*(1+beat*0.25);x0.shadowColor=pc(g.ci);
+    };
+    const gnf=(alpha,blur)=>{
+      x0.fillStyle=rgba(pc(g.ci),Math.min(1,alpha*(1+beat*0.2)));
+      x0.shadowBlur=blur*(1+beat*0.25);x0.shadowColor=pc(g.ci);
+    };
+
+    // ── TAIL — curling behind body ──────────────────────
+    gn(0.35,6);x0.lineWidth=2;
     x0.beginPath();
-    x0.moveTo(g.side*4,-8);
-    x0.bezierCurveTo(g.side*(18+wSpread*20),-30+wSpread*(-20),g.side*(28+wSpread*15),-10,g.side*12,8);
+    x0.moveTo(-g.side*gSz*0.05,gSz*0.18);
+    x0.bezierCurveTo(
+      -g.side*gSz*0.35,gSz*0.35,
+      -g.side*gSz*0.4,gSz*0.55+Math.sin(t*0.002)*gSz*0.05,
+      -g.side*gSz*0.25,gSz*0.62
+    );x0.stroke();
+
+    // ── HAUNCHES & LEGS — crouched gargoyle stance ───────
+    gn(0.65,14);x0.lineWidth=3;
+    // Hip/haunch mass
+    x0.beginPath();x0.ellipse(-g.side*gSz*0.04,gSz*0.15,gSz*0.22,gSz*0.15,0,0,Math.PI*2);x0.stroke();
+    gnf(0.12,6);x0.fill();
+    // Upper leg
+    x0.lineWidth=4;gn(0.6,10);
+    x0.beginPath();x0.moveTo(-g.side*gSz*0.08,gSz*0.18);x0.bezierCurveTo(-g.side*gSz*0.14,gSz*0.32,-g.side*gSz*0.2,gSz*0.38,-g.side*gSz*0.22,gSz*0.5);x0.stroke();
+    x0.beginPath();x0.moveTo(-g.side*gSz*0.0,gSz*0.18);x0.bezierCurveTo(-g.side*gSz*0.04,gSz*0.32,g.side*gSz*0.06,gSz*0.38,g.side*gSz*0.1,gSz*0.5);x0.stroke();
+    // Taloned feet gripping ledge
+    gn(0.55,8);x0.lineWidth=2;
+    for(const[fx,fy,side2] of [[-g.side*gSz*0.22,gSz*0.5,-1],[g.side*gSz*0.1,gSz*0.5,1]]){
+      for(let tk=0;tk<3;tk++){
+        const ta=-0.3+tk*0.3;
+        x0.beginPath();x0.moveTo(fx,fy);x0.lineTo(fx+Math.cos(ta+Math.PI*0.5)*gSz*0.12*side2,fy+gSz*0.1);x0.stroke();
+      }
+    }
+
+    // ── TORSO — hunched forward, muscular ─────────────────
+    gn(0.72,16);x0.lineWidth=3.5;
+    // Spine curve — hunched
+    x0.beginPath();
+    x0.moveTo(-g.side*gSz*0.04,gSz*0.06);
+    x0.bezierCurveTo(-g.side*gSz*0.12,-gSz*0.08,-g.side*gSz*0.2,-gSz*0.22,-g.side*gSz*0.3,-gSz*0.32);
+    x0.stroke();
+    // Chest / rib cage
+    gn(0.6,12);x0.lineWidth=2.5;
+    x0.beginPath();x0.ellipse(-g.side*gSz*0.14,-gSz*0.12,gSz*0.2,gSz*0.14,g.side*0.3,0,Math.PI*2);x0.stroke();
+    gnf(0.08,4);x0.fill();
+    // Belly scales — rows of chevron lines
+    gn(0.3,5);x0.lineWidth=1.2;
+    for(let sc=0;sc<3;sc++){
+      const sy=-gSz*0.02+sc*gSz*0.07;
+      x0.beginPath();
+      x0.moveTo(-g.side*gSz*0.06,sy);
+      x0.bezierCurveTo(-g.side*gSz*0.12,sy-gSz*0.035,g.side*gSz*0.06,sy-gSz*0.035,g.side*gSz*0.1,sy);
+      x0.stroke();
+    }
+
+    // ── ARMS — forward reaching, clawed ──────────────────
+    gn(0.65,12);x0.lineWidth=3.5;x0.lineCap='round';
+    // Upper arm
+    x0.beginPath();x0.moveTo(-g.side*gSz*0.18,-gSz*0.08);x0.bezierCurveTo(-g.side*gSz*0.3,-gSz*0.16,-g.side*gSz*0.4,-gSz*0.08,-g.side*gSz*0.44,gSz*0.04);x0.stroke();
+    // Forearm — reaching forward
+    x0.beginPath();x0.moveTo(-g.side*gSz*0.44,gSz*0.04);x0.bezierCurveTo(-g.side*gSz*0.5,gSz*0.14,-g.side*gSz*0.52,gSz*0.24,-g.side*gSz*0.5,gSz*0.34);x0.stroke();
+    // Claws gripping ledge
+    gn(0.55,8);x0.lineWidth=2;
+    for(let cl=0;cl<4;cl++){
+      const ca=-0.4+cl*0.28;
+      x0.beginPath();x0.moveTo(-g.side*gSz*0.5,gSz*0.34);x0.lineTo(-g.side*gSz*0.5+Math.cos(ca)*gSz*0.1,-g.side*gSz*0.5+Math.sin(ca+Math.PI*0.6)*gSz*0.1+gSz*0.42);x0.stroke();
+    }
+    // Second arm — slightly raised
+    gn(0.58,10);x0.lineWidth=3;
+    x0.beginPath();x0.moveTo(-g.side*gSz*0.08,-gSz*0.18);x0.bezierCurveTo(-g.side*gSz*0.18,-gSz*0.3,-g.side*gSz*0.3,-gSz*0.28,-g.side*gSz*0.36,-gSz*0.18);x0.stroke();
+    x0.lineCap='butt';
+
+    // ── WINGS — large, membrane, beat-reactive ────────────
+    const wf=0.4+g.wingFlare*0.7;
+    // Wing membrane — filled translucent
+    gnf(0.18+beat*0.08,4);
+    x0.beginPath();
+    x0.moveTo(g.side*gSz*0.06,-gSz*0.08);
+    x0.bezierCurveTo(g.side*gSz*(0.28+wf*0.32),-gSz*(0.38+wf*0.22),g.side*gSz*(0.5+wf*0.28),-gSz*(0.12-wf*0.18),g.side*gSz*(0.45+wf*0.2),gSz*0.22);
+    x0.bezierCurveTo(g.side*gSz*0.3,gSz*0.3,g.side*gSz*0.1,gSz*0.22,g.side*gSz*0.0,gSz*0.1);
+    x0.fill();
+    // Wing outline — primary strokes
+    gn(0.52+beat*0.15,10);x0.lineWidth=2.2;
+    x0.beginPath();
+    x0.moveTo(g.side*gSz*0.06,-gSz*0.08);
+    x0.bezierCurveTo(g.side*gSz*(0.28+wf*0.32),-gSz*(0.38+wf*0.22),g.side*gSz*(0.5+wf*0.28),-gSz*(0.12-wf*0.18),g.side*gSz*(0.45+wf*0.2),gSz*0.22);
+    x0.stroke();
+    // Wing finger bones — 3 spars
+    gn(0.4,7);x0.lineWidth=1.5;
+    for(let wb=0;wb<3;wb++){
+      const wt=(wb+1)/3;
+      x0.beginPath();
+      x0.moveTo(g.side*gSz*0.06,-gSz*0.08);
+      x0.lineTo(g.side*gSz*(0.18+wf*0.3*wt),-gSz*(0.22+wf*0.15*wt));
+      x0.lineTo(g.side*gSz*(0.35+wf*0.22*wt),gSz*(0.05+wt*0.12));
+      x0.stroke();
+    }
+    // Wing lower edge
+    gn(0.42,8);x0.lineWidth=2;
+    x0.beginPath();
+    x0.moveTo(g.side*gSz*(0.45+wf*0.2),gSz*0.22);
+    x0.bezierCurveTo(g.side*gSz*0.28,gSz*0.3,g.side*gSz*0.1,gSz*0.22,g.side*gSz*0.0,gSz*0.1);
+    x0.stroke();
+
+    // ── HEAD — large, horned, detailed ───────────────────
+    const hx=-g.side*gSz*0.28+Math.cos(g.headAngle)*gSz*0.08;
+    const hy=-gSz*0.42+Math.sin(g.headAngle)*gSz*0.05;
+    const hSz=gSz*0.36; // head size
+
+    // Neck
+    gn(0.6,10);x0.lineWidth=3;
+    x0.beginPath();x0.moveTo(-g.side*gSz*0.2,-gSz*0.28);x0.lineTo(hx+g.side*hSz*0.12,hy+hSz*0.4);x0.stroke();
+
+    // Head mass — angular, reptilian skull
+    gn(0.78,18);x0.lineWidth=2.8;
+    x0.beginPath();
+    x0.moveTo(hx,hy-hSz*0.5);           // crown
+    x0.bezierCurveTo(hx+g.side*hSz*0.3,hy-hSz*0.48,hx+g.side*hSz*0.48,hy-hSz*0.25,hx+g.side*hSz*0.45,hy-hSz*0.0);
+    x0.bezierCurveTo(hx+g.side*hSz*0.5, hy+hSz*0.22,hx+g.side*hSz*0.35,hy+hSz*0.38,hx+g.side*hSz*0.15,hy+hSz*0.42); // jaw
+    x0.bezierCurveTo(hx-g.side*hSz*0.08,hy+hSz*0.45,hx-g.side*hSz*0.3,hy+hSz*0.35,hx-g.side*hSz*0.38,hy+hSz*0.15);
+    x0.bezierCurveTo(hx-g.side*hSz*0.42,hy-hSz*0.08,hx-g.side*hSz*0.28,hy-hSz*0.42,hx,hy-hSz*0.5);
+    x0.stroke();
+    gnf(0.08,3);x0.fill();
+
+    // Brow ridge — heavy
+    gn(0.7,12);x0.lineWidth=2.8;
+    x0.beginPath();
+    x0.moveTo(hx-g.side*hSz*0.38,hy-hSz*0.16);
+    x0.bezierCurveTo(hx-g.side*hSz*0.15,hy-hSz*0.3,hx+g.side*hSz*0.15,hy-hSz*0.3,hx+g.side*hSz*0.38,hy-hSz*0.18);
+    x0.stroke();
+
+    // Horns — two main curved horns + smaller brow nubs
+    gn(0.75,14);x0.lineWidth=2.5;
+    // Main left horn
+    x0.beginPath();x0.moveTo(hx-g.side*hSz*0.22,hy-hSz*0.44);
+    x0.bezierCurveTo(hx-g.side*hSz*0.32,hy-hSz*0.78,hx-g.side*hSz*0.18,hy-hSz*0.98,hx-g.side*hSz*0.08,hy-hSz*1.08);x0.stroke();
+    // Main right horn
+    x0.beginPath();x0.moveTo(hx+g.side*hSz*0.12,hy-hSz*0.42);
+    x0.bezierCurveTo(hx+g.side*hSz*0.24,hy-hSz*0.72,hx+g.side*hSz*0.38,hy-hSz*0.88,hx+g.side*hSz*0.32,hy-hSz*1.0);x0.stroke();
+    // Brow nubs
+    gn(0.55,8);x0.lineWidth=2;
+    x0.beginPath();x0.moveTo(hx-g.side*hSz*0.28,hy-hSz*0.26);x0.lineTo(hx-g.side*hSz*0.36,hy-hSz*0.42);x0.stroke();
+    x0.beginPath();x0.moveTo(hx+g.side*hSz*0.08,hy-hSz*0.26);x0.lineTo(hx+g.side*hSz*0.14,hy-hSz*0.4);x0.stroke();
+
+    // Eye socket
+    x0.fillStyle='rgba(0,0,0,0.7)';x0.shadowBlur=0;
+    x0.beginPath();x0.ellipse(hx+g.side*hSz*0.08,hy-hSz*0.06,hSz*0.18,hSz*0.15,g.headAngle*0.2,0,Math.PI*2);x0.fill();
+    // Eye glow — fiery on beat
+    gnf(0.55+beat*0.45,12+beat*8);
+    x0.strokeStyle=rgba(pc((g.ci+2)%4),0.8+beat*0.2);x0.lineWidth=1.5;x0.shadowColor=pc((g.ci+2)%4);
+    x0.beginPath();x0.ellipse(hx+g.side*hSz*0.08,hy-hSz*0.06,hSz*0.12*(1+beat*0.18),hSz*0.09*(1+beat*0.18),0,0,Math.PI*2);x0.stroke();
+    gnf(0.9+beat*0.1,15);x0.shadowColor=rgba(pc((g.ci+1)%4),1);
+    x0.beginPath();x0.arc(hx+g.side*hSz*0.08,hy-hSz*0.06,hSz*0.065*(1+beat*0.3),0,Math.PI*2);x0.fill();
+    // Pupil slit
+    x0.fillStyle='rgba(0,0,0,0.92)';x0.shadowBlur=0;
+    x0.beginPath();x0.ellipse(hx+g.side*hSz*0.08,hy-hSz*0.06,hSz*0.02,hSz*0.07,0,0,Math.PI*2);x0.fill();
+
+    // Snout / muzzle — protruding
+    gn(0.65,12);x0.lineWidth=2.5;
+    x0.beginPath();
+    x0.moveTo(hx+g.side*hSz*0.28,hy-hSz*0.05);
+    x0.bezierCurveTo(hx+g.side*hSz*0.5,hy-hSz*0.1,hx+g.side*hSz*0.55,hy+hSz*0.1,hx+g.side*hSz*0.42,hy+hSz*0.18);
     x0.stroke();
     x0.beginPath();
-    x0.moveTo(g.side*4,-4);
-    x0.bezierCurveTo(g.side*(22+wSpread*15),-18+wSpread*(-10),g.side*(30+wSpread*10),0,g.side*14,10);
+    x0.moveTo(hx+g.side*hSz*0.28,hy+hSz*0.16);
+    x0.bezierCurveTo(hx+g.side*hSz*0.42,hy+hSz*0.22,hx+g.side*hSz*0.5,hy+hSz*0.3,hx+g.side*hSz*0.38,hy+hSz*0.38);
     x0.stroke();
-    // Head — turned toward scene
-    const hx=-g.side*20+Math.cos(g.headAngle)*8;
-    const hy=-32+Math.sin(g.headAngle)*6;
-    neon(g.ci,0.75*(1+beat*0.15),10);x0.lineWidth=2;
-    x0.beginPath();x0.ellipse(hx,hy,9,8,g.headAngle*0.3,0,Math.PI*2);x0.stroke();
-    // Horns
-    x0.lineWidth=1.5;
-    x0.beginPath();x0.moveTo(hx-4,hy-8);x0.lineTo(hx-7,hy-18);x0.stroke();
-    x0.beginPath();x0.moveTo(hx+4,hy-8);x0.lineTo(hx+6,hy-18);x0.stroke();
-    // Eyes glow on beat
-    neonFill(g.ci,0.6+beat*0.4,8);
-    x0.beginPath();x0.arc(hx-3,hy-1,2.5*(1+beat*0.5),0,Math.PI*2);x0.fill();
-    x0.beginPath();x0.arc(hx+3,hy-1,2.5*(1+beat*0.5),0,Math.PI*2);x0.fill();
+    // Teeth
+    gn(0.6,6);x0.lineWidth=1.8;
+    for(let tk=0;tk<3;tk++){
+      const ty=hy+hSz*(0.16+tk*0.04);
+      x0.beginPath();x0.moveTo(hx+g.side*hSz*(0.32+tk*0.06),ty);x0.lineTo(hx+g.side*hSz*(0.32+tk*0.06),ty+hSz*0.1);x0.stroke();
+    }
+    // Nostril
+    gn(0.45,5);x0.lineWidth=1.5;
+    x0.beginPath();x0.arc(hx+g.side*hSz*0.44,hy,hSz*0.04,0,Math.PI*2);x0.stroke();
 
     x0.shadowBlur=0;x0.restore();
   }
 
-  // ── GHOSTS — spawn over time, float toward centerpiece ──
+    // ── GHOSTS — spawn over time, float toward centerpiece ──
   SD.ghostSpawnTimer+=16;
   const maxGhosts=Math.floor(songProg*12)+1;
   if(SD.ghosts.length<maxGhosts&&SD.ghostSpawnTimer>2500-songProg*1500){
@@ -2141,26 +2286,73 @@ function drawOmniaNightclub(t){
 
   // ── Dance floor ──────────────────────────────────────
   const floorY = h*0.74;
-  // Floor grid with reflections
-  x0.strokeStyle=rgba(pc(0),0.08*(1+beat*0.2));x0.lineWidth=1;
-  for(let fx=0;fx<w;fx+=w/14){x0.beginPath();x0.moveTo(fx,floorY);x0.lineTo(cx+(fx-cx)*0.1,floorY-h*0.08);x0.stroke();}
-  for(let fy=0;fy<4;fy++){
-    const fyd=fy/3;
-    x0.strokeStyle=rgba(pc(fy%4),0.06*(1+beat*0.2));
-    x0.beginPath();x0.moveTo(0,floorY+fy*(h-floorY)/3);x0.lineTo(w,floorY+fy*(h-floorY)/3);x0.stroke();
+  // Floor base fill
+  const floorG=x0.createLinearGradient(0,floorY,0,h);
+  floorG.addColorStop(0,'rgba(10,5,22,0.98)');floorG.addColorStop(1,'rgba(2,1,6,1)');
+  x0.fillStyle=floorG;x0.fillRect(0,floorY,w,h-floorY);
+
+  // Perspective tile grid — converges toward vanishing point (center top of floor)
+  const vanPX=cx,vanPY=floorY;
+  x0.shadowBlur=0;
+  // Diagonal tile lines converging
+  for(let col=0;col<=18;col++){
+    const px=col/18*w;
+    x0.strokeStyle=rgba(pc(col%4),0.11*(1+beat*0.35));
+    x0.lineWidth=col%3===0?1.5:0.8;
+    x0.shadowBlur=col%3===0?4:1;x0.shadowColor=pc(col%4);
+    x0.beginPath();x0.moveTo(px,h);x0.lineTo(vanPX+(px-vanPX)*0.04,vanPY+2);x0.stroke();
   }
-  // Chandelier reflection on floor (moves with chandelier)
-  const refY = floorY + (O.chanY/h)*(h-floorY)*0.3;
-  const refAlpha = 0.08*(1+beat*0.3);
-  for(const ring of O.rings){
-    const rSz = ring.r*w*0.4;
-    x0.strokeStyle=rgba(pc(ring.ci),refAlpha);
-    x0.lineWidth=1; x0.shadowBlur=4; x0.shadowColor=pc(ring.ci);
-    x0.beginPath();x0.ellipse(cx,floorY+20,rSz,rSz*0.15,0,0,Math.PI*2);x0.stroke();
-    x0.shadowBlur=0;
+  // Horizontal depth lines
+  for(let row=0;row<8;row++){
+    const rowFrac=row/7;
+    const rowY=floorY+(h-floorY)*rowFrac;
+    const spread=0.04+(1-rowFrac)*0.96;
+    x0.strokeStyle=rgba(pc(row%4),0.1*(1+beat*0.25));
+    x0.lineWidth=row===0?2:1;x0.shadowBlur=row===0?6:2;x0.shadowColor=pc(row%4);
+    x0.beginPath();x0.moveTo(cx-(cx*spread),rowY);x0.lineTo(cx+(cx*spread),rowY);x0.stroke();
+  }
+  x0.shadowBlur=0;
+
+  // Tile fill — checkerboard pattern on floor
+  for(let row=0;row<7;row++){
+    const y1=floorY+(h-floorY)*row/7;
+    const y2=floorY+(h-floorY)*(row+1)/7;
+    for(let col=0;col<16;col++){
+      if((row+col)%2!==0)continue;
+      const x1=col/16*w,x2=(col+1)/16*w;
+      x0.fillStyle=rgba(pc((row+col)%4),(0.04+beat*0.04)*(1-row*0.08));
+      x0.fillRect(x1,y1,x2-x1,y2-y1);
+    }
   }
 
-  // ── Chandelier drop logic ────────────────────────────
+  // Beat-reactive radial pulse from center
+  if(beat>0.3){
+    const pg=x0.createRadialGradient(cx,floorY+4,0,cx,floorY+4,w*(0.12+beat*0.4));
+    pg.addColorStop(0,rgba(pc(0),(beat-0.3)*0.55));
+    pg.addColorStop(0.4,rgba(pc(1),(beat-0.3)*0.2));
+    pg.addColorStop(1,'transparent');
+    x0.fillStyle=pg;x0.fillRect(0,floorY,w,h-floorY);
+  }
+
+  // Chandelier light pool on floor — moves with chandelier height
+  const poolSize=w*(0.3+O.chanY/h*0.2);
+  const poolG=x0.createRadialGradient(cx,floorY+10,0,cx,floorY+10,poolSize);
+  poolG.addColorStop(0,rgba(pc(0),0.22*(1+beat*0.4)));
+  poolG.addColorStop(0.3,rgba(pc(1),0.1));
+  poolG.addColorStop(1,'transparent');
+  x0.fillStyle=poolG;x0.fillRect(0,floorY,w,h-floorY);
+
+  // Chandelier reflection rings on floor
+  x0.shadowBlur=6;
+  for(const ring of O.rings){
+    const rSz=ring.r*w*0.55*(1+beat*0.04);
+    x0.strokeStyle=rgba(pc(ring.ci),0.22*(1+beat*0.4)*(1-ring.r*0.55));
+    x0.lineWidth=1.5; x0.shadowColor=pc(ring.ci);
+    x0.beginPath();x0.ellipse(cx,floorY+12,rSz,rSz*0.11,0,0,Math.PI*2);x0.stroke();
+  }
+  x0.shadowBlur=0;
+
+    // ── Chandelier drop logic ────────────────────────────
   // Check scheduled drops based on song progress
   for(const dp of O.dropSchedule){
     if(songProg>dp && O.lastDropProg<dp){
@@ -2758,16 +2950,190 @@ function drawDayOfDead(t){
   x0.beginPath();x0.moveTo(0,altY+altH);x0.lineTo(w,altY+altH);x0.stroke();
 }
 
-// ── Sugar mask draw helper ────────────────────────────────
 
 
-// ── Mini skull helper ─────────────────────────────────────
+function drawSugarMask(ctx,x,y,sz,ci,t,beat,isMain){
+  // Face oval
+  ctx.fillStyle=rgba(pc(ci),isMain?0.12:0.06);
+  ctx.beginPath();ctx.ellipse(x,y,sz*0.52,sz*0.62,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle=rgba(pc(ci),isMain?0.9:0.5);
+  ctx.lineWidth=isMain?3:1.5;
+  ctx.shadowBlur=isMain?20+beat*15:8;ctx.shadowColor=pc(ci);
+  ctx.beginPath();ctx.ellipse(x,y,sz*0.52,sz*0.62,0,0,Math.PI*2);ctx.stroke();
+  ctx.shadowBlur=0;
 
+  // Forehead arch decoration
+  ctx.strokeStyle=rgba(pc((ci+1)%4),isMain?0.7:0.35);
+  ctx.lineWidth=isMain?2:1;ctx.shadowBlur=isMain?12:4;ctx.shadowColor=pc((ci+1)%4);
+  ctx.beginPath();ctx.arc(x,y-sz*0.28,sz*0.28,Math.PI*1.15,Math.PI*1.85);ctx.stroke();
+  // Diamond on forehead
+  ctx.fillStyle=rgba(pc((ci+2)%4),isMain?0.8:0.4);
+  ctx.shadowBlur=isMain?10:4;ctx.shadowColor=pc((ci+2)%4);
+  ctx.beginPath();ctx.moveTo(x,y-sz*0.52);ctx.lineTo(x+sz*0.06,y-sz*0.44);
+  ctx.lineTo(x,y-sz*0.36);ctx.lineTo(x-sz*0.06,y-sz*0.44);ctx.closePath();ctx.fill();
+  ctx.shadowBlur=0;
 
-// ── Sombrero draw helper ──────────────────────────────────
+  // Eye sockets — large teardrop shaped
+  const eyeX=sz*0.28,eyeY=y-sz*0.1;
+  for(const ex of [x-eyeX,x+eyeX]){
+    // Socket dark fill
+    ctx.fillStyle=`rgba(0,0,0,${isMain?0.7:0.5})`;
+    ctx.beginPath();ctx.ellipse(ex,eyeY,sz*0.16,sz*0.19,0,0,Math.PI*2);ctx.fill();
+    // Socket decorative ring
+    ctx.strokeStyle=rgba(pc((ci+2)%4),isMain?0.8:0.4);
+    ctx.lineWidth=isMain?2.5:1;ctx.shadowBlur=isMain?14:5;ctx.shadowColor=pc((ci+2)%4);
+    ctx.beginPath();ctx.ellipse(ex,eyeY,sz*0.16,sz*0.19,0,0,Math.PI*2);ctx.stroke();
+    // Flower petals around eye
+    for(let p=0;p<8;p++){
+      const pa=p/8*Math.PI*2+(isMain?t*0.0004:0);
+      const pr=sz*0.22;
+      ctx.strokeStyle=rgba(pc((ci+p)%4),isMain?0.5:0.2);
+      ctx.lineWidth=isMain?1.5:0.8;ctx.shadowBlur=isMain?6:2;
+      ctx.beginPath();
+      ctx.arc(ex+Math.cos(pa)*pr,eyeY+Math.sin(pa)*pr,sz*0.045,0,Math.PI*2);
+      ctx.stroke();
+    }
+    ctx.shadowBlur=0;
+  }
 
+  // Nose — small decorative diamond
+  ctx.fillStyle=rgba(pc((ci+1)%4),isMain?0.6:0.3);
+  ctx.shadowBlur=isMain?8:3;ctx.shadowColor=pc((ci+1)%4);
+  ctx.beginPath();ctx.moveTo(x,y+sz*0.1);ctx.lineTo(x+sz*0.06,y+sz*0.17);
+  ctx.lineTo(x,y+sz*0.24);ctx.lineTo(x-sz*0.06,y+sz*0.17);ctx.closePath();ctx.fill();
+  ctx.shadowBlur=0;
 
-// ── Zombie draw helper ────────────────────────────────────
+  // Mouth — teeth grin with decorative lines above/below
+  ctx.strokeStyle=rgba(pc(ci),isMain?0.7:0.35);
+  ctx.lineWidth=isMain?2:1;ctx.shadowBlur=isMain?10:3;ctx.shadowColor=pc(ci);
+  // Lips outline
+  ctx.beginPath();ctx.ellipse(x,y+sz*0.35,sz*0.2,sz*0.1,0,0,Math.PI*2);ctx.stroke();
+  // Teeth
+  ctx.fillStyle=`rgba(240,240,220,${isMain?0.85:0.45})`;
+  for(let tooth=0;tooth<5;tooth++){
+    const tx2=x-sz*0.16+tooth*sz*0.08;
+    ctx.fillRect(tx2,y+sz*0.28,sz*0.065,sz*0.1);
+  }
+  ctx.shadowBlur=0;
+
+  // Cheek swirl decorations
+  for(const sx of [x-sz*0.32,x+sz*0.32]){
+    const sDir=sx<x?1:-1;
+    ctx.strokeStyle=rgba(pc((ci+3)%4),isMain?0.6:0.25);
+    ctx.lineWidth=isMain?2:0.8;ctx.shadowBlur=isMain?8:3;ctx.shadowColor=pc((ci+3)%4);
+    ctx.beginPath();
+    ctx.moveTo(sx,y+sz*0.05);
+    ctx.bezierCurveTo(sx+sDir*sz*0.1,y-sz*0.08,sx+sDir*sz*0.18,y+sz*0.05,sx+sDir*sz*0.08,y+sz*0.15);
+    ctx.stroke();
+    // Dots along cheek
+    for(let d=0;d<3;d++){
+      ctx.fillStyle=rgba(pc((ci+d)%4),isMain?0.5:0.2);
+      ctx.beginPath();ctx.arc(sx+sDir*d*sz*0.05,y+sz*(0.08+d*0.06),isMain?3:1.5,0,Math.PI*2);ctx.fill();
+    }
+    ctx.shadowBlur=0;
+  }
+
+  // Crown of flowers at top
+  if(isMain){
+    for(let fl=0;fl<7;fl++){
+      const fa=fl/7*Math.PI+Math.PI*0.05;
+      const fr=sz*0.52;
+      const fx=x+Math.cos(fa-Math.PI*0.5)*sz*0.52;
+      const fy=y+Math.sin(fa-Math.PI*0.5)*sz*0.62;
+      ctx.fillStyle=rgba(pc(fl%4),0.7+beat*0.2);
+      ctx.shadowBlur=8+beat*6;ctx.shadowColor=pc(fl%4);
+      ctx.beginPath();ctx.arc(fx,fy,sz*0.048*(1+beat*0.2),0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle=rgba(pc((fl+2)%4),0.5);ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(fx,fy,sz*0.075,0,Math.PI*2);ctx.stroke();
+      ctx.shadowBlur=0;
+    }
+  }
+}
+
+function drawMiniSkull(ctx,x,y,sz,ci,t){
+  ctx.fillStyle=rgba(pc(ci),0.5);
+  ctx.shadowBlur=5;ctx.shadowColor=pc(ci);
+  ctx.beginPath();ctx.ellipse(x,y-sz*0.2,sz*0.45,sz*0.4,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.8)';
+  ctx.beginPath();ctx.ellipse(x-sz*0.14,y-sz*0.22,sz*0.12,sz*0.14,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+sz*0.14,y-sz*0.22,sz*0.12,sz*0.14,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=rgba(pc(ci),0.6);
+  ctx.beginPath();ctx.rect(x-sz*0.28,y+sz*0.05,sz*0.56,sz*0.3);ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.7)';
+  for(let t2=0;t2<4;t2++)ctx.fillRect(x-sz*0.22+t2*sz*0.15,y+sz*0.06,sz*0.08,sz*0.25);
+  ctx.shadowBlur=0;
+}
+
+function drawSombrero(ctx,x,y,sz,t,beat){
+  const brimW=sz*0.85;
+  const crownH=sz*0.28;
+  const crownW=sz*0.32;
+  // Brim — wide ellipse
+  ctx.fillStyle=rgba(pc(0),0.85);
+  ctx.shadowBlur=20+beat*10;ctx.shadowColor=pc(1);
+  ctx.beginPath();ctx.ellipse(x,y,brimW,brimW*0.22,0,0,Math.PI*2);ctx.fill();
+  // Brim underside shade
+  ctx.fillStyle=rgba(pc(2),0.4);
+  ctx.beginPath();ctx.ellipse(x,y+4,brimW*0.9,brimW*0.18,0,0,Math.PI*2);ctx.fill();
+  // Crown
+  ctx.fillStyle=rgba(pc(0),0.9);
+  ctx.beginPath();ctx.ellipse(x,y,crownW,crownW*0.22,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.moveTo(x-crownW,y);ctx.lineTo(x-crownW*0.85,-crownH);
+  ctx.bezierCurveTo(x-crownW*0.5,-crownH*1.15,x+crownW*0.5,-crownH*1.15,x+crownW*0.85,-crownH);
+  ctx.lineTo(x+crownW,y);ctx.fill();
+  // Decorative band
+  ctx.strokeStyle=rgba(pc(1),0.9);ctx.lineWidth=3;ctx.shadowBlur=12;ctx.shadowColor=pc(1);
+  ctx.beginPath();ctx.ellipse(x,y-crownH*0.12,crownW*0.95,crownW*0.21,0,-Math.PI,0,true);ctx.stroke();
+  // Pompom / tassel at top
+  ctx.fillStyle=rgba(pc(3),0.95);ctx.shadowBlur=15;ctx.shadowColor=pc(3);
+  ctx.beginPath();ctx.arc(x,-crownH*1.1,sz*0.04*(1+beat*0.3),0,Math.PI*2);ctx.fill();
+  // Brim decorative dots
+  ctx.shadowBlur=6;
+  for(let d=0;d<14;d++){
+    const da=d/14*Math.PI*2;
+    const dr=brimW*0.75;
+    ctx.fillStyle=rgba(pc(d%4),0.7+beat*0.2);
+    ctx.beginPath();ctx.arc(x+Math.cos(da)*dr,y+Math.sin(da)*dr*0.22,sz*0.018,0,Math.PI*2);ctx.fill();
+  }
+  ctx.shadowBlur=0;
+}
+
+function drawZombie(ctx,x,y,sz,ci,ph,beat){
+  const bounce=Math.abs(Math.sin(ph))*sz*0.08;
+  const sway=Math.sin(ph*0.5)*sz*0.06;
+  // Legs shuffle
+  const lLeg=Math.sin(ph)*sz*0.15;
+  const rLeg=-Math.sin(ph)*sz*0.15;
+  ctx.strokeStyle=rgba(pc(ci),0.8);ctx.lineWidth=sz*0.09;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-sz*0.12+sway,y+sz*0.4+lLeg);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+sz*0.12+sway,y+sz*0.4+rLeg);ctx.stroke();
+  // Body
+  ctx.fillStyle=rgba(pc(ci),0.55);
+  ctx.fillRect(x-sz*0.16+sway,y-sz*0.5+bounce,sz*0.32,sz*0.5);
+  // Arms outstretched (zombie style)
+  const lArmA=Math.sin(ph*0.7)*0.3-0.2;
+  const rArmA=-Math.sin(ph*0.7)*0.3+0.2;
+  ctx.lineWidth=sz*0.07;
+  ctx.beginPath();ctx.moveTo(x-sz*0.16+sway,y-sz*0.3+bounce);
+  ctx.lineTo(x-sz*0.45+sway,y-sz*(0.3-lArmA*0.3)+bounce);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x+sz*0.16+sway,y-sz*0.3+bounce);
+  ctx.lineTo(x+sz*0.45+sway,y-sz*(0.3-rArmA*0.3)+bounce);ctx.stroke();
+  ctx.lineCap='butt';
+  // Head with mini sugar mask look
+  ctx.fillStyle=rgba(pc(ci),0.7);ctx.shadowBlur=8;ctx.shadowColor=pc(ci);
+  ctx.beginPath();ctx.ellipse(x+sway,y-sz*0.65+bounce,sz*0.16,sz*0.18,0,0,Math.PI*2);ctx.fill();
+  // X eyes
+  ctx.strokeStyle='rgba(0,0,0,0.9)';ctx.lineWidth=1.5;ctx.shadowBlur=0;
+  for(const ex of [x-sz*0.06+sway,x+sz*0.06+sway]){
+    const ey=y-sz*0.67+bounce;
+    ctx.beginPath();ctx.moveTo(ex-3,ey-3);ctx.lineTo(ex+3,ey+3);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(ex+3,ey-3);ctx.lineTo(ex-3,ey+3);ctx.stroke();
+  }
+  // Dots / decoration on face
+  ctx.fillStyle=rgba(pc((ci+2)%4),0.7);ctx.shadowBlur=3;ctx.shadowColor=pc((ci+2)%4);
+  ctx.beginPath();ctx.arc(x+sway,y-sz*0.55+bounce,sz*0.04,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;
+}
 
 function drawChineseDragon(t){
   const w=W(),h=H(),cx=w/2,cy=h/2;
@@ -2941,100 +3307,266 @@ function drawMountOlympus(t){
     }
   }
 
-  // Draw Zeus face as white line art — large, upper portion of screen
+  // ── ZEUS FACE — elaborate godly portrait ─────────────
   x0.save();
-  x0.translate(cx,h*0.2);
+  x0.translate(cx, h*0.21);
   x0.rotate(Z.tilt);
-  const faceR=h*0.22; // face radius — fills good chunk of upper sky
-  const anger=Z.angry||0;
-  const glowIntensity=0.7+Z.eyeFlashL*0.6+anger*0.4+SM.beatPulse*0.2;
-  x0.strokeStyle=`rgba(255,255,230,${glowIntensity})`;
-  x0.shadowColor='rgba(200,220,255,0.9)';
-  x0.lineWidth=3;
+  const faceR = h*0.27;
+  const anger = Z.angry||0;
+  const charge = (Z.eyeFlashL||0);
+  const glow = 0.78 + charge*0.5 + anger*0.3 + SM.beatPulse*0.15;
 
-  // Face outline — oval
-  x0.shadowBlur=20+Z.eyeFlashL*40+anger*30;
-  x0.beginPath();x0.ellipse(0,0,faceR*0.72,faceR,0,0,Math.PI*2);x0.stroke();
+  const ss=(alpha,blur,lw)=>{
+    x0.strokeStyle=`rgba(255,255,225,${Math.min(1,alpha*glow)})`;
+    x0.shadowColor='rgba(210,230,255,0.95)';
+    x0.shadowBlur=blur*(1+SM.beatPulse*0.15);
+    x0.lineWidth=lw; x0.lineCap='round'; x0.lineJoin='round';
+  };
 
-  // Brow ridge — heavy, furrowed
-  const browFurrow=0.06+anger*0.12;
-  x0.lineWidth=4;x0.shadowBlur=15+anger*20;
-  // Left brow
-  x0.beginPath();x0.moveTo(-faceR*0.62,-faceR*0.18);
-  x0.bezierCurveTo(-faceR*0.45,-faceR*(0.32+browFurrow),-faceR*0.28,-faceR*(0.3+browFurrow),-faceR*0.1,-faceR*0.18);x0.stroke();
-  // Right brow
-  x0.beginPath();x0.moveTo(faceR*0.62,-faceR*0.18);
-  x0.bezierCurveTo(faceR*0.45,-faceR*(0.32+browFurrow),faceR*0.28,-faceR*(0.3+browFurrow),faceR*0.1,-faceR*0.18);x0.stroke();
+  // Divine aura behind face
+  const aura=x0.createRadialGradient(0,0,faceR*0.3,0,0,faceR*2.4);
+  aura.addColorStop(0,`rgba(255,250,190,${0.05+charge*0.1+SM.beatPulse*0.03})`);
+  aura.addColorStop(0.45,`rgba(210,180,100,${0.025+anger*0.04})`);
+  aura.addColorStop(1,'transparent');
+  x0.fillStyle=aura;x0.fillRect(-faceR*2.8,-faceR*2.6,faceR*5.6,faceR*5.2);
 
-  // Eyes — glow when charging shot
-  const eyeY=-faceR*0.08;
-  for(const[ex,glow] of [[-faceR*0.32,Z.eyeFlashL],[faceR*0.32,Z.eyeFlashR]]){
-    // Eye socket
-    x0.lineWidth=2.5;x0.shadowBlur=10+glow*60;
-    x0.strokeStyle=`rgba(255,255,200,${0.7+glow*0.3})`;
-    x0.beginPath();x0.ellipse(ex,eyeY,faceR*0.15,faceR*0.1,0,0,Math.PI*2);x0.stroke();
-    // Iris
-    x0.beginPath();x0.arc(ex,eyeY,faceR*0.07,0,Math.PI*2);
-    x0.fillStyle=`rgba(255,255,100,${0.4+glow*0.6})`;x0.fill();
-    // Eye flash beam — visible during charge
-    if(glow>0.1){
-      const tgt=SD.cpTarget;
-      if(tgt&&tgt.alive){
-        // Draw charging beam (world coords — need to un-rotate)
-        // Just draw a faint line in local coords toward target direction
-        const worldEyeX=cx+ex*Math.cos(Z.tilt)-eyeY*Math.sin(Z.tilt);
-        const worldEyeY=h*0.2+ex*Math.sin(Z.tilt)+eyeY*Math.cos(Z.tilt);
-        // Quick line in local space
-        const localTgtX=(tgt.x-cx)*Math.cos(-Z.tilt)-(tgt.y-h*0.2)*Math.sin(-Z.tilt);
-        const localTgtY=(tgt.x-cx)*Math.sin(-Z.tilt)+(tgt.y-h*0.2)*Math.cos(-Z.tilt);
-        const dist=Math.hypot(localTgtX-ex,localTgtY-eyeY)||1;
-        x0.save();x0.globalAlpha=glow*0.4;
-        x0.strokeStyle='rgba(255,255,100,0.9)';x0.lineWidth=2+glow*4;x0.shadowBlur=20;x0.shadowColor='rgba(255,255,0,1)';
-        x0.beginPath();x0.moveTo(ex,eyeY);x0.lineTo(ex+(localTgtX-ex)/dist*faceR*0.8,eyeY+(localTgtY-eyeY)/dist*faceR*0.8);x0.stroke();
-        x0.restore();
-      }
+  // Lightning tendrils around head on charge/anger
+  if(charge>0.15||anger>0.3){
+    for(let lt=0;lt<10;lt++){
+      const lta=lt/10*Math.PI*2+t*0.0006;
+      const lr1=faceR*(0.9+Math.sin(lt*2.1)*0.06);
+      const lr2=faceR*(1.08+Math.sin(lt*1.7+t*0.001)*0.14);
+      x0.strokeStyle=`rgba(255,255,160,${(charge*0.5+anger*0.3)*0.7})`;
+      x0.lineWidth=0.8;x0.shadowBlur=8;x0.shadowColor='rgba(255,255,80,0.9)';
+      x0.beginPath();
+      x0.moveTo(Math.cos(lta)*lr1,Math.sin(lta)*lr1);
+      const midA=lta+(Math.random()-0.5)*0.4;
+      const midR=(lr1+lr2)*0.5;
+      x0.lineTo(Math.cos(midA)*midR+(Math.random()-0.5)*12,Math.sin(midA)*midR+(Math.random()-0.5)*12);
+      x0.lineTo(Math.cos(lta)*lr2+(Math.random()-0.5)*8,Math.sin(lta)*lr2+(Math.random()-0.5)*8);
+      x0.stroke();
+    }
+    x0.shadowBlur=0;
+  }
+
+  // ── HEAD SHAPE — broad noble cranium ─────────────────
+  ss(0.9,30,3.5);
+  x0.beginPath();
+  x0.moveTo(0,-faceR);
+  x0.bezierCurveTo( faceR*0.52,-faceR,    faceR*0.84,-faceR*0.65, faceR*0.8, -faceR*0.28);
+  x0.bezierCurveTo( faceR*0.9, -faceR*0.0, faceR*0.88, faceR*0.22, faceR*0.72, faceR*0.44);
+  x0.bezierCurveTo( faceR*0.58, faceR*0.68, faceR*0.35, faceR*0.84, 0,         faceR*0.9);
+  x0.bezierCurveTo(-faceR*0.35, faceR*0.84,-faceR*0.58, faceR*0.68,-faceR*0.72,faceR*0.44);
+  x0.bezierCurveTo(-faceR*0.88, faceR*0.22,-faceR*0.9,  -faceR*0.0,-faceR*0.8, -faceR*0.28);
+  x0.bezierCurveTo(-faceR*0.84,-faceR*0.65,-faceR*0.52,-faceR,      0,         -faceR);
+  x0.stroke();
+  x0.fillStyle=`rgba(150,130,220,${0.035+SM.beatPulse*0.015})`;x0.fill();
+
+  // ── LAUREL WREATH — olive crown across top ────────────
+  const wreathR=faceR*1.08;
+  ss(0.6,12,1.8);
+  x0.beginPath();x0.arc(0,0,wreathR,-Math.PI*0.87,-Math.PI*0.13);x0.stroke();
+  // Second ring
+  x0.beginPath();x0.arc(0,0,wreathR*0.93,-Math.PI*0.82,-Math.PI*0.18);x0.stroke();
+  // Leaf pairs along wreath
+  for(let lf=0;lf<13;lf++){
+    const la=-Math.PI*0.84+lf*(Math.PI*0.68/12);
+    const lx=Math.cos(la)*wreathR,ly=Math.sin(la)*wreathR;
+    x0.save();x0.translate(lx,ly);x0.rotate(la+Math.PI/2);
+    for(const sd of [-1,1]){
+      x0.strokeStyle=rgba(pc((lf+1)%4),0.5*glow);
+      x0.shadowColor=pc((lf+1)%4);x0.shadowBlur=7+SM.beatPulse*4;
+      x0.lineWidth=1.8;
+      x0.beginPath();x0.moveTo(0,0);
+      x0.bezierCurveTo(sd*7,-11,sd*13,-7,sd*9,1);
+      x0.bezierCurveTo(sd*13,8,sd*7,12,0,0);x0.stroke();
+    }
+    x0.restore();
+    if(lf%3===0){
+      x0.fillStyle=rgba(pc(lf%4),0.65);x0.shadowBlur=5;x0.shadowColor=pc(lf%4);
+      x0.beginPath();x0.arc(Math.cos(la)*wreathR*0.96,Math.sin(la)*wreathR*0.96,3.5,0,Math.PI*2);x0.fill();
     }
   }
-  x0.strokeStyle=`rgba(255,255,230,${glowIntensity})`;
 
-  // Nose — angular, strong
-  x0.lineWidth=2.5;x0.shadowBlur=10;
-  x0.beginPath();x0.moveTo(-faceR*0.12,faceR*0.05);x0.lineTo(0,faceR*0.3);x0.lineTo(faceR*0.12,faceR*0.05);x0.stroke();
-  x0.beginPath();x0.moveTo(-faceR*0.22,faceR*0.28);x0.lineTo(-faceR*0.12,faceR*0.05);x0.moveTo(faceR*0.22,faceR*0.28);x0.lineTo(faceR*0.12,faceR*0.05);x0.stroke();
-
-  // Mouth — varies with anger
-  x0.lineWidth=3;
-  const mouthCurve=anger*0.08;
+  // ── BROW RIDGE — heavy, deeply furrowed ───────────────
+  const furrow=0.1+anger*0.2+charge*0.06;
+  ss(0.88,24,5);
+  // Brow bone mass — thick single arc
   x0.beginPath();
-  x0.moveTo(-faceR*0.38,faceR*0.52);
-  x0.bezierCurveTo(-faceR*0.2,faceR*(0.52-mouthCurve),faceR*0.2,faceR*(0.52-mouthCurve),faceR*0.38,faceR*0.52);
+  x0.moveTo(-faceR*0.74,-faceR*0.1);
+  x0.bezierCurveTo(-faceR*0.54,-faceR*0.3,-faceR*0.2,-faceR*(0.38+furrow),0,-faceR*(0.32+furrow*0.5));
+  x0.bezierCurveTo( faceR*0.2,-faceR*(0.38+furrow), faceR*0.54,-faceR*0.3, faceR*0.74,-faceR*0.1);
   x0.stroke();
+  // Temple ridge lines
+  ss(0.55,10,2);
+  x0.beginPath();x0.moveTo(-faceR*0.74,-faceR*0.1);x0.bezierCurveTo(-faceR*0.82,-faceR*0.02,-faceR*0.8,faceR*0.12,-faceR*0.72,faceR*0.18);x0.stroke();
+  x0.beginPath();x0.moveTo( faceR*0.74,-faceR*0.1);x0.bezierCurveTo( faceR*0.82,-faceR*0.02, faceR*0.8,faceR*0.12, faceR*0.72,faceR*0.18);x0.stroke();
+  // Inner scowl creases between brows
+  ss(0.65,12,2.5);
+  x0.beginPath();x0.moveTo(-faceR*0.13,-faceR*(0.3+furrow*0.7));x0.lineTo(-faceR*0.05,-faceR*0.16);x0.stroke();
+  x0.beginPath();x0.moveTo( faceR*0.13,-faceR*(0.3+furrow*0.7));x0.lineTo( faceR*0.05,-faceR*0.16);x0.stroke();
 
-  // Beard — flowing lines from jaw downward
-  x0.lineWidth=2;x0.shadowBlur=8;
-  for(let b=0;b<9;b++){
-    const bx=-faceR*0.55+b*(faceR*1.1/8);
-    const startY=faceR*(0.65+Math.abs(b-4)*0.04);
-    x0.beginPath();x0.moveTo(bx,startY);
+  // ── EYES — deep-set, hooded, intense ─────────────────
+  const eyeY=-faceR*0.05;
+  const eyeXL=-faceR*0.34,eyeXR=faceR*0.34;
+  for(const[ex,ef] of [[eyeXL,charge],[eyeXR,charge]]){
+    // Deep socket void
+    x0.fillStyle=`rgba(0,0,0,${0.6+anger*0.2})`;
+    x0.beginPath();x0.ellipse(ex,eyeY,faceR*0.185,faceR*0.135,0,0,Math.PI*2);x0.fill();
+    // Heavy overhanging upper lid
+    ss(0.82+ef*0.18,16+ef*35,3);
+    x0.shadowColor=ef>0.15?'rgba(255,255,80,1)':'rgba(200,225,255,0.95)';
+    x0.beginPath();
+    x0.moveTo(ex-faceR*0.185,eyeY+faceR*0.01);
+    x0.bezierCurveTo(ex-faceR*0.13,eyeY-faceR*0.145,ex+faceR*0.07,eyeY-faceR*0.14,ex+faceR*0.185,eyeY-faceR*0.01);
+    x0.stroke();
+    // Lower lid
+    x0.beginPath();
+    x0.moveTo(ex-faceR*0.185,eyeY+faceR*0.01);
+    x0.bezierCurveTo(ex-faceR*0.08,eyeY+faceR*0.08,ex+faceR*0.08,eyeY+faceR*0.08,ex+faceR*0.185,eyeY-faceR*0.01);
+    x0.stroke();
+    // Iris ring
+    const ir=faceR*0.09;
+    x0.strokeStyle=`rgba(255,255,${ef>0.15?90:200},${0.75+ef*0.25})`;
+    x0.shadowBlur=10+ef*55;x0.lineWidth=2.5;
+    x0.beginPath();x0.arc(ex,eyeY,ir,0,Math.PI*2);x0.stroke();
+    // Iris inner detail
+    x0.lineWidth=1.2;x0.shadowBlur=5+ef*20;
+    x0.beginPath();x0.arc(ex,eyeY,ir*0.62,0,Math.PI*2);x0.stroke();
+    // Iris spokes
+    for(let sp=0;sp<10;sp++){
+      const sa=sp/10*Math.PI*2;
+      x0.strokeStyle=`rgba(255,255,${ef>0.15?70:170},${0.28+ef*0.35})`;
+      x0.lineWidth=0.9;x0.shadowBlur=3+ef*10;
+      x0.beginPath();x0.moveTo(ex+Math.cos(sa)*ir*0.38,eyeY+Math.sin(sa)*ir*0.38);
+      x0.lineTo(ex+Math.cos(sa)*ir*0.9,eyeY+Math.sin(sa)*ir*0.9);x0.stroke();
+    }
+    // Pupil
+    x0.fillStyle='rgba(0,0,0,0.95)';x0.shadowBlur=0;
+    x0.beginPath();x0.arc(ex,eyeY,ir*0.34,0,Math.PI*2);x0.fill();
+    // Gleam
+    x0.fillStyle=`rgba(255,255,255,${0.55+ef*0.4})`;
+    x0.beginPath();x0.arc(ex-ir*0.28,eyeY-ir*0.25,ir*0.17,0,Math.PI*2);x0.fill();
+    // Charge beam
+    if(ef>0.08&&SD.cpTarget&&SD.cpTarget.alive){
+      const tgt=SD.cpTarget;
+      const lx=(tgt.x-cx)*Math.cos(-Z.tilt)-(tgt.y-h*0.21)*Math.sin(-Z.tilt);
+      const ly=(tgt.x-cx)*Math.sin(-Z.tilt)+(tgt.y-h*0.21)*Math.cos(-Z.tilt);
+      const dist=Math.hypot(lx-ex,ly-eyeY)||1;
+      x0.save();x0.globalAlpha=ef*0.55;
+      x0.strokeStyle='rgba(255,255,100,1)';x0.lineWidth=2+ef*6;
+      x0.shadowBlur=28;x0.shadowColor='rgba(255,255,0,1)';
+      x0.beginPath();x0.moveTo(ex,eyeY);x0.lineTo(ex+(lx-ex)/dist*faceR*0.9,eyeY+(ly-eyeY)/dist*faceR*0.9);x0.stroke();
+      x0.restore();
+    }
+  }
+
+  // ── NOSE — aquiline Roman bridge ──────────────────────
+  ss(0.78,14,3.2);
+  x0.beginPath();
+  x0.moveTo(-faceR*0.07,-faceR*0.2);
+  x0.bezierCurveTo(-faceR*0.09,faceR*0.06,-faceR*0.06,faceR*0.22,-faceR*0.05,faceR*0.3);
+  x0.stroke();
+  x0.beginPath();
+  x0.moveTo( faceR*0.07,-faceR*0.2);
+  x0.bezierCurveTo( faceR*0.09,faceR*0.06, faceR*0.06,faceR*0.22, faceR*0.05,faceR*0.3);
+  x0.stroke();
+  // Nostril wings
+  ss(0.6,9,2);
+  x0.beginPath();x0.moveTo(-faceR*0.05,faceR*0.28);x0.bezierCurveTo(-faceR*0.18,faceR*0.23,-faceR*0.23,faceR*0.36,-faceR*0.14,faceR*0.39);x0.stroke();
+  x0.beginPath();x0.moveTo( faceR*0.05,faceR*0.28);x0.bezierCurveTo( faceR*0.18,faceR*0.23, faceR*0.23,faceR*0.36, faceR*0.14,faceR*0.39);x0.stroke();
+  // Nose bridge ridge
+  ss(0.38,6,1.2);
+  x0.beginPath();x0.moveTo(0,-faceR*0.2);x0.lineTo(0,faceR*0.28);x0.stroke();
+
+  // ── CHEEKBONES — sculptural definition ───────────────
+  ss(0.42,10,1.8);
+  x0.beginPath();x0.moveTo(-faceR*0.6,faceR*0.1);x0.bezierCurveTo(-faceR*0.72,faceR*0.22,-faceR*0.7,faceR*0.38,-faceR*0.58,faceR*0.42);x0.stroke();
+  x0.beginPath();x0.moveTo( faceR*0.6,faceR*0.1);x0.bezierCurveTo( faceR*0.72,faceR*0.22, faceR*0.7,faceR*0.38, faceR*0.58,faceR*0.42);x0.stroke();
+
+  // ── MUSTACHE — thick, curling ─────────────────────────
+  ss(0.82,16,4);
+  x0.beginPath();
+  x0.moveTo(-faceR*0.35,faceR*0.41);
+  x0.bezierCurveTo(-faceR*0.22,faceR*0.38,-faceR*0.08,faceR*0.42,0,faceR*0.44);
+  x0.bezierCurveTo( faceR*0.08,faceR*0.42, faceR*0.22,faceR*0.38,faceR*0.35,faceR*0.41);
+  x0.stroke();
+  // Curled ends
+  ss(0.72,10,2.5);
+  x0.beginPath();x0.moveTo(-faceR*0.35,faceR*0.41);x0.bezierCurveTo(-faceR*0.44,faceR*0.36,-faceR*0.46,faceR*0.3,-faceR*0.38,faceR*0.28);x0.stroke();
+  x0.beginPath();x0.moveTo( faceR*0.35,faceR*0.41);x0.bezierCurveTo( faceR*0.44,faceR*0.36, faceR*0.46,faceR*0.3, faceR*0.38,faceR*0.28);x0.stroke();
+
+  // ── MOUTH — commanding, lips with philtrum detail ─────
+  const mOpen=anger*0.05+charge*0.025;
+  ss(0.72,14,3);
+  // Upper lip — Cupid's bow
+  x0.beginPath();
+  x0.moveTo(-faceR*0.3,faceR*0.48+mOpen);
+  x0.bezierCurveTo(-faceR*0.18,faceR*0.44+mOpen,-faceR*0.07,faceR*0.5+mOpen,0,faceR*0.47+mOpen);
+  x0.bezierCurveTo( faceR*0.07,faceR*0.5+mOpen, faceR*0.18,faceR*0.44+mOpen,faceR*0.3,faceR*0.48+mOpen);
+  x0.stroke();
+  // Lower lip
+  x0.beginPath();
+  x0.moveTo(-faceR*0.3,faceR*0.48+mOpen);
+  x0.bezierCurveTo(-faceR*0.2,faceR*0.62,faceR*0.2,faceR*0.62,faceR*0.3,faceR*0.48+mOpen);
+  x0.stroke();
+  // Lip line
+  ss(0.45,7,1.5);
+  x0.beginPath();x0.moveTo(-faceR*0.3,faceR*0.48+mOpen);x0.lineTo(faceR*0.3,faceR*0.48+mOpen);x0.stroke();
+  // Philtrum
+  x0.beginPath();x0.moveTo(-faceR*0.06,faceR*0.39);x0.lineTo(-faceR*0.04,faceR*0.46+mOpen);x0.stroke();
+  x0.beginPath();x0.moveTo( faceR*0.06,faceR*0.39);x0.lineTo( faceR*0.04,faceR*0.46+mOpen);x0.stroke();
+
+  // ── BEARD — vast, layered, animated flowing strands ───
+  ss(0.7,10,2.2);
+  // Outer beard silhouette
+  x0.beginPath();
+  x0.moveTo(-faceR*0.72,faceR*0.44);
+  x0.bezierCurveTo(-faceR*0.88,faceR*0.72,-faceR*0.94,faceR*1.15,-faceR*0.72,faceR*1.55);
+  x0.bezierCurveTo(-faceR*0.42,faceR*1.82,faceR*0.42,faceR*1.82,faceR*0.72,faceR*1.55);
+  x0.bezierCurveTo( faceR*0.94,faceR*1.15, faceR*0.88,faceR*0.72, faceR*0.72,faceR*0.44);
+  x0.stroke();
+  // 18 animated strands
+  for(let b=0;b<18;b++){
+    const bf=b/17;
+    const bx=-faceR*0.68+bf*faceR*1.36;
+    const sy=faceR*(0.52+Math.pow(Math.abs(bf-0.5)*2,1.8)*0.12);
+    const endM=1.25+Math.sin(bf*Math.PI)*0.48;
+    const wa=t*0.0007;
+    x0.strokeStyle=`rgba(255,255,222,${(0.32+Math.sin(bf*Math.PI)*0.32)*glow})`;
+    x0.lineWidth=0.9+Math.sin(bf*Math.PI)*1.8;
+    x0.shadowBlur=5+Math.sin(bf*Math.PI)*7;
+    x0.shadowColor='rgba(200,220,255,0.7)';
+    x0.beginPath();x0.moveTo(bx,sy);
     x0.bezierCurveTo(
-      bx+Math.sin(b*0.8+t*0.001)*12,startY+faceR*0.25,
-      bx+Math.sin(b*0.6+t*0.0008)*10,startY+faceR*0.5,
-      bx+Math.sin(b*1.2+t*0.0012)*8,startY+faceR*0.75
+      bx+Math.sin(b*0.85+wa)*17,   sy+faceR*0.36,
+      bx+Math.sin(b*0.62+wa*0.8)*14,sy+faceR*0.76,
+      bx+Math.sin(b*1.1+wa*1.1)*10, sy+faceR*endM
     );x0.stroke();
   }
-
-  // Crown / wreath at top of head
-  x0.lineWidth=2;x0.shadowBlur=12;
-  for(let l=0;l<8;l++){
-    const la=l/8*Math.PI-Math.PI*0.08;
-    const lr1=faceR*0.75,lr2=faceR*0.9;
-    x0.beginPath();x0.moveTo(Math.cos(la-Math.PI/2)*lr1,Math.sin(la-Math.PI/2)*lr1);
-    x0.lineTo(Math.cos(la-Math.PI/2)*lr2,Math.sin(la-Math.PI/2)*lr2);x0.stroke();
+  // Beard curl clusters at bottom
+  ss(0.52,7,1.8);
+  for(let c=0;c<7;c++){
+    const cx2=-faceR*0.55+c*faceR*0.185;
+    const cy2=faceR*(1.38+Math.sin(c*1.3)*0.08);
+    x0.beginPath();x0.arc(cx2+Math.sin(t*0.0007+c)*5,cy2,faceR*0.055,0,Math.PI*2);x0.stroke();
   }
 
-  x0.shadowBlur=0;x0.restore();
+  // ── EARS — partially visible at sides ─────────────────
+  ss(0.48,10,2.2);
+  for(const[ex2,dir] of [[-faceR*0.8,-1],[faceR*0.8,1]]){
+    const ey2=faceR*0.06;
+    x0.beginPath();x0.arc(ex2,ey2,faceR*0.105,dir>0?-Math.PI*0.6:-Math.PI*0.4,dir>0?Math.PI*0.4:Math.PI*0.6);x0.stroke();
+    ss(0.3,5,1);
+    x0.beginPath();x0.arc(ex2,ey2,faceR*0.058,dir>0?-Math.PI*0.45:-Math.PI*0.28,dir>0?Math.PI*0.28:Math.PI*0.45);x0.stroke();
+    // Earlobe
+    ss(0.4,7,1.8);
+    x0.beginPath();x0.arc(ex2,ey2+faceR*0.1,faceR*0.042,0,Math.PI*2);x0.stroke();
+  }
 
-  // ── Centerpiece target ───────────────────────────────
+  x0.lineCap='butt'; x0.lineJoin='miter'; x0.shadowBlur=0; x0.restore();
+
+    // ── Centerpiece target ───────────────────────────────
   if(!SD.cpTarget){SD.cpTarget={x:w*0.25+Math.random()*w*0.5,y:h*0.62+Math.random()*h*0.15,alive:true,debris:[],spawnTimer:0,reforming:false,reformProgress:0};}
   const cpt=SD.cpTarget;
   cpt.spawnTimer+=16;
@@ -3209,7 +3741,7 @@ function drawSuperMario(t){
 function drawAtlantis(t){
   const w=W(),h=H(),cx=w/2;
   const beat=SM.beatPulse,energy=SM.energy;
-  const floorY=h*0.82;
+  const floorY=h*0.88;
 
   // ── Init ─────────────────────────────────────────────
   if(!SD.atl){
@@ -3254,28 +3786,28 @@ function drawAtlantis(t){
       })),
       // Statues — still standing heroes, react to beat
       statues:[
-        {x:cx-w*0.35, y:floorY, sz:h*0.18, lean:0, leanDir:1, ci:2, intact:true},
-        {x:cx+w*0.28, y:floorY, sz:h*0.22, lean:0, leanDir:-1, ci:3, intact:true},
-        {x:cx-w*0.12, y:floorY, sz:h*0.15, lean:0, leanDir:1, ci:0, intact:true},
+        {x:cx-w*0.35, y:floorY, sz:h*0.28, lean:0, leanDir:1, ci:2, intact:true},
+        {x:cx+w*0.28, y:floorY, sz:h*0.34, lean:0, leanDir:-1, ci:3, intact:true},
+        {x:cx-w*0.12, y:floorY, sz:h*0.24, lean:0, leanDir:1, ci:0, intact:true},
         // Toppled statue on ground
-        {x:cx+w*0.12, y:floorY, sz:h*0.14, lean:Math.PI/2, leanDir:0, ci:1, intact:false},
+        {x:cx+w*0.12, y:floorY, sz:h*0.22, lean:Math.PI/2, leanDir:0, ci:1, intact:false},
       ],
       // Ruins columns
       columns:[
-        {x:cx-w*0.42, y:floorY, h:h*0.28, broken:false, ci:2},
-        {x:cx-w*0.34, y:floorY, h:h*0.16, broken:true,  ci:3},
-        {x:cx-w*0.22, y:floorY, h:h*0.32, broken:false, ci:0},
-        {x:cx-w*0.08, y:floorY, h:h*0.22, broken:true,  ci:1},
-        {x:cx+w*0.05, y:floorY, h:h*0.35, broken:false, ci:2},
-        {x:cx+w*0.18, y:floorY, h:h*0.18, broken:true,  ci:3},
-        {x:cx+w*0.32, y:floorY, h:h*0.29, broken:false, ci:0},
-        {x:cx+w*0.44, y:floorY, h:h*0.12, broken:true,  ci:1},
+        {x:cx-w*0.46, y:floorY, h:h*0.44, broken:false, ci:2},
+        {x:cx-w*0.34, y:floorY, h:h*0.28, broken:true,  ci:3},
+        {x:cx-w*0.22, y:floorY, h:h*0.50, broken:false, ci:0},
+        {x:cx-w*0.08, y:floorY, h:h*0.36, broken:true,  ci:1},
+        {x:cx+w*0.05, y:floorY, h:h*0.54, broken:false, ci:2},
+        {x:cx+w*0.18, y:floorY, h:h*0.30, broken:true,  ci:3},
+        {x:cx+w*0.32, y:floorY, h:h*0.46, broken:false, ci:0},
+        {x:cx+w*0.48, y:floorY, h:h*0.22, broken:true,  ci:1},
       ],
       // Fallen column pieces on ground
       fallenCols:[
-        {x:cx-w*0.29, y:floorY-8,  w:w*0.12, ci:3},
-        {x:cx+w*0.08, y:floorY-6,  w:w*0.09, ci:1},
-        {x:cx+w*0.38, y:floorY-10, w:w*0.11, ci:0},
+        {x:cx-w*0.29, y:floorY-8,  w:w*0.19, ci:3},
+        {x:cx+w*0.08, y:floorY-6,  w:w*0.15, ci:1},
+        {x:cx+w*0.38, y:floorY-10, w:w*0.17, ci:0},
       ],
       // Cracked road tiles
       roadTiles:Array.from({length:18},(_,i)=>({
@@ -3287,7 +3819,7 @@ function drawAtlantis(t){
         x:w*0.05+i*(w*0.17), y:floorY, r:14+Math.random()*18, ci:i%4,
       })),
       // Toppled arch fragment
-      arch:{x:cx-w*0.05, y:floorY, w:w*0.18, h:h*0.14, ci:2},
+      arch:{x:cx-w*0.05, y:floorY, w:w*0.18, h:h*0.22, ci:2},
       // Kraken
       kraken:null,
       // Whirlpool
@@ -3395,7 +3927,7 @@ function drawAtlantis(t){
   for(const col of A.columns){
     const algGlow=rgba(pc(col.ci),0.28*(1+beat*0.18));
     x0.shadowBlur=16;x0.shadowColor=algGlow;
-    const colW=w*0.022;
+    const colW=w*0.038;
     // Column shaft — tapered (wider at base)
     x0.fillStyle=rgba(pc(col.ci),0.16);
     x0.beginPath();
