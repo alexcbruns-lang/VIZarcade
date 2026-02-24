@@ -312,9 +312,9 @@ else if(sc==='NEON_CATHEDRAL'){
       // A: Gargoyles Come Alive — stand up, wings flap, fly around, eyes blazing 30s
       sequence([
         [0,()=>{
-          if(SD.gargoyles){
-            SD.gargoyleAlive=true;SD.gargoyleAliveTimer=30000;
-            SD.gargoyles.forEach(g=>{g.flyMode=true;g.flyVx=(Math.random()-0.5)*3;g.flyVy=-(1+Math.random()*2);});
+          if(SD.cath&&SD.cath.gargoyles){
+            SD.cath.gargoyleAlive=true;SD.cath.gargoyleAliveTimer=30000;
+            SD.cath.gargoyles.forEach(g=>{g.flyMode=true;g.flyVx=(Math.random()-0.5)*3;g.flyVy=-(1+Math.random()*2);});
           }
           flash(rgba(pc(0),0.6),300);
         }],
@@ -326,7 +326,7 @@ else if(sc==='NEON_CATHEDRAL'){
       // B: Church Doors Open — light floods out, stained glass color explosion 30s
       sequence([
         [0,()=>{
-          SD.doorsOpen=true;SD.doorsOpenTimer=30000;
+          if(SD.cath){SD.cath.doorsOpen=true;SD.cath.doorsOpenTimer=30000;}
           flash('rgba(255,255,220,0.7)',500);
         }],
         [600,()=>{flash(rgba(pc(0),0.6),300);}],
@@ -338,7 +338,7 @@ else if(sc==='NEON_CATHEDRAL'){
       // C: Gargoyle Fire Breath — all 4 breathe neon fire beams across scene 30s
       sequence([
         [0,()=>{
-          SD.gargoyleFireBreath=true;SD.gargoyleFireTimer=30000;
+          if(SD.cath){SD.cath.gargoyleFireBreath=true;SD.cath.gargoyleFireTimer=30000;}
           flash(rgba(pc(0),0.7),300);
         }],
         [400,()=>{flash(rgba(pc(1),0.6),200);}],
@@ -485,25 +485,25 @@ else if(sc==='OMNIA_NIGHTCLUB'){
   }
 else if(sc==='DAY_OF_DEAD'){
     if(variant===0){
-      // A: Mask gets huge and vibrant — swells to fill screen
+      // A: Mask gets huge and vibrant — swells dramatically
       sequence([
         [0,()=>{
-          if(SD.dotd){SD.dotd.maskRotSpeed=0.025;SD.dotd.maskPulse=0.2;}
+          if(SD.dotd){SD.dotd.maskRotSpeed=0.035;SD.dotd.maskPulse=0.6;}
           flash(rgba(pc(0),0.7),300);
         }],
         [400,()=>{flash(rgba(pc(1),0.6),200);}],
         [800,()=>{
-          if(SD.dotd){SD.dotd.maskPulse=0.35;}
+          if(SD.dotd){SD.dotd.maskPulse=1.0;}
           flash(rgba(pc(2),0.7),200);
         }],
         [1200,()=>{flash('rgba(255,255,255,0.5)',150);}],
-        [2000,()=>{flash(rgba(pc(3),0.5),300);}],
-        [3000,()=>{flash(rgba(pc(0),0.6),200);}],
+        [2000,()=>{flash(rgba(pc(3),0.5),300);if(SD.dotd)SD.dotd.maskPulse=0.8;}],
+        [3000,()=>{flash(rgba(pc(0),0.6),200);if(SD.dotd)SD.dotd.maskPulse=1.2;}],
         [4500,()=>{
-          if(SD.dotd){SD.dotd.maskPulse=0.2;}
+          if(SD.dotd){SD.dotd.maskPulse=0.6;}
           flash(rgba(pc(1),0.5),300);
         }],
-        [7000,()=>{flash(rgba(pc(2),0.4),400);}],
+        [7000,()=>{flash(rgba(pc(2),0.4),400);if(SD.dotd)SD.dotd.maskPulse=0.3;}],
         [9000,()=>{if(SD.dotd){SD.dotd.maskRotSpeed=0.008;SD.dotd.maskPulse=0;}}],
       ]);
     } else if(variant===1){
@@ -513,16 +513,16 @@ else if(sc==='DAY_OF_DEAD'){
           flash(rgba(pc(0),0.5),400);
           if(SD.dotd){
             SD.dotd.zombieActive=true;
-            // Spawn 6 zombies — rise from bottom, spread across floor
+            // Spawn 6 zombies — from screen edges, walk inward
             const w2=W(),h2=H();
             for(let i=0;i<6;i++){
               setTimeout(()=>{
-                const spawnSide=i%2===0?-1:1;
+                const fromLeft=i%2===0;
                 SD.dotd.zombies.push({
-                  x: spawnSide*(w2*0.6+Math.random()*w2*0.2),
-                  y: h2*0.78,
-                  vx: spawnSide*(-0.4-Math.random()*0.5),
-                  sz: 38+Math.random()*20,
+                  x: fromLeft?-40:w2+40,
+                  y: h2*0.72,
+                  vx: fromLeft?(0.6+Math.random()*0.8):-(0.6+Math.random()*0.8),
+                  sz: 42+Math.random()*22,
                   ph: Math.random()*Math.PI*2,
                   phSpeed: 0.04+Math.random()*0.03,
                   ci: i%4,
@@ -745,7 +745,7 @@ else if(sc==='ATLANTIS'){
         [0,()=>{
           flash(rgba(pc(0),0.7),300);
           if(SD.atl&&!SD.atl.kraken){
-            const w2=W(),h2=H(),fl=h2*0.82;
+            const w2=W(),h2=H(),fl=h2*0.88;
             // Place eye above ruins on the right side
             SD.atl.kraken={
               eyeX:w2*0.78, eyeY:h2*0.18,
@@ -766,7 +766,7 @@ else if(sc==='ATLANTIS'){
         [1500,()=>{
           // Spawn column debris — kraken pulling things apart
           if(SD.atl){
-            const w2=W(),h2=H(),fl=h2*0.82;
+            const w2=W(),h2=H(),fl=h2*0.88;
             for(let d=0;d<18;d++){
               SD.atl.debris.push({
                 x:w2*(0.2+Math.random()*0.6), y:fl-Math.random()*h2*0.25,
@@ -781,7 +781,7 @@ else if(sc==='ATLANTIS'){
         [3000,()=>{
           // More debris chunks
           if(SD.atl){
-            const w2=W(),h2=H(),fl=h2*0.82;
+            const w2=W(),h2=H(),fl=h2*0.88;
             for(let d=0;d<12;d++){
               SD.atl.debris.push({
                 x:w2*(0.3+Math.random()*0.5), y:fl-Math.random()*h2*0.3,
@@ -966,7 +966,7 @@ function initScene(){
   if(sc==='DISCO_DIMENSION'){SD.tileZ=0;SD.chandeliers=Array.from({length:3},(_,i)=>({x:w*(0.2+i*0.3),y:h*0.05,rot:Math.random()*Math.PI*2,rotS:0.006+Math.random()*0.01,size:Math.random()*80+60,drop:false}));SD.beams=Array.from({length:20},()=>({x:Math.random()*w,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)}));}
   if(sc==='ACID_TRIP'){SD.fracPh=0;SD.colorCyc=0;SD.warpGrid=[];for(let gx=0;gx<=20;gx++)for(let gy=0;gy<=14;gy++)SD.warpGrid.push({gx,gy,ph:Math.random()*Math.PI*2});}
   if(sc==='SPACE_STATION'){SD.debris=Array.from({length:12},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.5,vy:(Math.random()-0.5)*0.3,rot:Math.random()*Math.PI*2,rotS:(Math.random()-0.5)*0.01,sz:Math.random()*40+10,ci:Math.floor(Math.random()*4)}));}
-  if(sc==='NEON_CATHEDRAL'){SD.arches=Array.from({length:6},(_,i)=>({depth:i/5,width:1-i*0.12,ci:i%4}));SD.rays=Array.from({length:12},()=>({x:Math.random()*w,width:Math.random()*60+20,alpha:Math.random()*0.3+0.05,ph:Math.random()*Math.PI*2}));SD.motes=Array.from({length:60},()=>({x:Math.random()*w,y:Math.random()*h,vy:-(Math.random()*0.8+0.2),r:Math.random()*2+0.5,ci:Math.floor(Math.random()*4),ph:Math.random()*Math.PI*2}));}
+  // NEON_CATHEDRAL self-initializes via SD.cath in drawNeonCathedral
   if(sc==='CLASSIC_ARCADE'){SD.pixels=Array.from({length:200},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*2,vy:(Math.random()-0.5)*2,size:Math.floor(Math.random()*3+1)*8,ci:Math.floor(Math.random()*4),type:Math.floor(Math.random()*4)}));SD.scanLine=0;SD.mazeLines=Array.from({length:20},()=>{const mx=Math.random()*w,my=Math.random()*h;return{x1:mx,y1:my,x2:mx+(Math.random()-0.5)*200,y2:my+(Math.random()-0.5)*200,ci:Math.floor(Math.random()*4)};});}
   if(sc==='ELECTRIC_FOREST'){SD.ef={trees:[],lasers:[],fairies:Array.from({length:30},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.8,vy:(Math.random()-0.5)*0.5,r:Math.random()*3+1.5,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)})),laserOverload:false,laserOverloadTimer:0,monkeySwarm:false,monkeySwarmTimer:0,monkeys:[],windstorm:false,windstormTimer:0};
   // Build solid trees flanking each side (4-6 per side)
@@ -983,7 +983,7 @@ function initScene(){
   if(sc==='MOUNT_OLYMPUS'){SD.lightnings=[];SD.ltTimer=0;SD.clouds=Array.from({length:8},()=>({x:Math.random()*w,y:Math.random()*h*0.6,r:Math.random()*120+60,vx:(Math.random()-0.5)*0.3,ci:Math.floor(Math.random()*2)}));SD.boltsComing=[];SD.zeusFace={alpha:0,scale:0.3};}
   if(sc==='SUPER_MARIO'){SD.platforms=Array.from({length:12},(_,i)=>({x:i*w/11,y:h*0.4+Math.sin(i)*h*0.2,w:Math.random()*120+60}));SD.coins=Array.from({length:20},()=>({x:Math.random()*w,y:Math.random()*h*0.7,ph:0}));SD.goombas=Array.from({length:5},()=>({x:Math.random()*w,y:h*0.75,vx:(Math.random()-0.5)*2}));SD.scrollX=0;SD.pipes=Array.from({length:4},(_,i)=>({x:w*(0.15+i*0.23),h:Math.random()*h*0.25+h*0.1}));}
   if(sc==='ATLANTIS'){SD.fish=Array.from({length:30},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*1.5,vy:(Math.random()-0.5)*0.5,sz:Math.random()*20+8,ci:Math.floor(Math.random()*4)}));SD.bubbles=Array.from({length:60},()=>({x:Math.random()*w,y:Math.random()*h,r:Math.random()*8+2,vy:-(Math.random()*0.8+0.2),ph:Math.random()*Math.PI*2}));SD.ruins=Array.from({length:10},(_,i)=>({x:i/9,h:Math.random()*h*0.4+h*0.1,w:Math.random()*80+30,ci:i%4}));SD.lightShafts=Array.from({length:6},(_,i)=>({x:w*(0.05+i*0.18),ph:Math.random()*Math.PI*2}));}
-  if(sc==='CARNIVAL'){SD.ferrisSegs=Array.from({length:12},(_,i)=>({angle:i/12*Math.PI*2,ci:i%4}));SD.ferrisRot=0;SD.confetti=Array.from({length:150},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*2,vy:Math.random()*2+0.5,rot:Math.random()*Math.PI*2,rotS:(Math.random()-0.5)*0.1,sz:Math.random()*8+3,ci:Math.floor(Math.random()*4)}));SD.tentLights=Array.from({length:16},(_,i)=>({angle:i/16*Math.PI*2,ph:Math.random()*Math.PI*2,ci:i%4}));}
+  if(sc==='CARNIVAL'){SD.ferrisSegs=Array.from({length:12},(_,i)=>({angle:i/12*Math.PI*2,ci:i%4}));SD.ferrisRot=0;SD.confetti=Array.from({length:150},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*2,vy:Math.random()*2+0.5,rot:Math.random()*Math.PI*2,rotS:(Math.random()-0.5)*0.1,sz:Math.random()*8+3,ci:Math.floor(Math.random()*4)}));}
   if(sc==='EGYPTIAN_TOMB'){SD.hieroglyphs=Array.from({length:40},()=>({x:Math.random()*w,y:Math.random()*h,char:Math.floor(Math.random()*12),ci:Math.floor(Math.random()*4),alpha:Math.random()*0.5+0.2}));SD.torches=Array.from({length:6},(_,i)=>({x:(i/5)*0.9+0.05,ph:Math.random()*Math.PI*2}));SD.tunnelZ=0;SD.traps=[];}
   beatFX={shockwaveR:0,shockwaveA:0,crackLines:[],invertA:0,slamS:1,speedBoost:0,gravityWave:0};
   energyHist=[];surpriseFired=false;surpriseArmed=false;midShifted=false;energyPeak=0;climaxArmed=false;beatReactionIdx=0;beatCount=0;cpRot=0;cpPh=0;cpOrbit=0;cpBounceX=0;cpBounceY=0;cpBounceVX=0.7+(Math.random()-0.5)*0.4;cpBounceVY=0.5+(Math.random()-0.5)*0.3;cpDriftX=0;cpDriftY=0;
@@ -1437,9 +1437,14 @@ function drawStormChaser(t){
       transformerSparks:[],
       cpOrbits:Array.from({length:8},(_,i)=>({angle:i/8*Math.PI*2,orbitSpeed:0.008+Math.random()*0.008,orbitR:0.14+Math.random()*0.06,phase:i/8*Math.PI*2})),
       towers:[
-        {x:w*0.12,baseY:h*0.88,topY:h*0.52,ci:0},
-        {x:w*0.88,baseY:h*0.88,topY:h*0.52,ci:1},
+        {x:w*0.12,baseY:h*0.92,topY:h*0.48,ci:0},
+        {x:w*0.88,baseY:h*0.92,topY:h*0.48,ci:1},
       ],
+      // Tornado dots — persistent array of spinning particles
+      tornadoDots:Array.from({length:1200},(_,i)=>{
+        const z=Math.random(); // 0=top(wide), 1=bottom(narrow)
+        return{z,angle:Math.random()*Math.PI*2,speed:0.03+Math.random()*0.025,ci:i%4,r:1+Math.random()*2,drift:Math.random()*0.3-0.15};
+      }),
     };
   }
   const ST=SD.storm;
@@ -1453,8 +1458,9 @@ function drawStormChaser(t){
   const stormI=ST.stormIntensity;
   const superRain=ST.heavyRain;
   const colorLt=ST.colorLightning;
+  const texpl=ST.transformerExplosion;
 
-  // BG
+  // BG — stormy sky
   const sg=x0.createRadialGradient(cx,cy*0.3,0,cx,h*0.5,h*0.8);
   const sc=h2r(pc(2));
   sg.addColorStop(0,`rgba(${Math.round(sc.r*0.18)},${Math.round(sc.g*0.12)},${Math.round(sc.b*0.35)},${0.2*stormI})`);
@@ -1474,42 +1480,57 @@ function drawStormChaser(t){
     x0.beginPath();x0.moveTo(rx,ry);x0.lineTo(rx-4*stormI*dropSpeed,ry+dropLen*dropSpeed);x0.stroke();
   }
 
-  // ── TORNADO — large top, skinny bottom ────────────────
-  ST.tornadoA+=0.018*(1+energy*0.4+beat*0.1);
+  // ══════════════════════════════════════════════════════
+  // TORNADO — thousands of tiny neon dots spinning in funnel
+  // Wide at top, skinny at bottom, pulses with beat
+  // ══════════════════════════════════════════════════════
+  ST.tornadoA+=0.018*(1+energy*0.4+beat*0.3);
   const tornadoX=cx+Math.sin(t*0.0003)*w*0.04;
-  const tornadoTopY=h*0.04;
-  const tornadoBottomY=h*0.88;
+  const tornadoTopY=h*0.02;
+  const tornadoBottomY=h*0.9;
   const tornadoH=tornadoBottomY-tornadoTopY;
+  const topWidth=Math.min(w,h)*(0.4+beat*0.06);
+  const bottomWidth=Math.min(w,h)*0.02;
 
-  // Draw tornado rings from top (wide) to bottom (skinny)
-  const numRings=35;
-  for(let ring=0;ring<numRings;ring++){
-    const z=ring/numRings;
-    // Wide at top, narrow at bottom
-    const topWidth=Math.min(w,h)*0.38*(1+beat*0.06);
-    const bottomWidth=Math.min(w,h)*0.025;
-    const ringR=topWidth*(1-z)+bottomWidth*z;
-    const ringY=tornadoTopY+z*tornadoH;
-    const alpha=(0.08+z*0.06*(1-z*0.5))*THEME.sceneIntensity*(1+beat*0.3);
-    const ci=Math.floor(ring/4+stormI*4)%4;
-
-    x0.beginPath();
-    x0.ellipse(tornadoX+Math.sin(ST.tornadoA+ring*0.2)*ringR*0.08,ringY,ringR*0.55,ringR*0.08,ST.tornadoA+ring*0.15,0,Math.PI*2);
-    x0.strokeStyle=rgba(pc(ci),alpha);x0.lineWidth=1.5+z*3;
-    x0.shadowBlur=z>0.5?12+beat*6:0;x0.shadowColor=pc(ci);x0.stroke();x0.shadowBlur=0;
-  }
-
-  // Tornado funnel fill — translucent gradient
+  // Translucent funnel fill behind dots
   const funnelG=x0.createLinearGradient(tornadoX,tornadoTopY,tornadoX,tornadoBottomY);
-  funnelG.addColorStop(0,rgba(pc(2),0.08+beat*0.04));
-  funnelG.addColorStop(0.6,rgba(pc(3),0.04));funnelG.addColorStop(1,'transparent');
+  funnelG.addColorStop(0,rgba(pc(2),0.07+beat*0.03));
+  funnelG.addColorStop(0.5,rgba(pc(3),0.04));funnelG.addColorStop(1,'transparent');
   x0.fillStyle=funnelG;
   x0.beginPath();
-  x0.moveTo(tornadoX-Math.min(w,h)*0.38,tornadoTopY);
-  x0.lineTo(tornadoX+Math.min(w,h)*0.38,tornadoTopY);
-  x0.lineTo(tornadoX+Math.min(w,h)*0.025,tornadoBottomY);
-  x0.lineTo(tornadoX-Math.min(w,h)*0.025,tornadoBottomY);
+  x0.moveTo(tornadoX-topWidth*0.5,tornadoTopY);
+  x0.lineTo(tornadoX+topWidth*0.5,tornadoTopY);
+  x0.lineTo(tornadoX+bottomWidth*0.5,tornadoBottomY);
+  x0.lineTo(tornadoX-bottomWidth*0.5,tornadoBottomY);
   x0.closePath();x0.fill();
+
+  // Draw thousands of spinning dots
+  for(const dot of ST.tornadoDots){
+    // Spin faster with beat and energy
+    dot.angle+=dot.speed*(1+energy*0.5+beat*0.4);
+    // Slight vertical drift
+    dot.z+=dot.drift*0.001;
+    if(dot.z<0)dot.z+=1;if(dot.z>1)dot.z-=1;
+
+    // Width at this Z position — lerp from topWidth to bottomWidth
+    const ringR=(topWidth*(1-dot.z)+bottomWidth*dot.z)*0.5;
+    const dotY=tornadoTopY+dot.z*tornadoH;
+    // Wobble the center slightly per ring
+    const wobble=Math.sin(ST.tornadoA+dot.z*5)*ringR*0.06;
+    const dotX=tornadoX+wobble+Math.cos(dot.angle)*ringR*(0.5+Math.sin(dot.angle*0.5)*0.08);
+    const dotYoff=dotY+Math.sin(dot.angle*2)*ringR*0.04;
+
+    // Alpha varies — denser at edges, beat reactive
+    const alpha=(0.25+dot.z*0.15)*(1+beat*0.4)*stormI;
+    x0.fillStyle=rgba(pc(dot.ci),Math.min(0.9,alpha));
+    x0.beginPath();x0.arc(dotX,dotYoff,dot.r*(1+beat*0.3),0,Math.PI*2);x0.fill();
+  }
+
+  // Glow core along center of funnel
+  x0.shadowBlur=40+beat*20;x0.shadowColor=rgba(pc(0),0.6);
+  x0.strokeStyle=rgba(pc(0),0.06+beat*0.04);x0.lineWidth=3;
+  x0.beginPath();x0.moveTo(tornadoX,tornadoTopY+tornadoH*0.1);x0.lineTo(tornadoX,tornadoBottomY);x0.stroke();
+  x0.shadowBlur=0;
 
   // ── 8 CENTERPIECES orbiting the tornado ──────────────
   if(THEME.centerpiece){
@@ -1517,12 +1538,10 @@ function drawStormChaser(t){
     cpPh+=0.013;
     for(const orb of ST.cpOrbits){
       orb.angle+=orb.orbitSpeed*(1+stormI+beat*0.5);
-      // Orbit varies height — some near top of tornado, some near bottom
       const orbitY=tornadoTopY+tornadoH*(0.3+Math.sin(orb.phase+t*0.0005)*0.35);
       const orbitR=baseOrbitR*(0.6+Math.sin(orb.phase)*0.4);
       const orbitX=tornadoX+Math.cos(orb.angle)*orbitR;
       const wobbleY=orbitY+Math.sin(orb.angle*2+ST.tornadoA)*orbitR*0.25;
-      // Size varies slightly per orb
       const osz=Math.min(w,h)*(0.038+Math.sin(orb.phase)*0.012+beat*0.015);
       cpRot+=0.04*(1+beat*0.5);
       x0.globalAlpha=0.7+stormI*0.25+beat*0.05;
@@ -1532,7 +1551,7 @@ function drawStormChaser(t){
     }
   }
 
-  // ── DEBRIS around tornado ─────────────────────────────
+  // ── DEBRIS around tornado ──────────────────────────
   for(const d of ST.debris){
     d.x+=d.vx*(1+energy*0.5+beat*0.2);
     d.y+=d.vy*(1+energy*0.4);
@@ -1548,7 +1567,7 @@ function drawStormChaser(t){
     x0.restore();
   }
 
-  // ── LIGHTNING ─────────────────────────────────────────
+  // ── LIGHTNING ──────────────────────────────────────
   ST.ltTimer-=16;
   const ltInterval=Math.max(80,600-songProg*400);
   if(ST.ltTimer<0){
@@ -1573,66 +1592,150 @@ function drawStormChaser(t){
     if(colorLt&&lt.life>0.8)flash(rgba(pc(lt.ci),0.15),200);
   }
 
-  // ── POWER TOWERS & LINES ─────────────────────────────
+  // ══════════════════════════════════════════════════════
+  // POWER TOWERS — wider, more solid, vibrant glow
+  // ══════════════════════════════════════════════════════
   if(ST.towers)for(const tow of ST.towers){
     const tx=tow.x,by=tow.baseY,ty=tow.topY;
-    // Lattice tower structure
-    x0.strokeStyle=rgba(pc(tow.ci),0.35+beat*0.1);x0.lineWidth=3;
-    x0.shadowBlur=8;x0.shadowColor=pc(tow.ci);
-    // Main legs
-    x0.beginPath();x0.moveTo(tx-18,by);x0.lineTo(tx-8,ty);x0.stroke();
-    x0.beginPath();x0.moveTo(tx+18,by);x0.lineTo(tx+8,ty);x0.stroke();
-    // Cross braces
-    for(let cb=0;cb<5;cb++){
-      const cbY=by-(by-ty)*(cb/5);const cbW=18-cb*2;
-      x0.lineWidth=1.5;x0.beginPath();x0.moveTo(tx-cbW,cbY);x0.lineTo(tx+cbW,cbY);x0.stroke();
-      if(cb<4){x0.beginPath();x0.moveTo(tx-cbW,cbY);x0.lineTo(tx+cbW-(cbW*0.3),cbY-(by-ty)*0.2);x0.stroke();}
+    const towW=40; // wider tower base
+    const towTopW=20; // narrower at top
+
+    x0.shadowBlur=14+beat*8;x0.shadowColor=pc(tow.ci);
+
+    // Main legs — thick, solid
+    x0.strokeStyle=rgba(pc(tow.ci),0.6+beat*0.2);x0.lineWidth=5;
+    x0.beginPath();x0.moveTo(tx-towW,by);x0.lineTo(tx-towTopW,ty);x0.stroke();
+    x0.beginPath();x0.moveTo(tx+towW,by);x0.lineTo(tx+towTopW,ty);x0.stroke();
+
+    // Cross braces — more, wider
+    for(let cb=0;cb<7;cb++){
+      const cbFrac=cb/7;
+      const cbY=by-(by-ty)*cbFrac;
+      const cbW=towW-(towW-towTopW)*cbFrac;
+      x0.strokeStyle=rgba(pc(tow.ci),(0.5+beat*0.15));x0.lineWidth=3;
+      x0.beginPath();x0.moveTo(tx-cbW,cbY);x0.lineTo(tx+cbW,cbY);x0.stroke();
+      // X-braces between horizontals
+      if(cb<6){
+        const nextY=by-(by-ty)*((cb+1)/7);
+        const nextW=towW-(towW-towTopW)*((cb+1)/7);
+        x0.strokeStyle=rgba(pc(tow.ci),(0.35+beat*0.1));x0.lineWidth=2;
+        x0.beginPath();x0.moveTo(tx-cbW,cbY);x0.lineTo(tx+nextW,nextY);x0.stroke();
+        x0.beginPath();x0.moveTo(tx+cbW,cbY);x0.lineTo(tx-nextW,nextY);x0.stroke();
+      }
     }
-    // Top crossbar
-    x0.lineWidth=2.5;x0.beginPath();x0.moveTo(tx-25,ty);x0.lineTo(tx+25,ty);x0.stroke();
-    // Transformer box
-    x0.fillStyle=rgba(pc(tow.ci),0.25+beat*0.1);
-    x0.fillRect(tx-10,ty+15,20,12);
-    x0.strokeRect(tx-10,ty+15,20,12);
-    // Beat-synced spark bursts from transformer
-    if(beat>0.4||ST.transformerExplosion){
-      const sparkCount=ST.transformerExplosion?8:3;
+
+    // Top crossbar — wide, prominent
+    x0.strokeStyle=rgba(pc(tow.ci),0.7+beat*0.2);x0.lineWidth=4;
+    x0.beginPath();x0.moveTo(tx-towW*1.2,ty);x0.lineTo(tx+towW*1.2,ty);x0.stroke();
+    // Insulators hanging from crossbar
+    for(let ins=-2;ins<=2;ins++){
+      const ix=tx+ins*towW*0.5;
+      x0.strokeStyle=rgba(pc((tow.ci+1)%4),(0.5+beat*0.2));x0.lineWidth=2;
+      x0.beginPath();x0.moveTo(ix,ty);x0.lineTo(ix,ty+12);x0.stroke();
+      x0.fillStyle=rgba(pc((tow.ci+1)%4),(0.6+beat*0.2));
+      x0.beginPath();x0.arc(ix,ty+14,4,0,Math.PI*2);x0.fill();
+    }
+
+    // ── TRANSFORMER BOX — larger, more detailed ──
+    const tfW=30,tfH=22;
+    const tfY=ty+(by-ty)*0.15;
+    // Box body
+    x0.fillStyle=rgba(pc(tow.ci),(0.35+beat*0.15));
+    x0.fillRect(tx-tfW/2,tfY,tfW,tfH);
+    x0.strokeStyle=rgba(pc(tow.ci),(0.7+beat*0.2));x0.lineWidth=2;
+    x0.strokeRect(tx-tfW/2,tfY,tfW,tfH);
+    // Internal detail lines
+    x0.strokeStyle=rgba(pc((tow.ci+2)%4),(0.3+beat*0.1));x0.lineWidth=1;
+    x0.beginPath();x0.moveTo(tx-tfW*0.3,tfY+tfH*0.3);x0.lineTo(tx+tfW*0.3,tfY+tfH*0.3);x0.stroke();
+    x0.beginPath();x0.moveTo(tx-tfW*0.3,tfY+tfH*0.65);x0.lineTo(tx+tfW*0.3,tfY+tfH*0.65);x0.stroke();
+    // Warning glow
+    x0.shadowBlur=20+beat*15;x0.shadowColor=rgba(pc(tow.ci),0.8);
+    x0.fillStyle=rgba(pc(tow.ci),(0.4+beat*0.3));
+    x0.beginPath();x0.arc(tx,tfY+tfH/2,6+beat*3,0,Math.PI*2);x0.fill();
+
+    // ── SPARKS from transformer — much more apparent ──
+    // Always emit some sparks, way more on beat
+    const sparkActive=beat>0.2||texpl;
+    if(sparkActive){
+      const sparkCount=texpl?25:(beat>0.5?12:5);
+      const sparkScale=texpl?10:1;
       for(let sp=0;sp<sparkCount;sp++){
-        const sx=tx+(Math.random()-0.5)*20,sy=ty+20;
-        const sLen=10+Math.random()*20*(ST.transformerExplosion?3:1);
-        x0.strokeStyle=rgba(pc(Math.floor(Math.random()*4)),0.8+beat*0.2);
-        x0.lineWidth=1;x0.shadowBlur=12;x0.shadowColor=pc(sp%4);
-        x0.beginPath();x0.moveTo(sx,sy);x0.lineTo(sx+(Math.random()-0.5)*sLen,sy-Math.random()*sLen);x0.stroke();
+        const sx=tx+(Math.random()-0.5)*tfW*1.5;
+        const sy=tfY+tfH*0.5;
+        const sLen=(15+Math.random()*25)*sparkScale;
+        const sAngle=-(Math.random()*Math.PI*0.7+Math.PI*0.15); // mostly upward
+        const ex=sx+Math.cos(sAngle)*sLen;
+        const ey=sy+Math.sin(sAngle)*sLen;
+        x0.strokeStyle=rgba(pc(Math.floor(Math.random()*4)),(0.8+beat*0.2));
+        x0.lineWidth=texpl?(2+Math.random()*2):(1+Math.random());
+        x0.shadowBlur=texpl?25:14;x0.shadowColor=pc(sp%4);
+        x0.beginPath();x0.moveTo(sx,sy);x0.lineTo(ex,ey);x0.stroke();
+        // Spark tip glow
+        x0.fillStyle=rgba(pc(sp%4),(0.9+beat*0.1));
+        x0.beginPath();x0.arc(ex,ey,texpl?(3+Math.random()*3):(2+Math.random()),0,Math.PI*2);x0.fill();
       }
     }
     x0.shadowBlur=0;
   }
+
   // Power lines — sagging catenary between towers
   if(ST.towers&&ST.towers.length>=2){
     const t1=ST.towers[0],t2=ST.towers[1];
     for(let ln=0;ln<3;ln++){
       const ly=t1.topY-5+ln*8;
-      const sag=40+Math.sin(t*0.002+ln)*10+(ST.windstorm?Math.sin(t*0.01)*20:0);
-      x0.strokeStyle=rgba(pc(ln%4),0.2+beat*0.08);x0.lineWidth=1;
-      x0.beginPath();x0.moveTo(t1.x+25,ly);
-      x0.quadraticCurveTo(cx,ly+sag,t2.x-25,ly);x0.stroke();
+      const sag=45+Math.sin(t*0.002+ln)*12;
+      x0.strokeStyle=rgba(pc(ln%4),(0.3+beat*0.12));x0.lineWidth=1.5;
+      x0.shadowBlur=6+beat*4;x0.shadowColor=pc(ln%4);
+      x0.beginPath();x0.moveTo(t1.x+45,ly);
+      x0.quadraticCurveTo(cx,ly+sag,t2.x-45,ly);x0.stroke();
     }
+    x0.shadowBlur=0;
   }
 
-  // ── TRANSFORMER EXPLOSION SPARKS ───────────────────────
-  if(ST.transformerExplosion){
-    // Spawn continuous sparks from tower tops
-    if(Math.random()<0.4){
+  // ══════════════════════════════════════════════════════
+  // TRANSFORMER EXPLOSION — 10x scale spark fountain
+  // Continuous massive sparks flying out of tower tops
+  // ══════════════════════════════════════════════════════
+  if(texpl){
+    // Spawn LOTS of sparks per frame — 10x the normal rate
+    for(let burst=0;burst<3;burst++){
       for(const tow of ST.towers){
-        ST.transformerSparks.push({x:tow.x,y:tow.topY+18,vx:(Math.random()-0.5)*8,vy:-(Math.random()*6+2),life:1,ci:Math.floor(Math.random()*4),r:2+Math.random()*3});
+        const tfY=tow.topY+(tow.baseY-tow.topY)*0.15;
+        for(let sp=0;sp<6;sp++){
+          ST.transformerSparks.push({
+            x:tow.x+(Math.random()-0.5)*60,
+            y:tfY+10,
+            vx:(Math.random()-0.5)*18,
+            vy:-(Math.random()*16+6),
+            life:1,
+            ci:Math.floor(Math.random()*4),
+            r:3+Math.random()*6,
+          });
+        }
       }
     }
+    // Cap array to prevent lag
+    if(ST.transformerSparks.length>800)ST.transformerSparks.length=800;
+
+    // Render all sparks
     for(let i=ST.transformerSparks.length-1;i>=0;i--){
       const sp=ST.transformerSparks[i];
-      sp.x+=sp.vx;sp.y+=sp.vy;sp.vy+=0.15;sp.life-=0.015;
+      sp.x+=sp.vx;sp.y+=sp.vy;sp.vy+=0.2;sp.life-=0.008;
       if(sp.life<=0){ST.transformerSparks.splice(i,1);continue;}
-      x0.fillStyle=rgba(pc(sp.ci),sp.life*0.9);x0.shadowBlur=8;x0.shadowColor=pc(sp.ci);
-      x0.beginPath();x0.arc(sp.x,sp.y,sp.r*sp.life,0,Math.PI*2);x0.fill();x0.shadowBlur=0;
+      x0.fillStyle=rgba(pc(sp.ci),sp.life*0.95);
+      x0.shadowBlur=16+beat*10;x0.shadowColor=pc(sp.ci);
+      x0.beginPath();x0.arc(sp.x,sp.y,sp.r*sp.life,0,Math.PI*2);x0.fill();
+    }
+    x0.shadowBlur=0;
+
+    // Explosion glow halos on both towers
+    for(const tow of ST.towers){
+      const tfY=tow.topY+(tow.baseY-tow.topY)*0.15;
+      const explGlow=x0.createRadialGradient(tow.x,tfY,0,tow.x,tfY,Math.min(w,h)*0.25);
+      explGlow.addColorStop(0,rgba(pc(tow.ci),(0.3+beat*0.3)));
+      explGlow.addColorStop(0.5,rgba(pc((tow.ci+1)%4),(0.1+beat*0.1)));
+      explGlow.addColorStop(1,'transparent');
+      x0.fillStyle=explGlow;x0.fillRect(0,0,w,h);
     }
   }
 }
@@ -1899,631 +2002,523 @@ function drawSpaceStation(t){
 if(typeof SD.hullBreachActive==='undefined'){}
 function drawNeonCathedral(t){
   const w=W(),h=H(),cx=w/2;
-  const holyLight=0.35+songProg*0.75;
-  const beat=SM.beatPulse;
+  const beat=SM.beatPulse,energy=SM.energy;
 
-  // ── Background sky ───────────────────────────────────
+  // ── Init scene data ────────────────────────────────────
+  if(!SD.cath){
+    const groundY=h*0.92;
+    // 4 gargoyles on pedestals — wider gap between middle two for centerpiece/doors
+    SD.cath={
+      groundY,
+      gargoyles:[
+        {x:cx-w*0.38, y:groundY, side:-1, ci:0, headAngle:0, wingFlare:0, lunge:0, flyMode:false, flyVx:0, flyVy:0, origX:cx-w*0.38, origY:groundY},
+        {x:cx-w*0.14, y:groundY, side:-1, ci:1, headAngle:Math.PI*0.5, wingFlare:0, lunge:0, flyMode:false, flyVx:0, flyVy:0, origX:cx-w*0.14, origY:groundY},
+        {x:cx+w*0.14, y:groundY, side:1,  ci:2, headAngle:Math.PI, wingFlare:0, lunge:0, flyMode:false, flyVx:0, flyVy:0, origX:cx+w*0.14, origY:groundY},
+        {x:cx+w*0.38, y:groundY, side:1,  ci:3, headAngle:Math.PI*1.5, wingFlare:0, lunge:0, flyMode:false, flyVx:0, flyVy:0, origX:cx+w*0.38, origY:groundY},
+      ],
+      motes:Array.from({length:35},()=>({x:Math.random()*w,y:Math.random()*h,vy:-(0.2+Math.random()*0.4),r:1+Math.random()*2,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)})),
+      gargoyleAlive:false, gargoyleAliveTimer:0,
+      doorsOpen:false, doorsOpenTimer:0,
+      gargoyleFireBreath:false, gargoyleFireTimer:0,
+    };
+  }
+  const C=SD.cath;
+  const groundY=C.groundY;
+
+  // ── Surprise timer updates ─────────────────────────────
+  if(C.gargoyleAlive){
+    C.gargoyleAliveTimer-=16;
+    if(C.gargoyleAliveTimer<=0){
+      C.gargoyleAlive=false;
+      C.gargoyles.forEach(g=>{g.flyMode=false;g.x=g.origX;g.y=g.origY;});
+    } else {
+      for(const g of C.gargoyles){
+        if(g.flyMode){
+          g.x+=g.flyVx*(1+beat*0.5);g.y+=g.flyVy*(1+beat*0.3);
+          g.flyVy+=0.03;
+          if(g.x<w*0.05||g.x>w*0.95)g.flyVx*=-0.85;
+          if(g.y<h*0.05||g.y>h*0.88){g.flyVy*=-0.9;g.y=Math.max(h*0.05,Math.min(h*0.88,g.y));}
+        }
+      }
+    }
+  }
+  if(C.doorsOpen){C.doorsOpenTimer-=16;if(C.doorsOpenTimer<=0)C.doorsOpen=false;}
+  if(C.gargoyleFireBreath){C.gargoyleFireTimer-=16;if(C.gargoyleFireTimer<=0)C.gargoyleFireBreath=false;}
+
+  // ── Helper: neon stroke ────────────────────────────────
+  const neon=(ci,alpha=0.7,blur=12)=>{
+    x0.strokeStyle=rgba(pc(ci),Math.min(1,alpha*(1+beat*0.2)));
+    x0.shadowBlur=blur*(1+beat*0.3);x0.shadowColor=pc(ci);
+  };
+
+  // ══════════════════════════════════════════════════════
+  // BACKGROUND — dark sky with subtle gradient
+  // ══════════════════════════════════════════════════════
   const sky=x0.createLinearGradient(0,0,0,h);
-  const sc0=h2r(pc(0)),sc2=h2r(pc(2));
-  sky.addColorStop(0,`rgba(${Math.round(sc0.r*0.05)},${Math.round(sc0.g*0.04)},${Math.round(sc0.b*0.08)},1)`);
-  sky.addColorStop(0.5,rgba(pc(2),0.12));
+  const c0=h2r(pc(0));
+  sky.addColorStop(0,`rgba(${Math.round(c0.r*0.04)},${Math.round(c0.g*0.03)},${Math.round(c0.b*0.07)},1)`);
+  sky.addColorStop(0.6,'rgba(3,3,12,1)');
   sky.addColorStop(1,'rgba(0,0,0,1)');
   x0.fillStyle=sky;x0.fillRect(0,0,w,h);
 
-  // ── Cathedral state init ─────────────────────────────
-  if(!SD.cathedralInit){
-    SD.cathedralInit=true;
-    // Gargoyles: 2 on each side of main towers, and 2 on buttresses
-    SD.gargoyles=[
-      {x:cx-w*0.31,y:h*0.32,side:-1,lunge:0,headAngle:0,wingFlare:0,ci:0,sz:90},
-      {x:cx+w*0.31,y:h*0.32,side:1, lunge:0,headAngle:0,wingFlare:0,ci:1,sz:90},
-      {x:cx-w*0.18,y:h*0.46,side:-1,lunge:0,headAngle:0,wingFlare:0,ci:2,sz:72},
-      {x:cx+w*0.18,y:h*0.46,side:1, lunge:0,headAngle:0,wingFlare:0,ci:3,sz:72},
-    ];
-    SD.ghosts=[];
-    SD.ghostSpawnTimer=0;
-    SD.angel=null;
-    SD.motes=Array.from({length:30},()=>({x:Math.random()*w,y:Math.random()*h,vy:-(0.3+Math.random()*0.5),r:1+Math.random()*2.5,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)}));
-  }
+  // ══════════════════════════════════════════════════════
+  // GOTHIC CHURCH FAÇADE — neon outline silhouette behind gargoyles
+  // Perspective: walking up to the front entrance
+  // ══════════════════════════════════════════════════════
+  const facadeW=w*0.7;
+  const facadeL=cx-facadeW/2;
+  const facadeR2=cx+facadeW/2;
+  const roofY=h*0.08;
+  const doorTopY=h*0.48;
+  const doorW=w*0.16;
+  const doorH=groundY-doorTopY;
+  const towW=w*0.09;
+  const towH=h*0.85;
 
-  // ── Neon line style helper ───────────────────────────
-  const neon=(ci,alpha=1,blur=15)=>{
-    x0.strokeStyle=rgba(pc(ci),alpha);
-    x0.shadowBlur=blur*(1+beat*0.3);
-    x0.shadowColor=pc(ci);
-  };
-  const neonFill=(ci,alpha=1,blur=12)=>{
-    x0.fillStyle=rgba(pc(ci),alpha);
-    x0.shadowBlur=blur*(1+beat*0.3);
-    x0.shadowColor=pc(ci);
-  };
+  x0.lineWidth=2;x0.lineCap='round';
 
-  // ── FACADE STRUCTURE ─────────────────────────────────
-  // Layout: two tall side towers, central nave with big rose window,
-  // flying buttresses, main pointed arch doorway open to interior
-
-  const navW=w*0.36;   // central nave width
-  const navH=h*0.82;   // nave height from bottom
-  const towW=w*0.13;   // tower width
-  const towH=h*0.9;    // tower height
-  const ltX=cx-navW/2-towW/2;  // left tower center
-  const rtX=cx+navW/2+towW/2;  // right tower center
-  const groundY=h*0.95;
-
-  // ── Interior visible through doorway (drawn first, behind facade) ──
-  // Receding columns and pews — subtle, perspective
-  const doorW=navW*0.42;
-  const doorH=h*0.44;
-  const doorX=cx-doorW/2;
-  const doorTopY=groundY-doorH;
-
-  // Deep dark interior fill
-  x0.fillStyle='rgba(2,0,6,0.97)';
+  // Left tower
+  neon(0,0.45,10);
   x0.beginPath();
-  x0.moveTo(doorX,groundY);
-  x0.lineTo(doorX,doorTopY+doorW*0.15);
-  x0.bezierCurveTo(doorX,doorTopY,doorX+doorW*0.5,doorTopY-doorW*0.25,doorX+doorW,doorTopY);
-  x0.lineTo(doorX+doorW,groundY);
-  x0.closePath();
-  x0.fill();
+  x0.moveTo(facadeL,groundY);x0.lineTo(facadeL,groundY-towH);
+  x0.lineTo(facadeL+towW*0.5,groundY-towH-h*0.06); // spire point
+  x0.lineTo(facadeL+towW,groundY-towH);
+  x0.lineTo(facadeL+towW,groundY);
+  x0.stroke();
+  // Tower window (pointed arch)
+  x0.beginPath();
+  const ltcx=facadeL+towW/2, ltwy=groundY-towH+h*0.12;
+  x0.moveTo(ltcx-towW*0.25,ltwy+h*0.08);
+  x0.lineTo(ltcx-towW*0.25,ltwy);
+  x0.quadraticCurveTo(ltcx,ltwy-h*0.04,ltcx+towW*0.25,ltwy);
+  x0.lineTo(ltcx+towW*0.25,ltwy+h*0.08);
+  x0.stroke();
 
-  // Interior columns receding — 3 pairs, getting smaller
-  for(let col=0;col<3;col++){
-    const depth=col/3;
-    const colScale=1-depth*0.65;
-    const colX1=cx-doorW*0.35*colScale;
-    const colX2=cx+doorW*0.35*colScale;
-    const colY=groundY-doorH*0.12-col*(doorH*0.22);
-    const colH=doorH*(0.5-depth*0.3)*colScale;
-    const colAlpha=0.12-depth*0.04;
-    x0.lineWidth=3*colScale;
-    neon(2,colAlpha,6);
-    for(const cx2 of [colX1,colX2]){
-      x0.beginPath();x0.moveTo(cx2,colY);x0.lineTo(cx2,colY-colH);
-      x0.bezierCurveTo(cx2,colY-colH-colH*0.2,cx2+(colX2-colX1)*0.08,colY-colH-colH*0.25,cx,colY-colH-colH*0.3);
+  // Right tower (mirror)
+  neon(1,0.45,10);
+  x0.beginPath();
+  x0.moveTo(facadeR2,groundY);x0.lineTo(facadeR2,groundY-towH);
+  x0.lineTo(facadeR2-towW*0.5,groundY-towH-h*0.06);
+  x0.lineTo(facadeR2-towW,groundY-towH);
+  x0.lineTo(facadeR2-towW,groundY);
+  x0.stroke();
+  const rtcx=facadeR2-towW/2, rtwy=groundY-towH+h*0.12;
+  x0.beginPath();
+  x0.moveTo(rtcx-towW*0.25,rtwy+h*0.08);
+  x0.lineTo(rtcx-towW*0.25,rtwy);
+  x0.quadraticCurveTo(rtcx,rtwy-h*0.04,rtcx+towW*0.25,rtwy);
+  x0.lineTo(rtcx+towW*0.25,rtwy+h*0.08);
+  x0.stroke();
+
+  // Main nave wall between towers
+  neon(2,0.35,8);x0.lineWidth=1.5;
+  x0.beginPath();
+  x0.moveTo(facadeL+towW,groundY);x0.lineTo(facadeL+towW,roofY+h*0.12);
+  // Peaked roof
+  x0.lineTo(cx,roofY);
+  x0.lineTo(facadeR2-towW,roofY+h*0.12);
+  x0.lineTo(facadeR2-towW,groundY);
+  x0.stroke();
+
+  // Flying buttresses (2 per side)
+  neon(3,0.25,6);x0.lineWidth=1.2;
+  for(let side=-1;side<=1;side+=2){
+    const tBase=side<0?facadeL+towW:facadeR2-towW;
+    for(let b=0;b<2;b++){
+      const by=groundY-h*0.25-b*h*0.2;
+      const bx=tBase+side*(towW*0.8+b*w*0.04);
+      x0.beginPath();
+      x0.moveTo(tBase,by);
+      x0.quadraticCurveTo(tBase+side*towW*0.4,by-h*0.05,bx,by+h*0.08);
       x0.stroke();
-    }
-    // Pew hints — horizontal lines
-    if(col<2){
-      x0.lineWidth=1.5*colScale;
-      neon(3,0.06-depth*0.02,4);
-      const pewY=groundY-col*doorH*0.08-doorH*0.06;
-      x0.beginPath();x0.moveTo(colX1+5,pewY);x0.lineTo(colX2-5,pewY);x0.stroke();
-      x0.beginPath();x0.moveTo(colX1+5,pewY-8*colScale);x0.lineTo(colX2-5,pewY-8*colScale);x0.stroke();
+      // Buttress pillar
+      x0.beginPath();x0.moveTo(bx,by+h*0.08);x0.lineTo(bx,groundY);x0.stroke();
     }
   }
 
-  // ── Centerpiece — floating where cross would be, deep in interior ──
+  // Rose window — large circle with radial spokes
+  neon(0,0.5+beat*0.2,15);x0.lineWidth=2;
+  const roseY=roofY+h*0.16;
+  const roseR=Math.min(w,h)*0.09;
+  x0.beginPath();x0.arc(cx,roseY,roseR,0,Math.PI*2);x0.stroke();
+  // Inner ring
+  neon(1,0.4,10);x0.lineWidth=1.5;
+  x0.beginPath();x0.arc(cx,roseY,roseR*0.6,0,Math.PI*2);x0.stroke();
+  // Radial spokes
+  for(let sp=0;sp<12;sp++){
+    const a=sp/12*Math.PI*2+t*0.0005;
+    neon(sp%4,0.3+beat*0.15,8);x0.lineWidth=1;
+    x0.beginPath();
+    x0.moveTo(cx+Math.cos(a)*roseR*0.2,roseY+Math.sin(a)*roseR*0.2);
+    x0.lineTo(cx+Math.cos(a)*roseR*0.95,roseY+Math.sin(a)*roseR*0.95);
+    x0.stroke();
+  }
+
+  // Pointed arch windows flanking rose window
+  neon(2,0.3,8);x0.lineWidth=1.2;
+  for(let side=-1;side<=1;side+=2){
+    const awx=cx+side*w*0.17,awy=roseY+h*0.08;
+    const aww=w*0.04,awh=h*0.12;
+    x0.beginPath();
+    x0.moveTo(awx-aww,awy+awh);
+    x0.lineTo(awx-aww,awy);
+    x0.quadraticCurveTo(awx,awy-awh*0.3,awx+aww,awy);
+    x0.lineTo(awx+aww,awy+awh);
+    x0.stroke();
+  }
+
+  // ══════════════════════════════════════════════════════
+  // MAIN DOORS — large pointed arch, centerpiece visible inside
+  // ══════════════════════════════════════════════════════
+  const dlx=cx-doorW/2, drx=cx+doorW/2;
+
+  // Door opening — dark interior
+  x0.fillStyle='rgba(0,0,0,0.85)';
+  x0.beginPath();
+  x0.moveTo(dlx,groundY);x0.lineTo(dlx,doorTopY+doorH*0.15);
+  x0.quadraticCurveTo(cx,doorTopY-doorH*0.08,drx,doorTopY+doorH*0.15);
+  x0.lineTo(drx,groundY);x0.closePath();x0.fill();
+
+  // Door arch outline
+  neon(3,0.6+beat*0.2,16);x0.lineWidth=2.5;
+  x0.beginPath();
+  x0.moveTo(dlx,groundY);x0.lineTo(dlx,doorTopY+doorH*0.15);
+  x0.quadraticCurveTo(cx,doorTopY-doorH*0.08,drx,doorTopY+doorH*0.15);
+  x0.lineTo(drx,groundY);
+  x0.stroke();
+
+  // Door detail — center split line
+  neon(3,0.3,6);x0.lineWidth=1;
+  x0.beginPath();x0.moveTo(cx,groundY);x0.lineTo(cx,doorTopY+doorH*0.2);x0.stroke();
+
+  // Door iron bands
+  for(let db=0;db<3;db++){
+    const dby=groundY-doorH*0.2-db*doorH*0.22;
+    x0.beginPath();x0.moveTo(dlx+3,dby);x0.lineTo(drx-3,dby);x0.stroke();
+  }
+
+  // Church doors open surprise — light flooding out
+  if(C.doorsOpen){
+    const dAlpha=Math.min(1,(30000-C.doorsOpenTimer)/800)*0.7;
+    // Bright light from inside
+    const doorGrad=x0.createRadialGradient(cx,groundY-doorH*0.4,0,cx,groundY-doorH*0.4,h*0.6);
+    doorGrad.addColorStop(0,rgba(pc(Math.floor(t*0.008)%4),dAlpha*0.5));
+    doorGrad.addColorStop(0.3,rgba(pc((Math.floor(t*0.008)+1)%4),dAlpha*0.25));
+    doorGrad.addColorStop(1,'transparent');
+    x0.fillStyle=doorGrad;x0.fillRect(0,0,w,h);
+    // Stained glass color beams radiating from doors
+    x0.save();x0.translate(cx,groundY-doorH*0.4);
+    x0.globalCompositeOperation='screen';
+    for(let b=0;b<14;b++){
+      const ba=b/14*Math.PI*2+t*0.001;
+      const bLen=h*0.45*(0.5+beat*0.5);
+      x0.strokeStyle=rgba(pc(b%4),dAlpha*(0.25+beat*0.3));
+      x0.lineWidth=6+beat*5;x0.shadowBlur=12+beat*8;x0.shadowColor=pc(b%4);
+      x0.beginPath();x0.moveTo(0,0);
+      x0.lineTo(Math.cos(ba)*bLen,Math.sin(ba)*bLen);x0.stroke();
+    }
+    x0.globalCompositeOperation='source-over';x0.restore();
+  }
+
+  // ── Centerpiece inside the doors ───────────────────────
   if(THEME.centerpiece){
-    const cpX=cx;
-    const cpY=groundY-doorH*0.72;
-    const cpSz=Math.min(w,h)*(0.07+beat*0.025)*(0.5+holyLight*0.6);
-    cpRot+=0.008;cpPh+=0.013;
-    // Divine glow radiating from cross position
-    const cpGlow=x0.createRadialGradient(cpX,cpY,0,cpX,cpY,cpSz*3);
-    cpGlow.addColorStop(0,rgba(pc(0),0.18*(1+beat*0.4)));
-    cpGlow.addColorStop(0.5,rgba(pc(1),0.06));
+    const cpX=cx, cpY=groundY-doorH*0.45;
+    const cpSz=Math.min(w,h)*(0.07+beat*0.02+(C.doorsOpen?0.03:0));
+    cpRot+=0.012;cpPh+=0.013;
+    // Glow behind centerpiece
+    const cpGlow=x0.createRadialGradient(cpX,cpY,0,cpX,cpY,cpSz*3.5);
+    cpGlow.addColorStop(0,rgba(pc(0),0.15*(1+beat*0.5)));
+    cpGlow.addColorStop(0.5,rgba(pc(1),0.05));
     cpGlow.addColorStop(1,'transparent');
     x0.fillStyle=cpGlow;x0.fillRect(0,0,w,h);
-    x0.shadowBlur=cpSz*0.9;x0.shadowColor=rgba(pc(0),0.9);
+    x0.shadowBlur=cpSz*0.7;x0.shadowColor=rgba(pc(0),0.9);
     drawCPMini(x0,THEME.centerpiece,cpX,cpY,cpSz,cpRot);
     x0.shadowBlur=0;
   }
 
-  // ── FACADE NEON LINES ────────────────────────────────
-  // Draw order: far details → close structural
-
-  // Flying buttresses — angled supports from towers to nave walls
-  x0.lineWidth=2;
-  for(const[bx1,by1,bx2,by2,ci2] of [
-    [cx-navW/2,groundY-navH*0.55, ltX+towW*0.4,groundY-towH*0.5, 0],
-    [cx+navW/2,groundY-navH*0.55, rtX-towW*0.4,groundY-towH*0.5, 0],
-    [cx-navW/2,groundY-navH*0.38, ltX+towW*0.4,groundY-towH*0.32, 1],
-    [cx+navW/2,groundY-navH*0.38, rtX-towW*0.4,groundY-towH*0.32, 1],
-  ]){
-    neon(ci2,0.25*(1+beat*0.2),8);
-    x0.lineWidth=2;
-    x0.beginPath();
-    x0.moveTo(bx1,by1);
-    x0.bezierCurveTo(bx1+(bx2-bx1)*0.3,by1-h*0.04,bx1+(bx2-bx1)*0.7,by2-h*0.04,bx2,by2);
-    x0.stroke();
-  }
-
-  // Left tower
-  x0.lineWidth=2.5;
-  neon(0,0.55*(1+beat*0.15),12);
-  // Tower outline
-  x0.beginPath();
-  x0.moveTo(ltX-towW/2,groundY);
-  x0.lineTo(ltX-towW/2,groundY-towH*0.82);
-  // Pointed spire
-  x0.lineTo(ltX,groundY-towH);
-  x0.lineTo(ltX+towW/2,groundY-towH*0.82);
-  x0.lineTo(ltX+towW/2,groundY);
-  x0.stroke();
-  // Tower windows — lancet arch pairs
-  for(let wn=0;wn<3;wn++){
-    const wy=groundY-towH*(0.25+wn*0.2);
-    const ww=towW*0.28;const wh=h*0.07;
-    for(const wxOff of [-ww*0.7,ww*0.7]){
-      neon(1,0.4*(1+beat*0.2),10);x0.lineWidth=1.5;
-      x0.beginPath();x0.moveTo(ltX+wxOff-ww/2,wy);x0.lineTo(ltX+wxOff-ww/2,wy-wh*0.6);
-      x0.bezierCurveTo(ltX+wxOff-ww/2,wy-wh,ltX+wxOff+ww/2,wy-wh,ltX+wxOff+ww/2,wy-wh*0.6);
-      x0.lineTo(ltX+wxOff+ww/2,wy);x0.stroke();
-    }
-  }
-
-  // Right tower (mirror)
-  x0.lineWidth=2.5;neon(0,0.55*(1+beat*0.15),12);
-  x0.beginPath();
-  x0.moveTo(rtX-towW/2,groundY);x0.lineTo(rtX-towW/2,groundY-towH*0.82);
-  x0.lineTo(rtX,groundY-towH);x0.lineTo(rtX+towW/2,groundY-towH*0.82);
-  x0.lineTo(rtX+towW/2,groundY);x0.stroke();
-  for(let wn=0;wn<3;wn++){
-    const wy=groundY-towH*(0.25+wn*0.2);
-    const ww=towW*0.28;const wh=h*0.07;
-    for(const wxOff of [-ww*0.7,ww*0.7]){
-      neon(1,0.4*(1+beat*0.2),10);x0.lineWidth=1.5;
-      x0.beginPath();x0.moveTo(rtX+wxOff-ww/2,wy);x0.lineTo(rtX+wxOff-ww/2,wy-wh*0.6);
-      x0.bezierCurveTo(rtX+wxOff-ww/2,wy-wh,rtX+wxOff+ww/2,wy-wh,rtX+wxOff+ww/2,wy-wh*0.6);
-      x0.lineTo(rtX+wxOff+ww/2,wy);x0.stroke();
-    }
-  }
-
-  // Central nave walls
-  x0.lineWidth=2.5;neon(2,0.6*(1+beat*0.12),14);
-  x0.beginPath();x0.moveTo(cx-navW/2,groundY);x0.lineTo(cx-navW/2,groundY-navH);x0.stroke();
-  x0.beginPath();x0.moveTo(cx+navW/2,groundY);x0.lineTo(cx+navW/2,groundY-navH);x0.stroke();
-
-  // Nave roofline — pointed gothic peak
-  x0.lineWidth=3;neon(2,0.7*(1+beat*0.12),14);
-  x0.beginPath();
-  x0.moveTo(cx-navW/2,groundY-navH);
-  x0.lineTo(cx,groundY-navH-h*0.1);
-  x0.lineTo(cx+navW/2,groundY-navH);
-  x0.stroke();
-  // Small spire at nave peak
-  neon(1,0.6,12);x0.lineWidth=2;
-  x0.beginPath();x0.moveTo(cx,groundY-navH-h*0.1);x0.lineTo(cx,groundY-navH-h*0.17);x0.stroke();
-  x0.beginPath();x0.arc(cx,groundY-navH-h*0.17,4,0,Math.PI*2);x0.fill();
-
-  // Rose window — circular tracery above door
-  const roseY=groundY-navH*0.72;
-  const roseR=navW*0.24*(1+beat*0.05);
-  neon(1,0.55*(1+beat*0.25),16);x0.lineWidth=2;
-  x0.beginPath();x0.arc(cx,roseY,roseR,0,Math.PI*2);x0.stroke();
-  // Inner ring
-  neon(0,0.45*(1+beat*0.2),12);x0.lineWidth=1.5;
-  x0.beginPath();x0.arc(cx,roseY,roseR*0.62,0,Math.PI*2);x0.stroke();
-  // Tracery spokes — rotate slowly
-  const traceRot=t*0.0003;
-  for(let sp=0;sp<12;sp++){
-    const sa=sp/12*Math.PI*2+traceRot;
-    neon(sp%4,0.3*(1+beat*0.2),8);x0.lineWidth=1.5;
-    x0.beginPath();x0.moveTo(cx,roseY);x0.lineTo(cx+Math.cos(sa)*roseR,roseY+Math.sin(sa)*roseR);x0.stroke();
-    // Petal arcs between spokes
-    if(sp%2===0){
-      const sa2=sa+Math.PI/12;
-      x0.beginPath();x0.arc(cx+Math.cos(sa+Math.PI/12)*roseR*0.62,roseY+Math.sin(sa+Math.PI/12)*roseR*0.62,roseR*0.22,0,Math.PI*2);
-      neon(sp%4,0.2*(1+beat*0.3),6);x0.stroke();
-    }
-  }
-
-  // Lancet windows flanking door — tall narrow pointed arches
-  for(const[lx2,lci] of [[cx-navW*0.36,3],[cx+navW*0.36,3]]){
-    const lwH=h*0.22;const lwW=navW*0.1;
-    neon(lci,0.45*(1+beat*0.2),10);x0.lineWidth=2;
-    x0.beginPath();x0.moveTo(lx2-lwW/2,groundY-navH*0.12);
-    x0.lineTo(lx2-lwW/2,groundY-navH*0.12-lwH*0.55);
-    x0.bezierCurveTo(lx2-lwW/2,groundY-navH*0.12-lwH,lx2+lwW/2,groundY-navH*0.12-lwH,lx2+lwW/2,groundY-navH*0.12-lwH*0.55);
-    x0.lineTo(lx2+lwW/2,groundY-navH*0.12);x0.stroke();
-    // Interior glow in window
-    const wglow=x0.createRadialGradient(lx2,groundY-navH*0.12-lwH*0.5,0,lx2,groundY-navH*0.12-lwH*0.5,lwW);
-    wglow.addColorStop(0,rgba(pc(lci),0.12*(1+beat*0.3)));wglow.addColorStop(1,'transparent');
-    x0.fillStyle=wglow;x0.fillRect(0,0,w,h);
-  }
-
-  // Main door arch — big pointed gothic opening
-  neon(2,0.8*(1+beat*0.15),18);x0.lineWidth=3;
-  x0.beginPath();
-  x0.moveTo(doorX,groundY);
-  x0.lineTo(doorX,doorTopY+doorW*0.15);
-  x0.bezierCurveTo(doorX,doorTopY,doorX+doorW*0.5,doorTopY-doorW*0.25,doorX+doorW,doorTopY);
-  x0.lineTo(doorX+doorW,groundY);
-  x0.stroke();
-  // Door arch inner reveal
-  neon(0,0.4*(1+beat*0.2),10);x0.lineWidth=1.5;
-  const dInset=doorW*0.08;
-  x0.beginPath();
-  x0.moveTo(doorX+dInset,groundY);
-  x0.lineTo(doorX+dInset,doorTopY+doorW*0.15+dInset*0.5);
-  x0.bezierCurveTo(doorX+dInset,doorTopY+dInset,doorX+doorW*0.5,doorTopY-doorW*0.25+dInset*1.2,doorX+doorW-dInset,doorTopY+dInset);
-  x0.lineTo(doorX+doorW-dInset,groundY);
-  x0.stroke();
-
   // Ground line
-  neon(3,0.35,8);x0.lineWidth=2;
+  neon(3,0.3,6);x0.lineWidth=1.5;
   x0.beginPath();x0.moveTo(0,groundY);x0.lineTo(w,groundY);x0.stroke();
 
-  // ── GARGOYLES ───────────────────────────────────────
-  for(const g of SD.gargoyles){
-    if(beat>0.5)g.lunge=Math.min(1,g.lunge+0.16);
-    else g.lunge*=0.9;
-    g.wingFlare+=(beat*0.7-g.wingFlare)*0.12;
-    const cpX=cx,cpY=groundY-doorH*0.72;
-    const dxa=cpX-g.x,dya=cpY-g.y;
-    g.headAngle+=0.008*(1+beat*0.2); // continuous slow 360 spin
+  // ══════════════════════════════════════════════════════
+  // GARGOYLES — 4 detailed crouching figures in foreground
+  // Crouched pose: wings spread, horns, clawed feet, menacing face
+  // ══════════════════════════════════════════════════════
+  for(let gi=0;gi<C.gargoyles.length;gi++){
+    const g=C.gargoyles[gi];
+    // Head spin — continuous slow 360°
+    g.headAngle+=0.008*(1+beat*0.15);
+    // Beat reactivity
+    if(beat>0.5)g.lunge=Math.min(1,g.lunge+0.12);
+    else g.lunge*=0.92;
+    g.wingFlare+=(beat*0.6-g.wingFlare)*0.1;
 
-    const lunge=g.lunge*22*g.side;
-    const gSz=g.sz||85; // larger than before
-    x0.save();x0.translate(g.x+lunge,g.y);
+    const gSz=Math.min(w,h)*0.13; // large gargoyles
+    const gx=g.x, gy=g.y;
 
-    // Full neon line style for this gargoyle
-    const gn=(alpha,blur)=>{
-      x0.strokeStyle=rgba(pc(g.ci),Math.min(1,alpha*(1+beat*0.2)));
-      x0.shadowBlur=blur*(1+beat*0.25);x0.shadowColor=pc(g.ci);
-    };
-    const gnf=(alpha,blur)=>{
-      x0.fillStyle=rgba(pc(g.ci),Math.min(1,alpha*(1+beat*0.2)));
-      x0.shadowBlur=blur*(1+beat*0.25);x0.shadowColor=pc(g.ci);
-    };
+    x0.save();x0.translate(gx,gy);
 
-    // ── TAIL — curling behind body ──────────────────────
-    gn(0.35,6);x0.lineWidth=2;
+    // ── Pedestal / perch ──────────────────────────────
+    neon(g.ci,0.5,10);x0.lineWidth=2;
+    const pedW=gSz*0.7,pedH=gSz*0.18;
     x0.beginPath();
-    x0.moveTo(-g.side*gSz*0.05,gSz*0.18);
-    x0.bezierCurveTo(
-      -g.side*gSz*0.35,gSz*0.35,
-      -g.side*gSz*0.4,gSz*0.55+Math.sin(t*0.002)*gSz*0.05,
-      -g.side*gSz*0.25,gSz*0.62
-    );x0.stroke();
+    x0.moveTo(-pedW/2,0);x0.lineTo(-pedW/2,-pedH);
+    x0.lineTo(-pedW*0.35,-pedH-4);x0.lineTo(pedW*0.35,-pedH-4);
+    x0.lineTo(pedW/2,-pedH);x0.lineTo(pedW/2,0);
+    x0.stroke();
+    // Pedestal decorative line
+    neon(g.ci,0.3,5);x0.lineWidth=1;
+    x0.beginPath();x0.moveTo(-pedW*0.4,-pedH*0.5);x0.lineTo(pedW*0.4,-pedH*0.5);x0.stroke();
 
-    // ── HAUNCHES & LEGS — crouched gargoyle stance ───────
-    gn(0.65,14);x0.lineWidth=3;
-    // Hip/haunch mass
-    x0.beginPath();x0.ellipse(-g.side*gSz*0.04,gSz*0.15,gSz*0.22,gSz*0.15,0,0,Math.PI*2);x0.stroke();
-    gnf(0.12,6);x0.fill();
-    // Upper leg
-    x0.lineWidth=4;gn(0.6,10);
-    x0.beginPath();x0.moveTo(-g.side*gSz*0.08,gSz*0.18);x0.bezierCurveTo(-g.side*gSz*0.14,gSz*0.32,-g.side*gSz*0.2,gSz*0.38,-g.side*gSz*0.22,gSz*0.5);x0.stroke();
-    x0.beginPath();x0.moveTo(-g.side*gSz*0.0,gSz*0.18);x0.bezierCurveTo(-g.side*gSz*0.04,gSz*0.32,g.side*gSz*0.06,gSz*0.38,g.side*gSz*0.1,gSz*0.5);x0.stroke();
-    // Taloned feet gripping ledge
-    gn(0.55,8);x0.lineWidth=2;
-    for(const[fx,fy,side2] of [[-g.side*gSz*0.22,gSz*0.5,-1],[g.side*gSz*0.1,gSz*0.5,1]]){
-      for(let tk=0;tk<3;tk++){
-        const ta=-0.3+tk*0.3;
-        x0.beginPath();x0.moveTo(fx,fy);x0.lineTo(fx+Math.cos(ta+Math.PI*0.5)*gSz*0.12*side2,fy+gSz*0.1);x0.stroke();
+    const baseY=-pedH-4; // top of pedestal
+
+    // ── Clawed feet ──────────────────────────────────
+    neon(g.ci,0.6,8);x0.lineWidth=1.5;
+    for(let foot=-1;foot<=1;foot+=2){
+      const fx=foot*gSz*0.18;
+      // 3 clawed toes
+      for(let c=0;c<3;c++){
+        const ca=(c-1)*0.2+foot*0.1;
+        x0.beginPath();
+        x0.moveTo(fx,baseY);
+        x0.lineTo(fx+Math.cos(ca-Math.PI/2)*gSz*0.08,baseY+gSz*0.02);
+        x0.lineTo(fx+Math.cos(ca-Math.PI/2)*gSz*0.12,baseY-gSz*0.02);
+        x0.stroke();
       }
     }
 
-    // ── TORSO — hunched forward, muscular ─────────────────
-    gn(0.72,16);x0.lineWidth=3.5;
-    // Spine curve — hunched
+    // ── Legs (crouched, bent at knees) ───────────────
+    neon(g.ci,0.55,10);x0.lineWidth=2.5;
+    for(let leg=-1;leg<=1;leg+=2){
+      const lx=leg*gSz*0.15;
+      // Thigh (angled back)
+      x0.beginPath();x0.moveTo(lx,baseY);
+      x0.lineTo(lx+leg*gSz*0.05,baseY-gSz*0.22);x0.stroke();
+      // Shin (angled forward — crouched)
+      x0.beginPath();x0.moveTo(lx+leg*gSz*0.05,baseY-gSz*0.22);
+      x0.lineTo(lx-leg*gSz*0.02,baseY-gSz*0.38);x0.stroke();
+    }
+
+    // ── Torso (hunched, muscular outline) ────────────
+    const torsoY=baseY-gSz*0.38;
+    neon(g.ci,0.6,12);x0.lineWidth=2.5;
     x0.beginPath();
-    x0.moveTo(-g.side*gSz*0.04,gSz*0.06);
-    x0.bezierCurveTo(-g.side*gSz*0.12,-gSz*0.08,-g.side*gSz*0.2,-gSz*0.22,-g.side*gSz*0.3,-gSz*0.32);
+    x0.moveTo(-gSz*0.2,torsoY+gSz*0.08);
+    x0.bezierCurveTo(-gSz*0.25,torsoY-gSz*0.05,-gSz*0.2,torsoY-gSz*0.2,-gSz*0.1,torsoY-gSz*0.28);
+    x0.lineTo(gSz*0.1,torsoY-gSz*0.28);
+    x0.bezierCurveTo(gSz*0.2,torsoY-gSz*0.2,gSz*0.25,torsoY-gSz*0.05,gSz*0.2,torsoY+gSz*0.08);
     x0.stroke();
-    // Chest / rib cage
-    gn(0.6,12);x0.lineWidth=2.5;
-    x0.beginPath();x0.ellipse(-g.side*gSz*0.14,-gSz*0.12,gSz*0.2,gSz*0.14,g.side*0.3,0,Math.PI*2);x0.stroke();
-    gnf(0.08,4);x0.fill();
-    // Belly scales — rows of chevron lines
-    gn(0.3,5);x0.lineWidth=1.2;
-    for(let sc=0;sc<3;sc++){
-      const sy=-gSz*0.02+sc*gSz*0.07;
+    // Spine ridge
+    neon(g.ci,0.3,5);x0.lineWidth=1;
+    x0.beginPath();x0.moveTo(0,torsoY+gSz*0.06);x0.lineTo(0,torsoY-gSz*0.25);x0.stroke();
+
+    // ── Arms (clinging to pedestal edge) ─────────────
+    neon(g.ci,0.55,8);x0.lineWidth=2;
+    for(let arm=-1;arm<=1;arm+=2){
+      const ax=arm*gSz*0.22;
+      // Upper arm
+      x0.beginPath();x0.moveTo(ax,torsoY-gSz*0.1);
+      x0.lineTo(ax+arm*gSz*0.12,torsoY+gSz*0.08);x0.stroke();
+      // Forearm down to pedestal
+      x0.beginPath();x0.moveTo(ax+arm*gSz*0.12,torsoY+gSz*0.08);
+      x0.lineTo(ax+arm*gSz*0.08,baseY+gSz*0.02);x0.stroke();
+      // Clawed hand (3 fingers gripping)
+      for(let f=0;f<3;f++){
+        const fa=(f-1)*0.15;
+        x0.beginPath();
+        x0.moveTo(ax+arm*gSz*0.08,baseY+gSz*0.02);
+        x0.lineTo(ax+arm*gSz*(0.06+f*0.02),baseY-gSz*0.03);
+        x0.stroke();
+      }
+    }
+
+    // ── Wings (spread wide, beat-reactive flare) ─────
+    const wFlare=0.15+g.wingFlare*0.35;
+    neon(g.ci,0.55+beat*0.2,14);x0.lineWidth=2;
+    for(let wing=-1;wing<=1;wing+=2){
+      const wx=wing*gSz*0.2;
+      const wingSpan=gSz*0.65*(1+wFlare);
+      const wingTipY=torsoY-gSz*0.35-wFlare*gSz*0.15;
+      // Main wing bone
       x0.beginPath();
-      x0.moveTo(-g.side*gSz*0.06,sy);
-      x0.bezierCurveTo(-g.side*gSz*0.12,sy-gSz*0.035,g.side*gSz*0.06,sy-gSz*0.035,g.side*gSz*0.1,sy);
+      x0.moveTo(wx,torsoY-gSz*0.15);
+      x0.bezierCurveTo(wx+wing*wingSpan*0.4,wingTipY-gSz*0.1,
+                        wx+wing*wingSpan*0.7,wingTipY,
+                        wx+wing*wingSpan,wingTipY+gSz*0.1);
+      x0.stroke();
+      // Wing membrane (3 ribs with connecting curves)
+      neon(g.ci,0.3+beat*0.15,8);x0.lineWidth=1.2;
+      for(let r=0;r<3;r++){
+        const rt=(r+1)/4;
+        const ribX=wx+wing*wingSpan*rt;
+        const ribY=lerp(torsoY-gSz*0.15,wingTipY+gSz*0.1,rt);
+        // Rib from shoulder
+        x0.beginPath();x0.moveTo(wx,torsoY-gSz*0.1);
+        x0.lineTo(ribX,ribY+gSz*0.05*r);x0.stroke();
+      }
+      // Trailing edge of wing
+      neon(g.ci,0.25,6);x0.lineWidth=1;
+      x0.beginPath();
+      x0.moveTo(wx,torsoY+gSz*0.05);
+      x0.bezierCurveTo(wx+wing*wingSpan*0.3,torsoY+gSz*0.02,
+                        wx+wing*wingSpan*0.6,wingTipY+gSz*0.2,
+                        wx+wing*wingSpan,wingTipY+gSz*0.1);
       x0.stroke();
     }
 
-    // ── ARMS — forward reaching, clawed ──────────────────
-    gn(0.65,12);x0.lineWidth=3.5;x0.lineCap='round';
-    // Upper arm
-    x0.beginPath();x0.moveTo(-g.side*gSz*0.18,-gSz*0.08);x0.bezierCurveTo(-g.side*gSz*0.3,-gSz*0.16,-g.side*gSz*0.4,-gSz*0.08,-g.side*gSz*0.44,gSz*0.04);x0.stroke();
-    // Forearm — reaching forward
-    x0.beginPath();x0.moveTo(-g.side*gSz*0.44,gSz*0.04);x0.bezierCurveTo(-g.side*gSz*0.5,gSz*0.14,-g.side*gSz*0.52,gSz*0.24,-g.side*gSz*0.5,gSz*0.34);x0.stroke();
-    // Claws gripping ledge
-    gn(0.55,8);x0.lineWidth=2;
-    for(let cl=0;cl<4;cl++){
-      const ca=-0.4+cl*0.28;
-      x0.beginPath();x0.moveTo(-g.side*gSz*0.5,gSz*0.34);x0.lineTo(-g.side*gSz*0.5+Math.cos(ca)*gSz*0.1,-g.side*gSz*0.5+Math.sin(ca+Math.PI*0.6)*gSz*0.1+gSz*0.42);x0.stroke();
-    }
-    // Second arm — slightly raised
-    gn(0.58,10);x0.lineWidth=3;
-    x0.beginPath();x0.moveTo(-g.side*gSz*0.08,-gSz*0.18);x0.bezierCurveTo(-g.side*gSz*0.18,-gSz*0.3,-g.side*gSz*0.3,-gSz*0.28,-g.side*gSz*0.36,-gSz*0.18);x0.stroke();
-    x0.lineCap='butt';
-
-    // ── WINGS — large, membrane, beat-reactive ────────────
-    const wf=0.4+g.wingFlare*0.7;
-    // Wing membrane — filled translucent
-    gnf(0.18+beat*0.08,4);
+    // ── Tail (curling down behind) ───────────────────
+    neon(g.ci,0.4,8);x0.lineWidth=1.8;
     x0.beginPath();
-    x0.moveTo(g.side*gSz*0.06,-gSz*0.08);
-    x0.bezierCurveTo(g.side*gSz*(0.28+wf*0.32),-gSz*(0.38+wf*0.22),g.side*gSz*(0.5+wf*0.28),-gSz*(0.12-wf*0.18),g.side*gSz*(0.45+wf*0.2),gSz*0.22);
-    x0.bezierCurveTo(g.side*gSz*0.3,gSz*0.3,g.side*gSz*0.1,gSz*0.22,g.side*gSz*0.0,gSz*0.1);
-    x0.fill();
-    // Wing outline — primary strokes
-    gn(0.52+beat*0.15,10);x0.lineWidth=2.2;
-    x0.beginPath();
-    x0.moveTo(g.side*gSz*0.06,-gSz*0.08);
-    x0.bezierCurveTo(g.side*gSz*(0.28+wf*0.32),-gSz*(0.38+wf*0.22),g.side*gSz*(0.5+wf*0.28),-gSz*(0.12-wf*0.18),g.side*gSz*(0.45+wf*0.2),gSz*0.22);
+    x0.moveTo(0,torsoY+gSz*0.06);
+    x0.bezierCurveTo(g.side*gSz*0.15,torsoY+gSz*0.15,
+                      g.side*gSz*0.25,baseY-gSz*0.05,
+                      g.side*gSz*0.18,baseY+gSz*0.02);
     x0.stroke();
-    // Wing finger bones — 3 spars
-    gn(0.4,7);x0.lineWidth=1.5;
-    for(let wb=0;wb<3;wb++){
-      const wt=(wb+1)/3;
+    // Tail tip (pointed)
+    x0.beginPath();
+    x0.moveTo(g.side*gSz*0.18,baseY+gSz*0.02);
+    x0.lineTo(g.side*gSz*0.22,baseY-gSz*0.02);
+    x0.lineTo(g.side*gSz*0.15,baseY+gSz*0.05);
+    x0.stroke();
+
+    // ── Head (with continuous 360° spin) ─────────────
+    const headY=torsoY-gSz*0.38;
+    const headSz=gSz*0.18;
+    const hAngle=g.headAngle;
+    // Head turns — offset position slightly based on angle
+    const hOffX=Math.cos(hAngle)*headSz*0.08;
+    const hOffY=Math.sin(hAngle)*headSz*0.04;
+
+    x0.save();x0.translate(hOffX,headY+hOffY);
+
+    // Skull shape
+    neon(g.ci,0.65,14);x0.lineWidth=2;
+    x0.beginPath();
+    x0.ellipse(0,0,headSz*0.8,headSz,0,0,Math.PI*2);
+    x0.stroke();
+
+    // Horns (two curved horns)
+    neon(g.ci,0.6,10);x0.lineWidth=2;
+    for(let horn=-1;horn<=1;horn+=2){
       x0.beginPath();
-      x0.moveTo(g.side*gSz*0.06,-gSz*0.08);
-      x0.lineTo(g.side*gSz*(0.18+wf*0.3*wt),-gSz*(0.22+wf*0.15*wt));
-      x0.lineTo(g.side*gSz*(0.35+wf*0.22*wt),gSz*(0.05+wt*0.12));
+      x0.moveTo(horn*headSz*0.5,-headSz*0.6);
+      x0.bezierCurveTo(horn*headSz*0.8,-headSz*1.2,
+                        horn*headSz*1.1,-headSz*1.0,
+                        horn*headSz*0.9,-headSz*0.5);
       x0.stroke();
     }
-    // Wing lower edge
-    gn(0.42,8);x0.lineWidth=2;
+
+    // Menacing brow ridge
+    neon(g.ci,0.5,8);x0.lineWidth=2;
     x0.beginPath();
-    x0.moveTo(g.side*gSz*(0.45+wf*0.2),gSz*0.22);
-    x0.bezierCurveTo(g.side*gSz*0.28,gSz*0.3,g.side*gSz*0.1,gSz*0.22,g.side*gSz*0.0,gSz*0.1);
+    x0.moveTo(-headSz*0.55,-headSz*0.2);
+    x0.bezierCurveTo(-headSz*0.3,-headSz*0.45,headSz*0.3,-headSz*0.45,headSz*0.55,-headSz*0.2);
     x0.stroke();
 
-    // ── HEAD — large, horned, detailed ───────────────────
-    const hx=-g.side*gSz*0.28+Math.cos(g.headAngle)*gSz*0.08;
-    const hy=-gSz*0.42+Math.sin(g.headAngle)*gSz*0.05;
-    const hSz=gSz*0.36; // head size
+    // Eyes — CONTRASTING PALETTE COLOR, pulse on beat
+    const eyeCI=(g.ci+2)%4; // contrasting color
+    const eyePulse=1+beat*0.6;
+    const eyeR=headSz*0.16*eyePulse;
+    x0.fillStyle=rgba(pc(eyeCI),0.7+beat*0.3);
+    x0.shadowBlur=12+beat*15;x0.shadowColor=pc(eyeCI);
+    x0.beginPath();x0.arc(-headSz*0.3,-headSz*0.15,eyeR,0,Math.PI*2);x0.fill();
+    x0.beginPath();x0.arc(headSz*0.3,-headSz*0.15,eyeR,0,Math.PI*2);x0.fill();
+    // Inner eye glow
+    x0.fillStyle=rgba(pc(eyeCI),0.95);
+    x0.beginPath();x0.arc(-headSz*0.3,-headSz*0.15,eyeR*0.4,0,Math.PI*2);x0.fill();
+    x0.beginPath();x0.arc(headSz*0.3,-headSz*0.15,eyeR*0.4,0,Math.PI*2);x0.fill();
 
-    // Neck
-    gn(0.6,10);x0.lineWidth=3;
-    x0.beginPath();x0.moveTo(-g.side*gSz*0.2,-gSz*0.28);x0.lineTo(hx+g.side*hSz*0.12,hy+hSz*0.4);x0.stroke();
-
-    // Head mass — angular, reptilian skull
-    gn(0.78,18);x0.lineWidth=2.8;
+    // Snout / nose
+    neon(g.ci,0.5,8);x0.lineWidth=1.5;
     x0.beginPath();
-    x0.moveTo(hx,hy-hSz*0.5);           // crown
-    x0.bezierCurveTo(hx+g.side*hSz*0.3,hy-hSz*0.48,hx+g.side*hSz*0.48,hy-hSz*0.25,hx+g.side*hSz*0.45,hy-hSz*0.0);
-    x0.bezierCurveTo(hx+g.side*hSz*0.5, hy+hSz*0.22,hx+g.side*hSz*0.35,hy+hSz*0.38,hx+g.side*hSz*0.15,hy+hSz*0.42); // jaw
-    x0.bezierCurveTo(hx-g.side*hSz*0.08,hy+hSz*0.45,hx-g.side*hSz*0.3,hy+hSz*0.35,hx-g.side*hSz*0.38,hy+hSz*0.15);
-    x0.bezierCurveTo(hx-g.side*hSz*0.42,hy-hSz*0.08,hx-g.side*hSz*0.28,hy-hSz*0.42,hx,hy-hSz*0.5);
+    x0.moveTo(-headSz*0.15,headSz*0.1);
+    x0.lineTo(0,headSz*0.35);
+    x0.lineTo(headSz*0.15,headSz*0.1);
     x0.stroke();
-    gnf(0.08,3);x0.fill();
+    // Nostrils
+    x0.beginPath();x0.arc(-headSz*0.08,headSz*0.25,headSz*0.06,0,Math.PI*2);x0.stroke();
+    x0.beginPath();x0.arc(headSz*0.08,headSz*0.25,headSz*0.06,0,Math.PI*2);x0.stroke();
 
-    // Brow ridge — heavy
-    gn(0.7,12);x0.lineWidth=2.8;
+    // Snarling mouth — open when beat hits
+    const mouthOpen=beat*headSz*0.12;
+    neon(g.ci,0.6,10);x0.lineWidth=1.5;
     x0.beginPath();
-    x0.moveTo(hx-g.side*hSz*0.38,hy-hSz*0.16);
-    x0.bezierCurveTo(hx-g.side*hSz*0.15,hy-hSz*0.3,hx+g.side*hSz*0.15,hy-hSz*0.3,hx+g.side*hSz*0.38,hy-hSz*0.18);
+    x0.moveTo(-headSz*0.4,headSz*0.45);
+    x0.bezierCurveTo(-headSz*0.2,headSz*(0.55+mouthOpen*0.02),
+                      headSz*0.2,headSz*(0.55+mouthOpen*0.02),
+                      headSz*0.4,headSz*0.45);
     x0.stroke();
-
-    // Horns — two main curved horns + smaller brow nubs
-    gn(0.75,14);x0.lineWidth=2.5;
-    // Main left horn
-    x0.beginPath();x0.moveTo(hx-g.side*hSz*0.22,hy-hSz*0.44);
-    x0.bezierCurveTo(hx-g.side*hSz*0.32,hy-hSz*0.78,hx-g.side*hSz*0.18,hy-hSz*0.98,hx-g.side*hSz*0.08,hy-hSz*1.08);x0.stroke();
-    // Main right horn
-    x0.beginPath();x0.moveTo(hx+g.side*hSz*0.12,hy-hSz*0.42);
-    x0.bezierCurveTo(hx+g.side*hSz*0.24,hy-hSz*0.72,hx+g.side*hSz*0.38,hy-hSz*0.88,hx+g.side*hSz*0.32,hy-hSz*1.0);x0.stroke();
-    // Brow nubs
-    gn(0.55,8);x0.lineWidth=2;
-    x0.beginPath();x0.moveTo(hx-g.side*hSz*0.28,hy-hSz*0.26);x0.lineTo(hx-g.side*hSz*0.36,hy-hSz*0.42);x0.stroke();
-    x0.beginPath();x0.moveTo(hx+g.side*hSz*0.08,hy-hSz*0.26);x0.lineTo(hx+g.side*hSz*0.14,hy-hSz*0.4);x0.stroke();
-
-    // Eye socket
-    x0.fillStyle='rgba(0,0,0,0.7)';x0.shadowBlur=0;
-    x0.beginPath();x0.ellipse(hx+g.side*hSz*0.08,hy-hSz*0.06,hSz*0.18,hSz*0.15,g.headAngle*0.2,0,Math.PI*2);x0.fill();
-    // Eye glow — fiery on beat
-    gnf(0.55+beat*0.45,12+beat*8);
-    x0.strokeStyle=rgba(pc((g.ci+2)%4),0.8+beat*0.2);x0.lineWidth=1.5;x0.shadowColor=pc((g.ci+2)%4);
-    x0.beginPath();x0.ellipse(hx+g.side*hSz*0.08,hy-hSz*0.06,hSz*0.12*(1+beat*0.18),hSz*0.09*(1+beat*0.18),0,0,Math.PI*2);x0.stroke();
-    gnf(0.9+beat*0.1,15);x0.shadowColor=rgba(pc((g.ci+1)%4),1);
-    x0.beginPath();x0.arc(hx+g.side*hSz*0.08,hy-hSz*0.06,hSz*0.065*(1+beat*0.3),0,Math.PI*2);x0.fill();
-    // Pupil slit
-    x0.fillStyle='rgba(0,0,0,0.92)';x0.shadowBlur=0;
-    x0.beginPath();x0.ellipse(hx+g.side*hSz*0.08,hy-hSz*0.06,hSz*0.02,hSz*0.07,0,0,Math.PI*2);x0.fill();
-
-    // Snout / muzzle — protruding
-    gn(0.65,12);x0.lineWidth=2.5;
-    x0.beginPath();
-    x0.moveTo(hx+g.side*hSz*0.28,hy-hSz*0.05);
-    x0.bezierCurveTo(hx+g.side*hSz*0.5,hy-hSz*0.1,hx+g.side*hSz*0.55,hy+hSz*0.1,hx+g.side*hSz*0.42,hy+hSz*0.18);
-    x0.stroke();
-    x0.beginPath();
-    x0.moveTo(hx+g.side*hSz*0.28,hy+hSz*0.16);
-    x0.bezierCurveTo(hx+g.side*hSz*0.42,hy+hSz*0.22,hx+g.side*hSz*0.5,hy+hSz*0.3,hx+g.side*hSz*0.38,hy+hSz*0.38);
-    x0.stroke();
-    // Teeth
-    gn(0.6,6);x0.lineWidth=1.8;
-    for(let tk=0;tk<3;tk++){
-      const ty=hy+hSz*(0.16+tk*0.04);
-      x0.beginPath();x0.moveTo(hx+g.side*hSz*(0.32+tk*0.06),ty);x0.lineTo(hx+g.side*hSz*(0.32+tk*0.06),ty+hSz*0.1);x0.stroke();
+    // Fangs
+    if(mouthOpen>2){
+      x0.lineWidth=1.2;
+      x0.beginPath();x0.moveTo(-headSz*0.2,headSz*0.45);x0.lineTo(-headSz*0.18,headSz*0.55);x0.stroke();
+      x0.beginPath();x0.moveTo(headSz*0.2,headSz*0.45);x0.lineTo(headSz*0.18,headSz*0.55);x0.stroke();
+      // Bottom fangs
+      x0.beginPath();x0.moveTo(-headSz*0.12,headSz*0.52);x0.lineTo(-headSz*0.14,headSz*0.42);x0.stroke();
+      x0.beginPath();x0.moveTo(headSz*0.12,headSz*0.52);x0.lineTo(headSz*0.14,headSz*0.42);x0.stroke();
     }
-    // Nostril
-    gn(0.45,5);x0.lineWidth=1.5;
-    x0.beginPath();x0.arc(hx+g.side*hSz*0.44,hy,hSz*0.04,0,Math.PI*2);x0.stroke();
 
-    x0.shadowBlur=0;x0.restore();
-  }
+    // Ears (pointed)
+    neon(g.ci,0.4,6);x0.lineWidth=1.5;
+    for(let ear=-1;ear<=1;ear+=2){
+      x0.beginPath();
+      x0.moveTo(ear*headSz*0.6,-headSz*0.5);
+      x0.lineTo(ear*headSz*0.75,-headSz*0.85);
+      x0.lineTo(ear*headSz*0.5,-headSz*0.6);
+      x0.stroke();
+    }
 
-    // ── GHOSTS — spawn over time, float toward centerpiece ──
-  SD.ghostSpawnTimer+=16;
-  const maxGhosts=Math.floor(songProg*12)+1;
-  if(SD.ghosts.length<maxGhosts&&SD.ghostSpawnTimer>2500-songProg*1500){
-    SD.ghostSpawnTimer=0;
-    // Spawn from edges or top
-    const side=Math.floor(Math.random()*3);
-    const spawnX=side===0?-40:side===1?w+40:Math.random()*w;
-    const spawnY=side<2?h*(0.2+Math.random()*0.5):-40;
-    SD.ghosts.push({
-      x:spawnX,y:spawnY,
-      targetX:cx,targetY:groundY-doorH*0.72,
-      speed:0.3+Math.random()*0.4,
-      wobble:Math.random()*Math.PI*2,
-      wobbleSpeed:0.02+Math.random()*0.02,
-      orbitAngle:Math.random()*Math.PI*2,
-      orbitR:navW*(0.25+Math.random()*0.25),
-      orbitting:false,
-      alpha:0,
-      ci:Math.floor(Math.random()*4),
-      fleeing:false,
-      fleeVx:0,fleeVy:0,
-      sz:0.6+Math.random()*0.7,
-    });
-  }
+    x0.restore(); // end head transform
 
-  const cpCX=cx,cpCY=groundY-doorH*0.72;
-  for(let i=SD.ghosts.length-1;i>=0;i--){
-    const g=SD.ghosts[i];
-    g.alpha=Math.min(0.7,g.alpha+0.005);
-    g.wobble+=g.wobbleSpeed*(1+beat*0.4);
+    // ── Blazing eyes overlay when alive ──────────────
+    if(C.gargoyleAlive&&g.flyMode){
+      const blazeR=headSz*0.25*(1+beat);
+      x0.fillStyle=pc(Math.floor(t*0.02)%4);
+      x0.shadowBlur=20+beat*15;x0.shadowColor=pc(Math.floor(t*0.015)%4);
+      x0.beginPath();x0.arc(hOffX-headSz*0.3,headY+hOffY-headSz*0.15,blazeR,0,Math.PI*2);x0.fill();
+      x0.beginPath();x0.arc(hOffX+headSz*0.3,headY+hOffY-headSz*0.15,blazeR,0,Math.PI*2);x0.fill();
+      x0.shadowBlur=0;
+    }
 
-    if(g.fleeing){
-      g.x+=g.fleeVx*(1+songProg*0.3);
-      g.y+=g.fleeVy*(1+songProg*0.3);
-      g.alpha-=0.015;
-      if(g.alpha<=0||g.x<-200||g.x>w+200||g.y<-200||g.y>h+200){SD.ghosts.splice(i,1);continue;}
-    } else if(!g.orbitting){
-      // Float toward centerpiece
-      const dx=cpCX-g.x,dy=cpCY-g.y;
-      const dist=Math.hypot(dx,dy)||1;
-      if(dist<g.orbitR){
-        g.orbitting=true;
-        g.orbitAngle=Math.atan2(g.y-cpCY,g.x-cpCX);
-      } else {
-        g.x+=dx/dist*g.speed*(1+beat*0.3);
-        g.y+=dy/dist*g.speed*(1+beat*0.3);
+    // ── Fire breath surprise ─────────────────────────
+    if(C.gargoyleFireBreath){
+      const fireLen=w*0.25*(0.5+beat*0.5+Math.sin(t*0.003+gi)*0.3);
+      const fireDir=g.side; // breathe toward center
+      const fx=hOffX,fy=headY+hOffY+headSz*0.4;
+      for(let fl=0;fl<3;fl++){
+        const flw=10-fl*2+beat*6;
+        const fAlpha=0.45-fl*0.1+beat*0.25;
+        x0.strokeStyle=rgba(pc((fl+Math.floor(t*0.01))%4),fAlpha);
+        x0.lineWidth=flw;x0.shadowBlur=18+beat*12;x0.shadowColor=pc(fl%4);
+        x0.beginPath();x0.moveTo(fx,fy);
+        x0.bezierCurveTo(fx-fireDir*fireLen*0.3,fy-fireLen*0.15,
+                          fx-fireDir*fireLen*0.6,fy+Math.sin(t*0.005+gi)*15,
+                          fx-fireDir*fireLen,fy+Math.sin(t*0.003+gi*2)*20);
+        x0.stroke();
       }
-    } else {
-      // Orbit centerpiece
-      g.orbitAngle+=0.008*(1+SM.energy*0.3)*(1+beat*0.3);
-      g.orbitR=Math.max(g.orbitR*0.998,navW*0.12); // slowly tighten orbit
-      g.x=cpCX+Math.cos(g.orbitAngle)*g.orbitR;
-      g.y=cpCY+Math.sin(g.orbitAngle)*g.orbitR*0.55;
-    }
-
-    // Draw ghost — teardrop wisp shape
-    const gs=35*g.sz;
-    const wobX=Math.sin(g.wobble)*6;
-    const wobY=Math.cos(g.wobble*0.7)*4;
-    x0.save();x0.translate(g.x+wobX,g.y+wobY);x0.globalAlpha=g.alpha;
-    x0.shadowBlur=20+beat*10;x0.shadowColor=rgba(pc(g.ci),0.8);
-
-    // Ghost strobing in surprise
-    if(SD.ghostStrobe){
-      x0.globalAlpha=g.alpha*(0.3+Math.abs(Math.sin(t*0.05+i))*0.7);
-      x0.shadowBlur=40+beat*20;
-    }
-
-    // Body
-    x0.fillStyle=rgba(pc(g.ci),0.35);
-    x0.beginPath();
-    x0.moveTo(0,-gs*0.55);
-    x0.bezierCurveTo(-gs*0.55,-gs*0.55,-gs*0.55,gs*0.2,-gs*0.45,gs*0.5);
-    x0.bezierCurveTo(-gs*0.3,gs*0.75,-gs*0.1,gs*0.55,0,gs*0.7);
-    x0.bezierCurveTo(gs*0.1,gs*0.55,gs*0.3,gs*0.75,gs*0.45,gs*0.5);
-    x0.bezierCurveTo(gs*0.55,gs*0.2,gs*0.55,-gs*0.55,0,-gs*0.55);
-    x0.fill();
-    // Outline glow
-    x0.strokeStyle=rgba(pc(g.ci),0.7);x0.lineWidth=1.5;x0.stroke();
-    // Eyes
-    x0.fillStyle=rgba(pc((g.ci+2)%4),0.9);
-    x0.beginPath();x0.arc(-gs*0.18,-gs*0.1,gs*0.1,0,Math.PI*2);x0.fill();
-    x0.beginPath();x0.arc(gs*0.18,-gs*0.1,gs*0.1,0,Math.PI*2);x0.fill();
-    x0.fillStyle='rgba(0,0,0,0.8)';
-    x0.beginPath();x0.arc(-gs*0.18,-gs*0.1,gs*0.05,0,Math.PI*2);x0.fill();
-    x0.beginPath();x0.arc(gs*0.18,-gs*0.1,gs*0.05,0,Math.PI*2);x0.fill();
-
-    x0.shadowBlur=0;x0.restore();
-  }
-
-  // ── SURPRISE A: Gargoyles Come Alive — fly around, eyes blazing ──
-  if(SD.gargoyleAlive){
-    SD.gargoyleAliveTimer-=16;
-    if(SD.gargoyleAliveTimer<=0){SD.gargoyleAlive=false;if(SD.gargoyles)SD.gargoyles.forEach(g=>{g.flyMode=false;});}
-    if(SD.gargoyles){
-      for(const g of SD.gargoyles){
-        if(g.flyMode){
-          if(!g.flyVx){g.flyVx=(Math.random()-0.5)*3;g.flyVy=-(1+Math.random()*2);}
-          g.x+=g.flyVx*(1+beat*0.5);g.y+=g.flyVy*(1+beat*0.3);
-          g.flyVy+=0.02; // gravity
-          // bounce off edges
-          if(g.x<w*0.05||g.x>w*0.95)g.flyVx*=-0.8;
-          if(g.y<h*0.05||g.y>h*0.85){g.flyVy*=-0.9;g.y=Math.max(h*0.05,Math.min(h*0.85,g.y));}
-          // blazing eyes
-          x0.save();x0.translate(g.x,g.y);
-          const eyeGlow=8+beat*12;
-          x0.shadowBlur=eyeGlow;x0.shadowColor=pc(0);
-          x0.fillStyle=pc(Math.floor(t*0.02)%4);
-          x0.beginPath();x0.arc(-8,-5,4+beat*2,0,Math.PI*2);x0.fill();
-          x0.beginPath();x0.arc(8,-5,4+beat*2,0,Math.PI*2);x0.fill();
-          x0.shadowBlur=0;x0.restore();
-        }
+      // Ember particles
+      for(let e=0;e<4;e++){
+        const ex=fx-fireDir*fireLen*(0.5+Math.random()*0.5);
+        const ey=fy+(Math.random()-0.5)*30;
+        x0.fillStyle=rgba(pc(e%4),0.5+beat*0.3);x0.shadowBlur=6;
+        x0.beginPath();x0.arc(ex,ey,2+Math.random()*2,0,Math.PI*2);x0.fill();
       }
+      x0.shadowBlur=0;
     }
+
+    x0.restore(); // end gargoyle transform
   }
 
-  // ── SURPRISE B: Church Doors Open — light floods out, stained glass explosion ──
-  if(SD.doorsOpen){
-    SD.doorsOpenTimer-=16;
-    if(SD.doorsOpenTimer<=0)SD.doorsOpen=false;
-    const doorAlpha=Math.min(1,(30000-SD.doorsOpenTimer)/1000)*0.7;
-    // Huge light beam from center bottom (door location)
-    const doorX=w*0.5,doorY=h*0.88;
-    const doorGrad=x0.createRadialGradient(doorX,doorY,0,doorX,doorY,h*0.7);
-    doorGrad.addColorStop(0,rgba(pc(Math.floor(t*0.008)%4),doorAlpha*0.4));
-    doorGrad.addColorStop(0.3,rgba(pc((Math.floor(t*0.008)+1)%4),doorAlpha*0.2));
-    doorGrad.addColorStop(1,'transparent');
-    x0.fillStyle=doorGrad;x0.fillRect(0,0,w,h);
-    // Stained glass color beams radiating outward
-    x0.save();x0.translate(doorX,doorY);
-    x0.globalCompositeOperation='screen';
-    for(let b=0;b<12;b++){
-      const ba=b/12*Math.PI*2+t*0.001;
-      const bLen=h*0.4*(0.6+beat*0.4);
-      x0.strokeStyle=rgba(pc(b%4),doorAlpha*(0.3+beat*0.3));
-      x0.lineWidth=8+beat*6;x0.shadowBlur=15+beat*10;x0.shadowColor=pc(b%4);
-      x0.beginPath();x0.moveTo(0,0);
-      x0.lineTo(Math.cos(ba)*bLen,Math.sin(ba)*bLen);x0.stroke();
-    }
-    x0.globalCompositeOperation='source-over';
-    x0.restore();
-  }
-
-  // ── SURPRISE C: Gargoyle Fire Breath — neon fire beams across scene ──
-  if(SD.gargoyleFireBreath){
-    SD.gargoyleFireTimer-=16;
-    if(SD.gargoyleFireTimer<=0)SD.gargoyleFireBreath=false;
-    if(SD.gargoyles){
-      for(const g of SD.gargoyles){
-        const fireLen=w*0.3*(0.5+beat*0.5+Math.sin(t*0.003+g.side)*0.3);
-        const fireAngle=g.headAngle||0;
-        const fx=g.x,fy=g.y-20;
-        // Fire beam — multiple layers for glow
-        for(let fl=0;fl<3;fl++){
-          const flw=12-fl*3+beat*8;
-          const fAlpha=0.4-fl*0.1+beat*0.2;
-          x0.strokeStyle=rgba(pc((fl+Math.floor(t*0.01))%4),fAlpha);
-          x0.lineWidth=flw;x0.shadowBlur=20+beat*15;x0.shadowColor=pc(fl%4);
-          x0.beginPath();x0.moveTo(fx,fy);
-          x0.lineTo(fx+Math.cos(fireAngle)*fireLen,fy+Math.sin(fireAngle)*fireLen);
-          x0.stroke();
-        }
-        // Ember particles at beam end
-        const endX=fx+Math.cos(fireAngle)*fireLen,endY=fy+Math.sin(fireAngle)*fireLen;
-        for(let e=0;e<3;e++){
-          x0.fillStyle=rgba(pc(e%4),0.6+beat*0.3);x0.shadowBlur=8;
-          x0.beginPath();x0.arc(endX+(Math.random()-0.5)*20,endY+(Math.random()-0.5)*20,2+Math.random()*3,0,Math.PI*2);x0.fill();
-        }
-      }
-    }
-    x0.shadowBlur=0;
-  }
-
-  // ── Floating motes ───────────────────────────────────
-  for(const p of SD.motes){
-    p.y+=p.vy*(0.5+holyLight*0.4);p.ph+=0.04;
-    if(p.y<-5){p.y=h+5;p.x=Math.random()*w;}
-    const br=Math.sin(p.ph)*0.4+0.6;
-    x0.beginPath();x0.arc(p.x,p.y,p.r*br,0,Math.PI*2);
-    x0.fillStyle=rgba(pc(p.ci),br*0.35*holyLight);
-    x0.shadowBlur=4;x0.shadowColor=pc(p.ci);x0.fill();x0.shadowBlur=0;
+  // ══════════════════════════════════════════════════════
+  // FLOATING MOTES — subtle atmospheric particles
+  // ══════════════════════════════════════════════════════
+  for(const m of C.motes){
+    m.y+=m.vy*(0.5+energy*0.3);m.ph+=0.03;
+    if(m.y<-10){m.y=h+10;m.x=Math.random()*w;}
+    const br=0.4+Math.sin(m.ph)*0.3;
+    x0.beginPath();x0.arc(m.x,m.y,m.r*br,0,Math.PI*2);
+    x0.fillStyle=rgba(pc(m.ci),br*0.3);
+    x0.shadowBlur=4;x0.shadowColor=pc(m.ci);x0.fill();x0.shadowBlur=0;
   }
 }
 function mkTetPiece(w,h){
@@ -2680,6 +2675,7 @@ function drawElectricForest(t){
   const beat=SM.beatPulse,energy=SM.energy;
   if(!SD.ef)return;
   const EF=SD.ef;
+
   // Timer updates
   if(EF.laserOverloadTimer>0){EF.laserOverloadTimer-=16;if(EF.laserOverloadTimer<=0)EF.laserOverload=false;}
   if(EF.monkeySwarmTimer>0){EF.monkeySwarmTimer-=16;if(EF.monkeySwarmTimer<=0){EF.monkeySwarm=false;EF.monkeys=[];}}
@@ -2687,145 +2683,298 @@ function drawElectricForest(t){
   const wind=EF.windstorm;
   const laserOL=EF.laserOverload;
 
-  // BG — dark forest night
+  // ══════════════════════════════════════════════════════
+  // BACKGROUND — dark forest night sky
+  // ══════════════════════════════════════════════════════
   const bgG=x0.createLinearGradient(0,0,0,h);
-  bgG.addColorStop(0,'rgba(1,3,8,1)');bgG.addColorStop(0.5,'rgba(2,6,12,1)');bgG.addColorStop(1,'rgba(0,2,4,1)');
+  bgG.addColorStop(0,'rgba(1,2,6,1)');bgG.addColorStop(0.4,'rgba(2,5,10,1)');bgG.addColorStop(1,'rgba(0,1,3,1)');
   x0.fillStyle=bgG;x0.fillRect(0,0,w,h);
-  // Ground path
-  const gG=x0.createLinearGradient(0,h*0.82,0,h);
-  gG.addColorStop(0,rgba(pc(2),0.15));gG.addColorStop(1,'rgba(0,0,0,0.9)');
-  x0.fillStyle=gG;x0.fillRect(0,h*0.82,w,h*0.18);
-  // Path perspective lines
-  x0.strokeStyle=rgba(pc(2),0.08+beat*0.04);x0.lineWidth=1;
-  x0.beginPath();x0.moveTo(cx-w*0.08,h*0.82);x0.lineTo(cx-w*0.25,h);x0.stroke();
-  x0.beginPath();x0.moveTo(cx+w*0.08,h*0.82);x0.lineTo(cx+w*0.25,h);x0.stroke();
 
-  // ── SOLID TREES — flanking sides ────────────────────────
-  for(const tr of EF.trees){
+  // Ground — forest floor path with perspective
+  const vanishY=h*0.38; // vanishing point (where stage is)
+  const gG=x0.createLinearGradient(0,vanishY,0,h);
+  gG.addColorStop(0,rgba(pc(2),0.06));gG.addColorStop(0.3,rgba(pc(2),0.1));gG.addColorStop(1,'rgba(2,4,2,0.95)');
+  x0.fillStyle=gG;x0.fillRect(0,vanishY,w,h-vanishY);
+
+  // Path edges — perspective lines converging to stage
+  x0.strokeStyle=rgba(pc(2),0.07+beat*0.03);x0.lineWidth=1;
+  x0.beginPath();x0.moveTo(cx-w*0.06,vanishY);x0.lineTo(0,h);x0.stroke();
+  x0.beginPath();x0.moveTo(cx+w*0.06,vanishY);x0.lineTo(w,h);x0.stroke();
+  // Inner path lines
+  x0.strokeStyle=rgba(pc(2),0.04);
+  x0.beginPath();x0.moveTo(cx-w*0.03,vanishY);x0.lineTo(cx-w*0.35,h);x0.stroke();
+  x0.beginPath();x0.moveTo(cx+w*0.03,vanishY);x0.lineTo(cx+w*0.35,h);x0.stroke();
+
+  // ══════════════════════════════════════════════════════
+  // TREES — immersive depth perspective, flanking sides
+  // Foreground trees (near edges) are LARGE and partially off-screen
+  // Background trees (near center) are smaller and higher up
+  // ══════════════════════════════════════════════════════
+  // Sort trees by depth (background first so foreground draws on top)
+  const sortedTrees=[...EF.trees].sort((a,b)=>{
+    const aD=Math.abs(a.x-cx);const bD=Math.abs(b.x-cx);return aD-bD;
+  });
+
+  for(const tr of sortedTrees){
     tr.ph+=0.005;const glm=tr.glowMult||1;
-    const windSway=wind?(Math.sin(t*0.003+tr.x*0.01)*30+Math.sin(t*0.007)*15):0;
+    // Wind sway
+    const windSway=wind?(Math.sin(t*0.003+tr.x*0.01)*35+Math.sin(t*0.007)*20):0;
     tr.swayOffset+=(windSway-tr.swayOffset)*0.05;
-    const baseX=tr.x,baseY=h;
-    const topX=baseX+tr.swayOffset,topY=h-tr.trunkH;
+
+    // Depth factor: how far from center (0=center/deep, 1=edge/close)
+    const edgeDist=Math.abs(tr.x-cx)/(w*0.5);
+    const depth=Math.min(1,edgeDist*1.3); // 0=far, 1=near
+
+    // Scale by depth — foreground trees are MUCH bigger
+    const scaleF=0.4+depth*0.9; // 0.4x at back to 1.3x at front
+    const trunkW=tr.trunkW*scaleF;
+    const trunkH=tr.trunkH*scaleF;
+
+    // Y position: foreground trees start at bottom, background trees start higher
+    const baseY=h+depth*h*0.05; // foreground slightly below edge
+    const topY=baseY-trunkH;
+
+    // X position: foreground trees pushed further to edges (partially off-screen)
+    const pushFactor=depth*0.12;
+    const baseX=tr.side<0?(tr.x-w*pushFactor):(tr.x+w*pushFactor);
+    const topX=baseX+tr.swayOffset;
+
+    // Alpha: background trees slightly more transparent
+    const depthAlpha=0.5+depth*0.5;
+
     x0.save();
-    // Trunk — solid dark with neon glow edge
-    x0.fillStyle='rgba(5,12,5,0.95)';
+    x0.globalAlpha=depthAlpha;
+
+    // ── Trunk — thick solid dark with neon glow edges ──
+    const twBase=trunkW*(1.2+depth*0.4); // wider at base for foreground
+    const twTop=trunkW*(0.5+depth*0.2);
+    x0.fillStyle=`rgba(4,10,4,${0.9+depth*0.08})`;
     x0.beginPath();
-    x0.moveTo(baseX-tr.trunkW,baseY);
-    x0.lineTo(topX-tr.trunkW*0.6,topY+tr.trunkH*0.3);
-    x0.lineTo(topX-tr.trunkW*0.4,topY);
-    x0.lineTo(topX+tr.trunkW*0.4,topY);
-    x0.lineTo(topX+tr.trunkW*0.6,topY+tr.trunkH*0.3);
-    x0.lineTo(baseX+tr.trunkW,baseY);
+    x0.moveTo(baseX-twBase,baseY);
+    x0.lineTo(topX-twTop,topY+trunkH*0.25);
+    x0.lineTo(topX-twTop*0.7,topY);
+    x0.lineTo(topX+twTop*0.7,topY);
+    x0.lineTo(topX+twTop,topY+trunkH*0.25);
+    x0.lineTo(baseX+twBase,baseY);
     x0.closePath();x0.fill();
-    // Neon glow outline
-    x0.strokeStyle=rgba(pc(tr.ci),(0.35+beat*0.15)*glm);x0.lineWidth=2;
-    x0.shadowBlur=(12+beat*8)*glm;x0.shadowColor=pc(tr.ci);x0.stroke();
-    // Canopy — large glowing ellipse at top
-    x0.fillStyle=rgba(pc(tr.ci),(0.2+beat*0.08)*glm);
-    x0.shadowBlur=(20+beat*12)*glm;x0.shadowColor=pc(tr.ci);
-    x0.beginPath();x0.ellipse(topX,topY,tr.trunkW*2.5+Math.sin(tr.ph)*5,tr.trunkH*0.22,0,0,Math.PI*2);x0.fill();
-    // Neon highlights on trunk
-    x0.strokeStyle=rgba(pc(tr.ci),(0.15+beat*0.08)*glm);x0.lineWidth=1.5;x0.shadowBlur=6*glm;
-    for(let b=0;b<3;b++){
-      const by=baseY-(b+1)*tr.trunkH*0.25;
-      x0.beginPath();x0.moveTo(baseX-tr.trunkW*0.8+b*2,by);x0.lineTo(baseX+tr.trunkW*0.8-b*2,by);x0.stroke();
+
+    // Neon glow outline on trunk
+    x0.strokeStyle=rgba(pc(tr.ci),(0.3+beat*0.15)*glm*depthAlpha);
+    x0.lineWidth=(1.5+depth*1.5)*glm;
+    x0.shadowBlur=(8+beat*6+depth*8)*glm;x0.shadowColor=pc(tr.ci);
+    x0.stroke();
+
+    // ── Branches — spreading outward, more on foreground trees ──
+    const numBranches=Math.floor(2+depth*3);
+    x0.strokeStyle=rgba(pc(tr.ci),(0.25+beat*0.1)*glm);
+    x0.lineWidth=(1+depth)*glm;
+    for(let b=0;b<numBranches;b++){
+      const by=topY+trunkH*(0.15+b*0.18);
+      const bSide=(b%2===0)?-1:1;
+      const bLen=trunkW*(1.5+depth*1.2+Math.sin(tr.ph+b)*0.3);
+      const bx=lerp(topX,baseX,b*0.18/(numBranches*0.18));
+      x0.beginPath();
+      x0.moveTo(bx,by);
+      x0.bezierCurveTo(
+        bx+bSide*bLen*0.4,by-trunkH*0.06,
+        bx+bSide*bLen*0.7,by-trunkH*0.02+tr.swayOffset*0.3,
+        bx+bSide*bLen+tr.swayOffset*0.5,by+trunkH*0.02
+      );
+      x0.stroke();
+      // Small leaf clusters at branch ends
+      x0.fillStyle=rgba(pc(tr.ci),(0.15+beat*0.06)*glm);
+      x0.shadowBlur=(10+beat*5)*glm;
+      x0.beginPath();
+      x0.ellipse(bx+bSide*bLen+tr.swayOffset*0.5,by,bLen*0.25,bLen*0.12,bSide*0.2,0,Math.PI*2);
+      x0.fill();
     }
-    x0.shadowBlur=0;x0.restore();
+
+    // ── Canopy glow at top — subtle, not blocking sky ──
+    x0.fillStyle=rgba(pc(tr.ci),(0.12+beat*0.05)*glm);
+    x0.shadowBlur=(15+beat*8)*glm;x0.shadowColor=pc(tr.ci);
+    x0.beginPath();x0.ellipse(topX,topY+trunkH*0.05,trunkW*1.8,trunkH*0.12,0,0,Math.PI*2);x0.fill();
+
+    // ── Neon bark highlights ──
+    x0.strokeStyle=rgba(pc(tr.ci),(0.1+beat*0.06)*glm);x0.lineWidth=1;x0.shadowBlur=4*glm;
+    for(let bk=0;bk<(2+Math.floor(depth*2));bk++){
+      const bky=baseY-(bk+1)*trunkH*0.2;
+      const bkx=lerp(topX,baseX,(bk+1)*0.2);
+      const bkw=lerp(twTop,twBase,(bk+1)*0.2)*0.7;
+      x0.beginPath();x0.moveTo(bkx-bkw,bky);x0.lineTo(bkx+bkw,bky);x0.stroke();
+    }
+
+    x0.shadowBlur=0;x0.globalAlpha=1;x0.restore();
     if(tr.glowMult>1)tr.glowMult*=0.995;
   }
 
-  // ── LASERS — from above centerpiece, sweep across top ───
-  const laserOriginX=cx,laserOriginY=h*0.15;
-  const laserCount=laserOL?EF.lasers.length*2:EF.lasers.length;
-  const laserBright=laserOL?1.8:1;
-  for(let li=0;li<Math.min(laserCount,EF.lasers.length);li++){
+  // ══════════════════════════════════════════════════════
+  // STAGE — centerpiece as the festival stage
+  // Positioned at the vanishing point, framed by a stage structure
+  // ══════════════════════════════════════════════════════
+  const stageX=cx, stageY=vanishY+h*0.08;
+  const stageSz=Math.min(w,h)*0.12;
+
+  // Stage platform — trapezoidal, perspective
+  const stgW1=w*0.08, stgW2=w*0.18, stgH=h*0.04;
+  x0.fillStyle=rgba(pc(3),0.12);
+  x0.beginPath();
+  x0.moveTo(stageX-stgW1,stageY);x0.lineTo(stageX-stgW2,stageY+stgH);
+  x0.lineTo(stageX+stgW2,stageY+stgH);x0.lineTo(stageX+stgW1,stageY);
+  x0.closePath();x0.fill();
+  x0.strokeStyle=rgba(pc(3),0.3+beat*0.15);x0.lineWidth=1.5;
+  x0.shadowBlur=8+beat*5;x0.shadowColor=pc(3);x0.stroke();x0.shadowBlur=0;
+
+  // Stage truss/rigging outline above centerpiece
+  const trussW=w*0.14, trussTop=stageY-h*0.18;
+  x0.strokeStyle=rgba(pc(0),0.2+beat*0.1);x0.lineWidth=1.5;
+  x0.shadowBlur=6+beat*4;x0.shadowColor=pc(0);
+  // Vertical truss legs
+  x0.beginPath();x0.moveTo(stageX-trussW,stageY);x0.lineTo(stageX-trussW*0.8,trussTop);x0.stroke();
+  x0.beginPath();x0.moveTo(stageX+trussW,stageY);x0.lineTo(stageX+trussW*0.8,trussTop);x0.stroke();
+  // Top bar
+  x0.beginPath();x0.moveTo(stageX-trussW*0.8,trussTop);x0.lineTo(stageX+trussW*0.8,trussTop);x0.stroke();
+  // Cross braces
+  x0.strokeStyle=rgba(pc(0),0.1);x0.lineWidth=1;
+  x0.beginPath();x0.moveTo(stageX-trussW*0.85,stageY-h*0.05);x0.lineTo(stageX+trussW*0.85,stageY-h*0.12);x0.stroke();
+  x0.beginPath();x0.moveTo(stageX+trussW*0.85,stageY-h*0.05);x0.lineTo(stageX-trussW*0.85,stageY-h*0.12);x0.stroke();
+  x0.shadowBlur=0;
+
+  // Centerpiece — the festival stage focal point
+  if(THEME.centerpiece){
+    const windPulse=wind?1.3:1;
+    cpRot+=0.012*(1+energy*0.2+beat*0.3)*windPulse;cpPh+=0.013;
+    const cpSz=stageSz*(0.7+beat*0.15+songProg*0.15)*windPulse;
+    const cpBob=Math.sin(t*0.001)*h*0.01;
+    x0.shadowBlur=(18+beat*12)*windPulse;x0.shadowColor=pc(0);
+    x0.globalAlpha=0.9+beat*0.1;
+    drawCPMini(x0,THEME.centerpiece,stageX,stageY-h*0.06+cpBob,cpSz,cpRot);
+    x0.globalAlpha=1;x0.shadowBlur=0;
+    // Stage glow halo
+    const cpGlow=x0.createRadialGradient(stageX,stageY-h*0.04,0,stageX,stageY-h*0.04,cpSz*3);
+    cpGlow.addColorStop(0,rgba(pc(0),0.12*(1+beat*0.4)));cpGlow.addColorStop(1,'transparent');
+    x0.fillStyle=cpGlow;x0.fillRect(0,0,w,h);
+  }
+
+  // ══════════════════════════════════════════════════════
+  // LASERS — from stage truss, aimed at viewer (fan outward toward edges)
+  // Creates the "lasers pointed at you" festival perspective
+  // ══════════════════════════════════════════════════════
+  const laserOriginX=stageX, laserOriginY=trussTop;
+  const laserBright=laserOL?2:1;
+
+  for(let li=0;li<EF.lasers.length;li++){
     const lz=EF.lasers[li];
-    const speedMult=laserOL?(2+Math.random()):1;
-    lz.angle+=lz.speed*speedMult*(1+beat*0.5);
-    const endX=laserOriginX+Math.cos(lz.angle)*w*0.8;
-    const endY=Math.sin(lz.angle)*h*0.2+h*0.05;
-    x0.strokeStyle=rgba(pc(lz.ci),(0.25+beat*0.15)*laserBright);
-    x0.lineWidth=lz.width*(laserOL?1.5:1);
-    x0.shadowBlur=(8+beat*6)*laserBright;x0.shadowColor=pc(lz.ci);
+    const speedMult=laserOL?(2.5+Math.random()*1.5):1;
+    lz.angle+=lz.speed*speedMult*(1+beat*0.6);
+
+    // Fan outward from stage toward viewer — beams spread wide toward screen edges and bottom
+    const spreadAngle=lz.angle;
+    // Horizontal spread: beams fan left and right
+    const hSpread=Math.sin(spreadAngle)*w*0.7;
+    // Vertical: beams come toward the viewer (bottom of screen)
+    const vTarget=h*0.6+Math.cos(spreadAngle*0.7)*h*0.35;
+    const endX=laserOriginX+hSpread;
+    const endY=vTarget;
+
+    x0.strokeStyle=rgba(pc(lz.ci),(0.2+beat*0.15)*laserBright);
+    x0.lineWidth=lz.width*(laserOL?1.8:1);
+    x0.shadowBlur=(6+beat*5)*laserBright;x0.shadowColor=pc(lz.ci);
     x0.beginPath();x0.moveTo(laserOriginX,laserOriginY);x0.lineTo(endX,endY);x0.stroke();
-    // Duplicate for overload
+
+    // Laser overload: extra beams, erratic angles
     if(laserOL){
-      const a2=lz.angle+Math.PI*0.3+Math.sin(t*0.01+li)*0.5;
-      const ex2=laserOriginX+Math.cos(a2)*w*0.7,ey2=Math.sin(a2)*h*0.25+h*0.08;
-      x0.strokeStyle=rgba(pc((lz.ci+1)%4),(0.2+beat*0.12)*laserBright);
+      const a2=spreadAngle+Math.PI*0.15+Math.sin(t*0.012+li)*0.6;
+      const ex2=laserOriginX+Math.sin(a2)*w*0.8;
+      const ey2=h*0.5+Math.cos(a2*0.5)*h*0.4;
+      x0.strokeStyle=rgba(pc((lz.ci+1)%4),(0.15+beat*0.12)*laserBright);
+      x0.lineWidth=lz.width*1.2;
       x0.beginPath();x0.moveTo(laserOriginX,laserOriginY);x0.lineTo(ex2,ey2);x0.stroke();
+      // Third beam for intensity
+      if(li%2===0){
+        const a3=spreadAngle-Math.PI*0.2+Math.cos(t*0.008+li)*0.4;
+        const ex3=laserOriginX+Math.sin(a3)*w*0.6;
+        const ey3=h*0.7+Math.cos(a3)*h*0.25;
+        x0.strokeStyle=rgba(pc((lz.ci+2)%4),(0.1+beat*0.1)*laserBright);
+        x0.beginPath();x0.moveTo(laserOriginX,laserOriginY);x0.lineTo(ex3,ey3);x0.stroke();
+      }
     }
   }
   x0.shadowBlur=0;
 
-  // ── CENTERPIECE — centered, floating, spins/strobes ─────
-  if(THEME.centerpiece){
-    cpRot+=0.012*(1+energy*0.2+beat*0.2);cpPh+=0.013;
-    const cpSz=Math.min(w,h)*(0.1+beat*0.04+songProg*0.04);
-    const cpY2=h*0.22+Math.sin(t*0.001)*h*0.02;
-    x0.shadowBlur=20+beat*15;x0.shadowColor=pc(0);
-    x0.globalAlpha=0.9+beat*0.1;
-    drawCPMini(x0,THEME.centerpiece,cx,cpY2,cpSz,cpRot);
-    x0.globalAlpha=1;x0.shadowBlur=0;
-    // Glow halo
-    const cpGlow=x0.createRadialGradient(cx,cpY2,0,cx,cpY2,cpSz*2.5);
-    cpGlow.addColorStop(0,rgba(pc(0),0.1*(1+beat*0.3)));cpGlow.addColorStop(1,'transparent');
-    x0.fillStyle=cpGlow;x0.fillRect(0,0,w,h);
-  }
-
-  // ── FAIRIES — floating firefly particles ────────────────
+  // ══════════════════════════════════════════════════════
+  // FIREFLIES — floating particles through the forest
+  // ══════════════════════════════════════════════════════
   for(const f of EF.fairies){
     f.x+=f.vx+Math.sin(t*0.001+f.ph)*0.4+(wind?Math.sin(t*0.005)*3:0);
     f.y+=f.vy+Math.cos(t*0.0008+f.ph)*0.4;f.ph+=0.05;
     if(f.x<0||f.x>w)f.vx*=-1;if(f.y<0||f.y>h)f.vy*=-1;
     const br=Math.sin(f.ph)*0.4+0.6;
     x0.beginPath();x0.arc(f.x,f.y,f.r*(0.5+br*0.5),0,Math.PI*2);
-    x0.fillStyle=rgba(pc(f.ci),br*0.6);x0.shadowBlur=10;x0.shadowColor=pc(f.ci);x0.fill();x0.shadowBlur=0;
+    x0.fillStyle=rgba(pc(f.ci),br*0.5);x0.shadowBlur=8;x0.shadowColor=pc(f.ci);x0.fill();x0.shadowBlur=0;
   }
 
-  // ── WIND PARTICLES (windstorm surprise) ─────────────────
+  // ══════════════════════════════════════════════════════
+  // WIND PARTICLES (windstorm surprise)
+  // ══════════════════════════════════════════════════════
   if(wind){
     for(let wp=0;wp<60;wp++){
       const wx=((t*0.8+wp*w/60)%w),wy=Math.random()*h;
-      x0.fillStyle=rgba(pc(wp%4),0.3+beat*0.2);
-      x0.beginPath();x0.ellipse(wx,wy,6+Math.random()*4,1,0.3,0,Math.PI*2);x0.fill();
+      x0.fillStyle=rgba(pc(wp%4),0.25+beat*0.2);
+      x0.beginPath();x0.ellipse(wx,wy,5+Math.random()*4,1,0.3,0,Math.PI*2);x0.fill();
     }
   }
 
-  // ── NEON MONKEYS (monkey swarm surprise) ────────────────
+  // ══════════════════════════════════════════════════════
+  // NEON MONKEYS (monkey swarm surprise)
+  // ══════════════════════════════════════════════════════
   if(EF.monkeySwarm){
     // Spawn monkeys if needed
     while(EF.monkeys.length<12){
       const treeIdx=Math.floor(Math.random()*EF.trees.length);
       const tr=EF.trees[treeIdx];
-      EF.monkeys.push({x:tr.x,y:h-tr.trunkH*(0.3+Math.random()*0.4),vx:(Math.random()-0.5)*4,vy:(Math.random()-0.5)*3,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4),sz:18+Math.random()*12,swinging:Math.random()>0.4,swingTree:treeIdx,swingAngle:Math.random()*Math.PI});
+      EF.monkeys.push({x:tr.x,y:h-tr.trunkH*(0.3+Math.random()*0.4),vx:(Math.random()-0.5)*4,vy:(Math.random()-0.5)*3,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4),sz:20+Math.random()*14,swinging:Math.random()>0.4,swingTree:treeIdx,swingAngle:Math.random()*Math.PI});
     }
     for(const mk of EF.monkeys){
       mk.ph+=0.06*(1+beat*0.4);
+      const strobeOn=Math.sin(t*0.015+mk.ph*3)>-0.2;
       if(mk.swinging){
         mk.swingAngle+=0.04*(1+beat*0.3);
         const tr=EF.trees[mk.swingTree%EF.trees.length];
-        mk.x=tr.x+Math.sin(mk.swingAngle)*50;
-        mk.y=(h-tr.trunkH*0.5)+Math.cos(mk.swingAngle)*30;
-        if(Math.random()<0.01){mk.swinging=false;mk.vx=(Math.random()-0.5)*6;mk.vy=-2-Math.random()*3;}
+        mk.x=tr.x+Math.sin(mk.swingAngle)*55;
+        mk.y=(h-tr.trunkH*0.5)+Math.cos(mk.swingAngle)*35;
+        if(Math.random()<0.008){mk.swinging=false;mk.vx=(Math.random()-0.5)*6;mk.vy=-2.5-Math.random()*3;}
       } else {
         mk.x+=mk.vx;mk.y+=mk.vy;mk.vy+=0.08;
         if(mk.y>h*0.8){mk.swinging=true;mk.swingTree=Math.floor(Math.random()*EF.trees.length);}
       }
+      if(!strobeOn)continue;
       // Draw neon-tube outline monkey
-      x0.strokeStyle=rgba(pc(mk.ci),0.8+beat*0.2);x0.lineWidth=2;
-      x0.shadowBlur=10+beat*6;x0.shadowColor=pc(mk.ci);
-      // Body circle
-      x0.beginPath();x0.arc(mk.x,mk.y,mk.sz*0.4,0,Math.PI*2);x0.stroke();
+      const mci=mk.ci;
+      x0.strokeStyle=rgba(pc(mci),0.8+beat*0.2);x0.lineWidth=2;
+      x0.shadowBlur=10+beat*6;x0.shadowColor=pc(mci);
+      // Body oval
+      x0.beginPath();x0.ellipse(mk.x,mk.y,mk.sz*0.35,mk.sz*0.45,0,0,Math.PI*2);x0.stroke();
       // Head
-      x0.beginPath();x0.arc(mk.x,mk.y-mk.sz*0.5,mk.sz*0.25,0,Math.PI*2);x0.stroke();
-      // Tail — curly
-      x0.beginPath();x0.moveTo(mk.x-mk.sz*0.3,mk.y+mk.sz*0.2);
-      x0.bezierCurveTo(mk.x-mk.sz*0.6,mk.y+mk.sz*0.5,mk.x-mk.sz*0.8,mk.y-mk.sz*0.1,mk.x-mk.sz*0.5,mk.y-mk.sz*0.3);x0.stroke();
-      // Arms
-      x0.beginPath();x0.moveTo(mk.x-mk.sz*0.3,mk.y-mk.sz*0.1);x0.lineTo(mk.x-mk.sz*0.6,mk.y-mk.sz*0.4+Math.sin(mk.ph)*mk.sz*0.2);x0.stroke();
-      x0.beginPath();x0.moveTo(mk.x+mk.sz*0.3,mk.y-mk.sz*0.1);x0.lineTo(mk.x+mk.sz*0.6,mk.y-mk.sz*0.4+Math.sin(mk.ph+1)*mk.sz*0.2);x0.stroke();
+      x0.beginPath();x0.arc(mk.x,mk.y-mk.sz*0.55,mk.sz*0.25,0,Math.PI*2);x0.stroke();
+      // Eyes
+      x0.fillStyle=rgba(pc((mci+2)%4),0.9);
+      x0.beginPath();x0.arc(mk.x-mk.sz*0.1,mk.y-mk.sz*0.58,mk.sz*0.06,0,Math.PI*2);x0.fill();
+      x0.beginPath();x0.arc(mk.x+mk.sz*0.1,mk.y-mk.sz*0.58,mk.sz*0.06,0,Math.PI*2);x0.fill();
+      // Tail — long curly
+      x0.beginPath();x0.moveTo(mk.x-mk.sz*0.2,mk.y+mk.sz*0.3);
+      x0.bezierCurveTo(mk.x-mk.sz*0.65,mk.y+mk.sz*0.6,mk.x-mk.sz*0.9,mk.y,mk.x-mk.sz*0.55,mk.y-mk.sz*0.3);
+      x0.stroke();
+      // Arms (swinging)
+      const armSwing=Math.sin(mk.ph)*mk.sz*0.2;
+      x0.beginPath();x0.moveTo(mk.x-mk.sz*0.3,mk.y-mk.sz*0.15);
+      x0.lineTo(mk.x-mk.sz*0.6,mk.y-mk.sz*0.4+armSwing);x0.stroke();
+      x0.beginPath();x0.moveTo(mk.x+mk.sz*0.3,mk.y-mk.sz*0.15);
+      x0.lineTo(mk.x+mk.sz*0.6,mk.y-mk.sz*0.4-armSwing);x0.stroke();
+      // Legs (bent)
+      x0.beginPath();x0.moveTo(mk.x-mk.sz*0.15,mk.y+mk.sz*0.35);
+      x0.lineTo(mk.x-mk.sz*0.25,mk.y+mk.sz*0.6);x0.stroke();
+      x0.beginPath();x0.moveTo(mk.x+mk.sz*0.15,mk.y+mk.sz*0.35);
+      x0.lineTo(mk.x+mk.sz*0.25,mk.y+mk.sz*0.6);x0.stroke();
       x0.shadowBlur=0;
     }
   }
@@ -3432,9 +3581,10 @@ function drawSuperhero(t){
       windowTimerAcc:0,
       fireTimerAcc:0,
     };
-    // Seed some initial fires
+    // Seed 2-3 initial fires across random buildings
+    let initFires=0;
     for(const b of SD.gotham.buildings){
-      if(Math.random()>0.7){b.fires.push({ph:Math.random()*Math.PI*2,active:true,x:Math.random()*b.w});}
+      if(initFires<3&&Math.random()>0.88){b.fires.push({ph:Math.random()*Math.PI*2,active:true,x:Math.random()*b.w,ci:Math.floor(Math.random()*4),buildingY:Math.random()*b.h*0.6});initFires++;}
     }
   }
   const G=SD.gotham;
@@ -3457,21 +3607,22 @@ function drawSuperhero(t){
     }
   }
 
-  // Fire appear/disappear timers
+  // Fire appear/disappear — GLOBAL cap of 3-5 total fires across all buildings
   if(G.fireTimerAcc>500){
     G.fireTimerAcc=0;
-    for(const b of G.buildings){
-      b.fireTimer-=500;
-      if(b.fireTimer<=0){
-        const maxFires=G.fireBlazeMode?5:3;
-        if(b.fires.length<maxFires&&Math.random()>0.5){
-          b.fires.push({ph:Math.random()*Math.PI*2,active:true,x:Math.random()*b.w,ci:Math.floor(Math.random()*4),buildingY:Math.random()*b.h*0.6});
-          b.fireTimer=G.fireBlazeMode?(500+Math.random()*2000):(5000+Math.random()*14000);
-        } else if(b.fires.length>0&&!G.fireBlazeMode&&Math.random()>0.5){
-          b.fires.pop();
-          b.fireTimer=6000+Math.random()*10000;
-        }
+    // Count total fires
+    let totalFires=0;for(const b of G.buildings)totalFires+=b.fires.length;
+    const maxTotal=G.fireBlazeMode?12:Math.min(5,3+Math.floor(songProg*3));
+    if(totalFires<maxTotal&&Math.random()>0.4){
+      // Add fire to a random building
+      const rb=G.buildings[Math.floor(Math.random()*G.buildings.length)];
+      if(rb.fires.length<2){ // max 2 per building
+        rb.fires.push({ph:Math.random()*Math.PI*2,active:true,x:Math.random()*rb.w,ci:Math.floor(Math.random()*4),buildingY:Math.random()*rb.h*0.6});
       }
+    } else if(totalFires>maxTotal&&!G.fireBlazeMode){
+      // Remove a random fire
+      const withFires=G.buildings.filter(b=>b.fires.length>0);
+      if(withFires.length>0){withFires[Math.floor(Math.random()*withFires.length)].fires.pop();}
     }
   }
 
@@ -3563,17 +3714,26 @@ function drawSuperhero(t){
       }
     }
 
-    // Fires on building — fewer but much larger, appear anywhere on building
+    // Fires on building — fewer but MUCH larger, appear anywhere
     for(const fire of b.fires){
       fire.ph+=0.08*(1+beat*0.3);
       const fx=b.x+fire.x,fy=bh+8+(fire.buildingY||0);
-      const fSize=(35+Math.sin(fire.ph)*12)*(fireBlazeMode?3:1.5);
+      const fSize=(55+Math.sin(fire.ph)*20)*(fireBlazeMode?3:1.8);
       const fci=fireBlazeMode?Math.floor((t*0.005+fire.ph)%4):fire.ci||0;
-      x0.shadowBlur=fSize*(fireBlazeMode?1.5:1);x0.shadowColor=fireBlazeMode?pc(fci):'rgba(255,140,0,0.8)';
-      const fG=x0.createRadialGradient(fx+Math.sin(fire.ph)*6,fy,0,fx,fy,fSize);
+      x0.shadowBlur=fSize*(fireBlazeMode?1.5:1.2);x0.shadowColor=fireBlazeMode?pc(fci):'rgba(255,140,0,0.8)';
+      const fG=x0.createRadialGradient(fx+Math.sin(fire.ph)*8,fy,0,fx,fy,fSize);
       if(fireBlazeMode){fG.addColorStop(0,rgba(pc(fci),0.95));fG.addColorStop(0.5,rgba(pc((fci+1)%4),0.7));fG.addColorStop(1,'transparent');}
       else{fG.addColorStop(0,'rgba(255,230,100,0.9)');fG.addColorStop(0.4,'rgba(255,100,20,0.7)');fG.addColorStop(1,'transparent');}
-      x0.fillStyle=fG;x0.beginPath();x0.arc(fx+Math.sin(fire.ph)*6,fy,fSize,0,Math.PI*2);x0.fill();x0.shadowBlur=0;
+      x0.fillStyle=fG;x0.beginPath();x0.arc(fx+Math.sin(fire.ph)*8,fy,fSize,0,Math.PI*2);x0.fill();
+      // Flame licks — upward tendrils
+      x0.strokeStyle=fireBlazeMode?rgba(pc(fci),0.6):'rgba(255,180,50,0.5)';x0.lineWidth=2;
+      for(let fl=0;fl<3;fl++){
+        const flx=fx+Math.sin(fire.ph+fl*2)*fSize*0.3;
+        x0.beginPath();x0.moveTo(flx,fy);
+        x0.bezierCurveTo(flx+Math.sin(fire.ph+fl)*8,fy-fSize*0.4,flx-Math.sin(fire.ph*1.3+fl)*6,fy-fSize*0.7,flx+Math.sin(fire.ph*0.7+fl)*10,fy-fSize*(0.8+Math.sin(fire.ph+fl)*0.2));
+        x0.stroke();
+      }
+      x0.shadowBlur=0;
     }
 
     // Street reflection
@@ -3585,31 +3745,40 @@ function drawSuperhero(t){
     }
   }
 
-  // ── SPOTLIGHT ─────────────────────────────────────────
+  // ── SPOTLIGHT — bigger, brighter, lingers at screen edges ──
   const sp=G.spotlight;
   const spMode=G.spotlightMode;
   const spSpeed=spMode?0.015:sp.speed;
-  sp.angle+=sp.rotDir*spSpeed*(1+beat*0.4);
-  if(sp.angle>Math.PI*0.88||sp.angle<Math.PI*0.12)sp.rotDir*=-1;
+  // Edge linger — when near limits, slow way down instead of instant reverse
+  if(!sp.edgePause)sp.edgePause=0;
+  if(sp.edgePause>0){
+    sp.edgePause-=16;
+  } else {
+    sp.angle+=sp.rotDir*spSpeed*(1+beat*0.4);
+    // Narrower sweep so spotlight stays more on-screen
+    if(sp.angle>Math.PI*0.78){sp.rotDir=-1;sp.edgePause=1500+Math.random()*1000;}
+    if(sp.angle<Math.PI*0.22){sp.rotDir=1;sp.edgePause=1500+Math.random()*1000;}
+  }
 
-  const spBeamX=spMode?cx:(sp.x+Math.cos(sp.angle)*w*1.2);
+  // Beam stays more visible — shorter throw so it doesn't clip off-screen
+  const spBeamX=spMode?cx:(sp.x+Math.cos(sp.angle)*w*0.85);
   const spBeamY=sp.y+Math.sin(sp.angle-Math.PI)*h*0.9;
-  const spAlpha=spMode?(0.14+beat*0.08):(0.07+beat*0.04);
+  const spAlpha=spMode?(0.18+beat*0.1):(0.12+beat*0.06);
 
   x0.save();x0.globalAlpha=spAlpha;
   const spG=x0.createLinearGradient(sp.x,sp.y,spBeamX,spBeamY);
   spG.addColorStop(0,'rgba(230,230,255,0.95)');spG.addColorStop(1,'transparent');
   x0.fillStyle=spG;
-  const beamW=spMode?60:30;
+  const beamW=spMode?80:45;
   x0.beginPath();x0.moveTo(sp.x-beamW/4,sp.y);x0.lineTo(sp.x+beamW/4,sp.y);
-  x0.lineTo(spBeamX+beamW*(spMode?2:1),spBeamY);x0.lineTo(spBeamX-beamW*(spMode?2:1),spBeamY);
+  x0.lineTo(spBeamX+beamW*(spMode?2.5:1.5),spBeamY);x0.lineTo(spBeamX-beamW*(spMode?2.5:1.5),spBeamY);
   x0.closePath();x0.fill();x0.restore();
 
-  // Spotlight circle in sky
+  // Spotlight circle in sky — LARGER and BRIGHTER
   const cloudX=spBeamX,cloudY=Math.max(h*0.03,Math.min(h*0.55,spBeamY));
-  x0.fillStyle=`rgba(180,190,230,${spMode?0.22:0.14})`;
-  x0.shadowBlur=spMode?(60+beat*35):40;x0.shadowColor='rgba(200,210,255,0.5)';
-  x0.beginPath();x0.arc(cloudX,cloudY,spMode?(h*0.13+beat*h*0.05):(h*0.09),0,Math.PI*2);x0.fill();
+  x0.fillStyle=`rgba(200,210,240,${spMode?0.3:0.2})`;
+  x0.shadowBlur=spMode?(80+beat*40):55;x0.shadowColor='rgba(210,220,255,0.7)';
+  x0.beginPath();x0.arc(cloudX,cloudY,spMode?(h*0.16+beat*h*0.06):(h*0.13+beat*h*0.02),0,Math.PI*2);x0.fill();
   x0.shadowBlur=0;
 
   // Centerpiece IN the spotlight
@@ -3738,7 +3907,7 @@ function drawDayOfDead(t){
         vx:(Math.random()-0.5)*0.25, vy:(Math.random()-0.5)*0.15,
         sz:28+Math.random()*42, rot:Math.random()*Math.PI*2,
         rotSpeed:(Math.random()-0.5)*0.006, ph:Math.random()*Math.PI*2,
-        ci:i%4, alpha:0.25+Math.random()*0.25,
+        ci:i%4, alpha:0.45+Math.random()*0.3,
       })),
       // Main mask spin state
       maskRot:0,        // Y-axis rotation (0=front, PI=back)
@@ -3769,40 +3938,43 @@ function drawDayOfDead(t){
   sky.addColorStop(1,'rgba(4,1,8,1)');
   x0.fillStyle=sky;x0.fillRect(0,0,w,h);
 
-  // ── Floating background candles ───────────────────────
+  // ── Floating background candles — bright and vibrant ──
   for(const c of D.bgCandles){
     c.x+=c.vx;c.y+=c.vy;c.ph+=0.04;c.flicker+=0.12+Math.random()*0.05;
     if(c.y<-30)c.y=h+30;if(c.x<-30)c.x=w+30;if(c.x>w+30)c.x=-30;
-    const flk=0.6+Math.sin(c.flicker)*0.4+Math.random()*0.1;
-    const alpha=(0.32+Math.sin(c.ph)*0.12)*flk;
-    // Candle body
-    x0.fillStyle=rgba(pc(c.ci),alpha*0.7);
+    const flk=0.7+Math.sin(c.flicker)*0.3+Math.random()*0.1;
+    const alpha=(0.6+Math.sin(c.ph)*0.15)*flk;
+    // Candle body — brighter
+    x0.fillStyle=rgba(pc(c.ci),alpha*0.85);
     x0.fillRect(c.x-c.sz*0.15,c.y,c.sz*0.3,c.sz*0.7);
-    // Flame
-    const fH=c.sz*0.45*flk;
+    // Flame — larger
+    const fH=c.sz*0.6*flk;
+    x0.shadowBlur=fH*1.5;x0.shadowColor=rgba(pc(c.ci),0.7);
     const fg=x0.createRadialGradient(c.x,c.y-fH*0.3,0,c.x,c.y,fH);
-    fg.addColorStop(0,'rgba(255,255,180,0.9)');
-    fg.addColorStop(0.4,rgba(pc(c.ci),0.6*alpha));
+    fg.addColorStop(0,'rgba(255,255,200,0.95)');
+    fg.addColorStop(0.35,rgba(pc(c.ci),0.75*alpha));
     fg.addColorStop(1,'transparent');
     x0.fillStyle=fg;x0.beginPath();
     x0.moveTo(c.x,c.y-fH);
-    x0.bezierCurveTo(c.x+c.sz*0.15,c.y-fH*0.5,c.x+c.sz*0.1,c.y,c.x,c.y);
-    x0.bezierCurveTo(c.x-c.sz*0.1,c.y,c.x-c.sz*0.15,c.y-fH*0.5,c.x,c.y-fH);
-    x0.fill();
-    // Glow halo
-    const hg=x0.createRadialGradient(c.x,c.y-fH*0.4,0,c.x,c.y-fH*0.4,c.sz*1.2*flk);
-    hg.addColorStop(0,rgba(pc(c.ci),0.08*flk));hg.addColorStop(1,'transparent');
+    x0.bezierCurveTo(c.x+c.sz*0.18,c.y-fH*0.5,c.x+c.sz*0.12,c.y,c.x,c.y);
+    x0.bezierCurveTo(c.x-c.sz*0.12,c.y,c.x-c.sz*0.18,c.y-fH*0.5,c.x,c.y-fH);
+    x0.fill();x0.shadowBlur=0;
+    // Glow halo — stronger
+    const hg=x0.createRadialGradient(c.x,c.y-fH*0.4,0,c.x,c.y-fH*0.4,c.sz*1.5*flk);
+    hg.addColorStop(0,rgba(pc(c.ci),0.16*flk));hg.addColorStop(1,'transparent');
     x0.fillStyle=hg;x0.fillRect(0,0,w,h);
   }
 
-  // ── Floating background sugar masks ───────────────────
+  // ── Floating background sugar masks — brighter ─────────
   for(const m of D.bgMasks){
     m.x+=m.vx;m.y+=m.vy;m.rot+=m.rotSpeed;m.ph+=0.015;
     if(m.x<-80)m.x=w+80;if(m.x>w+80)m.x=-80;
     if(m.y<-80)m.y=h+80;if(m.y>h+80)m.y=-80;
-    const alpha=m.alpha*(0.7+Math.sin(m.ph)*0.3);
-    x0.save();x0.translate(m.x,m.y);x0.rotate(m.rot);x0.globalAlpha=alpha;
+    const alpha=m.alpha*(1.0+Math.sin(m.ph)*0.3);
+    x0.save();x0.translate(m.x,m.y);x0.rotate(m.rot);x0.globalAlpha=Math.min(1,alpha*1.8);
+    x0.shadowBlur=12;x0.shadowColor=pc(m.ci);
     drawSugarMask(x0,0,0,m.sz,m.ci,t,0,false);
+    x0.shadowBlur=0;
     x0.restore();
   }
 
@@ -3811,7 +3983,7 @@ function drawDayOfDead(t){
     p.x+=p.vx;p.y+=p.vy;p.rot+=p.rotSpeed;
     if(p.y<-20)p.y=h+20;
     x0.save();x0.translate(p.x,p.y);x0.rotate(p.rot);
-    x0.fillStyle=rgba(pc(1),p.alpha*(0.5+beat*0.2));
+    x0.fillStyle=rgba(pc(1),p.alpha*(0.75+beat*0.25));
     x0.beginPath();x0.ellipse(0,0,p.sz*0.4,p.sz,0,0,Math.PI*2);x0.fill();
     x0.restore();
   }
@@ -3819,7 +3991,7 @@ function drawDayOfDead(t){
   // ── MAIN GIANT SUGAR MASK ─────────────────────────────
   D.maskRot+=D.maskRotSpeed*(1+beat*0.4);
   D.maskPulse+=(beat*0.08-D.maskPulse)*0.15;
-  const maskSz=Math.min(w,h)*(0.42+D.maskPulse*0.06+songProg*0.04);
+  const maskSz=Math.min(w,h)*(0.42+D.maskPulse*0.25+songProg*0.04);
   const maskX=cx;
   const maskY=h*0.38;
   // Y-axis spin — use cos for width scale (coin-flip rotation)
@@ -3904,7 +4076,7 @@ function drawDayOfDead(t){
 
   // Altar backdrop glow
   const altGlow=x0.createRadialGradient(cx,altY,0,cx,altY,altW*0.7);
-  altGlow.addColorStop(0,rgba(pc(0),0.15*(1+beat*0.3)));
+  altGlow.addColorStop(0,rgba(pc(0),0.22*(1+beat*0.4)));
   altGlow.addColorStop(1,'transparent');
   x0.fillStyle=altGlow;x0.fillRect(0,0,w,h);
 
@@ -3919,7 +4091,7 @@ function drawDayOfDead(t){
     x0.fillStyle=`rgba(${22+tier*6},${10+tier*4},${18+tier*6},0.95)`;
     x0.fillRect(tx,ty,tw,th);
     // Stone border
-    x0.strokeStyle=rgba(pc(tier%4),0.35*(1+beat*0.15));
+    x0.strokeStyle=rgba(pc(tier%4),0.55*(1+beat*0.2));
     x0.lineWidth=2;x0.shadowBlur=8;x0.shadowColor=pc(tier%4);
     x0.strokeRect(tx,ty,tw,th);x0.shadowBlur=0;
     // Decorative neon line detail on altar face
@@ -3933,7 +4105,7 @@ function drawDayOfDead(t){
       const skX=tx+tw*(sk+0.5)/skullCount;
       const skY=ty+th*0.5;
       const skSz=h*0.022;
-      x0.save();x0.globalAlpha=0.55+beat*0.2;
+      x0.save();x0.globalAlpha=0.75+beat*0.25;
       drawMiniSkull(x0,skX,skY,skSz,sk%4,t);
       x0.restore();
     }
@@ -4417,301 +4589,420 @@ function drawAtlantis(t){
   // ── Init ─────────────────────────────────────────────
   if(!SD.atl){
     SD.atl={
-      // Sea creatures
+      // Sea creatures — slightly larger
       anglerfish:Array.from({length:3},(_,i)=>({
-        x:Math.random()*w, y:h*(0.2+Math.random()*0.45),
-        vx:(Math.random()<0.5?1:-1)*(0.4+Math.random()*0.5),
-        sz:22+Math.random()*18, ph:Math.random()*Math.PI*2,
+        x:Math.random()*w, y:h*(0.2+Math.random()*0.4),
+        vx:(Math.random()<0.5?1:-1)*(0.3+Math.random()*0.35),
+        sz:28+Math.random()*22, ph:Math.random()*Math.PI*2,
         ci:i%4, mouthPh:Math.random()*Math.PI*2,
         lurePh:Math.random()*Math.PI*2,
       })),
       mantas:Array.from({length:4},(_,i)=>({
-        x:Math.random()*w, y:h*(0.08+Math.random()*0.3),
-        vx:(Math.random()<0.5?1:-1)*(0.6+Math.random()*0.5),
-        sz:35+Math.random()*30, ph:Math.random()*Math.PI*2,
+        x:Math.random()*w, y:h*(0.06+Math.random()*0.25),
+        vx:(Math.random()<0.5?1:-1)*(0.4+Math.random()*0.35),
+        sz:42+Math.random()*35, ph:Math.random()*Math.PI*2,
         ci:i%4, waveAmp:0,
       })),
       eels:Array.from({length:5},(_,i)=>({
-        x:Math.random()*w, y:h*(0.55+Math.random()*0.25),
-        vx:(Math.random()<0.5?1:-1)*(0.3+Math.random()*0.3),
-        sz:50+Math.random()*40, ph:Math.random()*Math.PI*2,
-        phSpeed:0.025+Math.random()*0.015, ci:i%4,
-        segments:12,
+        x:Math.random()*w, y:h*(0.5+Math.random()*0.25),
+        vx:(Math.random()<0.5?1:-1)*(0.2+Math.random()*0.25),
+        sz:55+Math.random()*45, ph:Math.random()*Math.PI*2,
+        phSpeed:0.018+Math.random()*0.01, ci:i%4,
+        segments:14,
       })),
-      // Bubbles
       bubbles:Array.from({length:35},()=>({
         x:Math.random()*w, y:Math.random()*h,
         vy:-(0.3+Math.random()*0.6), r:2+Math.random()*5,
         ph:Math.random()*Math.PI*2, ci:Math.floor(Math.random()*4),
         vx:(Math.random()-0.5)*0.2,
       })),
-      // Caustic light ripples
       caustics:Array.from({length:8},(_,i)=>({
         x:Math.random()*w, y:Math.random()*h*0.5,
         r:60+Math.random()*80, ph:Math.random()*Math.PI*2,
         speed:0.008+Math.random()*0.006, ci:i%4,
       })),
-      // Light shafts from surface
       shafts:Array.from({length:5},(_,i)=>({
         x:w*0.1+i*(w*0.2), ph:i*0.4, speed:0.004+Math.random()*0.003,
       })),
-      // Poseidon head — large central figure with centerpiece eyes
-      poseidon:{
-        x:cx, y:floorY-h*0.1, sz:Math.min(w,h)*0.35,
-        jawAngle:0, jawDir:1, eyeGlow:0,
-      },
-      // Ruins columns
-      columns:[
-        {x:cx-w*0.46, y:floorY, h:h*0.44, broken:false, ci:2},
-        {x:cx-w*0.34, y:floorY, h:h*0.28, broken:true,  ci:3},
-        {x:cx-w*0.22, y:floorY, h:h*0.50, broken:false, ci:0},
-        {x:cx-w*0.08, y:floorY, h:h*0.36, broken:true,  ci:1},
-        {x:cx+w*0.05, y:floorY, h:h*0.54, broken:false, ci:2},
-        {x:cx+w*0.18, y:floorY, h:h*0.30, broken:true,  ci:3},
-        {x:cx+w*0.32, y:floorY, h:h*0.46, broken:false, ci:0},
-        {x:cx+w*0.48, y:floorY, h:h*0.22, broken:true,  ci:1},
-      ],
-      // Fallen column pieces on ground
-      fallenCols:[
-        {x:cx-w*0.29, y:floorY-8,  w:w*0.19, ci:3},
-        {x:cx+w*0.08, y:floorY-6,  w:w*0.15, ci:1},
-        {x:cx+w*0.38, y:floorY-10, w:w*0.17, ci:0},
-      ],
-      // Cracked road tiles
-      roadTiles:Array.from({length:18},(_,i)=>({
-        x:i/17*w, y:floorY+h*0.01, w:w/17, crack:Math.random()>0.4,
-        ci:i%4,
-      })),
-      // Rubble piles at base
-      rubble:Array.from({length:6},(_,i)=>({
-        x:w*0.05+i*(w*0.17), y:floorY, r:14+Math.random()*18, ci:i%4,
-      })),
-      // Toppled arch fragment
-      arch:{x:cx-w*0.05, y:floorY, w:w*0.18, h:h*0.22, ci:2},
-      // Kraken
-      kraken:null,
-      // Whirlpool
-      whirlpool:null,
-      // Bubble storm
-      bubbleStorm:false,
-      // Destruction debris
-      debris:[],
+      // Poseidon — very large
+      poseidon:{jawAngle:0,jawDir:1,eyeGlow:0},
+      // Kraken / whirlpool / bubbleStorm — surprise state
+      kraken:null, whirlpool:null, bubbleStorm:false, debris:[],
     };
   }
   const A=SD.atl;
 
-  // ── Deep ocean background ────────────────────────────
+  // ── Deep ocean background — richer palette tint ─────
   const deep=x0.createLinearGradient(0,0,0,h);
   const sc0=h2r(pc(0)),sc2=h2r(pc(2));
-  deep.addColorStop(0,`rgba(${Math.round(sc0.r*0.05)},${Math.round(sc0.g*0.08)},${Math.round(sc0.b*0.12)},1)`);
-  deep.addColorStop(0.5,`rgba(${Math.round(sc2.r*0.03)},${Math.round(sc2.g*0.05)},${Math.round(sc2.b*0.1)},1)`);
-  deep.addColorStop(1,'rgba(1,2,6,1)');
+  deep.addColorStop(0,`rgba(${Math.round(sc0.r*0.06)},${Math.round(sc0.g*0.1)},${Math.round(sc0.b*0.16)},1)`);
+  deep.addColorStop(0.5,`rgba(${Math.round(sc2.r*0.04)},${Math.round(sc2.g*0.06)},${Math.round(sc2.b*0.14)},1)`);
+  deep.addColorStop(1,'rgba(1,2,8,1)');
   x0.fillStyle=deep;x0.fillRect(0,0,w,h);
 
-  // ── Caustic light ripples (surface light through water) ──
+  // ── Caustic light ripples ──────────────────────────
   for(const c of A.caustics){
     c.ph+=c.speed;
-    const alpha=0.04+Math.sin(c.ph)*0.025;
+    const alpha=0.05+Math.sin(c.ph)*0.03;
     const cg=x0.createRadialGradient(c.x+Math.sin(c.ph)*20,c.y,0,c.x,c.y,c.r*(1+beat*0.1));
     cg.addColorStop(0,rgba(pc(c.ci),alpha*(1+beat*0.3)));cg.addColorStop(1,'transparent');
     x0.fillStyle=cg;x0.fillRect(0,0,w,h);
   }
 
-  // ── Light shafts from above ──────────────────────────
+  // ── Light shafts from above ────────────────────────
   for(const sh of A.shafts){
     sh.ph+=sh.speed;
     const sx=sh.x+Math.sin(sh.ph)*25;
     const sg=x0.createLinearGradient(sx,0,sx+w*0.06,h*0.7);
-    sg.addColorStop(0,rgba(pc(0),0.04*(1+beat*0.2)));sg.addColorStop(1,'transparent');
+    sg.addColorStop(0,rgba(pc(0),0.05*(1+beat*0.2)));sg.addColorStop(1,'transparent');
     x0.fillStyle=sg;
     x0.beginPath();x0.moveTo(sx-20,0);x0.lineTo(sx+30,0);x0.lineTo(sx+80,h*0.7);x0.lineTo(sx-40,h*0.7);x0.closePath();x0.fill();
   }
 
-  // ── Seafloor ─────────────────────────────────────────
-  // Deep silt floor — layered
+  // ── Seafloor ───────────────────────────────────────
   const floorG=x0.createLinearGradient(0,floorY,0,h);
-  floorG.addColorStop(0,`rgba(${Math.round(sc2.r*0.12)},${Math.round(sc2.g*0.1)},${Math.round(sc2.b*0.18)},0.9)`);
+  floorG.addColorStop(0,`rgba(${Math.round(sc2.r*0.14)},${Math.round(sc2.g*0.12)},${Math.round(sc2.b*0.2)},0.9)`);
   floorG.addColorStop(1,'rgba(2,1,4,1)');
   x0.fillStyle=floorG;x0.fillRect(0,floorY,w,h-floorY);
-  // Bioluminescent algae glow on floor line
-  x0.shadowBlur=18;x0.shadowColor=rgba(pc(2),0.5);
-  x0.strokeStyle=rgba(pc(2),0.25*(1+beat*0.2));x0.lineWidth=2;
-  x0.beginPath();x0.moveTo(0,floorY);x0.lineTo(w,floorY);x0.stroke();
+  // Algae glow line
+  x0.shadowBlur=20;x0.shadowColor=rgba(pc(2),0.6);
+  x0.strokeStyle=rgba(pc(2),0.3*(1+beat*0.2));x0.lineWidth=2;
+  x0.beginPath();x0.moveTo(0,floorY);x0.lineTo(w,floorY);x0.stroke();x0.shadowBlur=0;
+
+  // ══════════════════════════════════════════════════════
+  // PILLARS — depth perspective layout per spec:
+  //   Left side: one tall intact pillar (foreground)
+  //   Right side: one broken pillar (foreground)
+  //   Several smaller pillars further back for depth
+  // ══════════════════════════════════════════════════════
+  const pillars=[
+    // Background pillars — smaller, closer to center, more transparent
+    {x:cx-w*0.18, depth:0.3, tall:h*0.28, broken:true,  ci:3},
+    {x:cx+w*0.14, depth:0.3, tall:h*0.32, broken:false, ci:0},
+    {x:cx-w*0.08, depth:0.2, tall:h*0.22, broken:true,  ci:1},
+    {x:cx+w*0.06, depth:0.2, tall:h*0.18, broken:true,  ci:2},
+    // Foreground pillars — large, at edges
+    {x:cx-w*0.42, depth:1.0, tall:h*0.72, broken:false, ci:2}, // LEFT: tall intact
+    {x:cx+w*0.42, depth:1.0, tall:h*0.45, broken:true,  ci:0}, // RIGHT: broken
+  ];
+
+  // Sort by depth — background first
+  const sortedPillars=[...pillars].sort((a,b)=>a.depth-b.depth);
+
+  for(const col of sortedPillars){
+    const scale=0.4+col.depth*0.6;
+    const colW=w*0.04*scale;
+    const colH=col.tall*scale;
+    const alpha=0.3+col.depth*0.7;
+    const baseY=floorY;
+    const topY=baseY-colH;
+
+    x0.save();x0.globalAlpha=alpha;
+    // Column shaft — tapered
+    x0.fillStyle=rgba(pc(col.ci),0.2*(1+beat*0.1));
+    x0.beginPath();
+    x0.moveTo(col.x-colW*0.6,baseY);
+    x0.lineTo(col.x-colW*0.45,topY);
+    x0.lineTo(col.x+colW*0.45,topY);
+    x0.lineTo(col.x+colW*0.6,baseY);
+    x0.closePath();x0.fill();
+
+    // Glowing outline
+    x0.strokeStyle=rgba(pc(col.ci),(0.45+beat*0.25)*(1+col.depth*0.3));
+    x0.lineWidth=1.5+col.depth;
+    x0.shadowBlur=(12+beat*8)*col.depth;x0.shadowColor=pc(col.ci);
+    x0.stroke();
+
+    // Fluting — vertical grooves
+    const numFlutes=Math.floor(3+col.depth*3);
+    x0.strokeStyle=rgba(pc(col.ci),0.15*(1+beat*0.1));x0.lineWidth=1;
+    for(let f=0;f<numFlutes;f++){
+      const fx=col.x-colW*0.4+f*(colW*0.8/numFlutes);
+      x0.beginPath();x0.moveTo(fx,baseY-5);x0.lineTo(fx,topY+colH*0.05);x0.stroke();
+    }
+
+    // Drum rings
+    x0.strokeStyle=rgba(pc(col.ci),0.25);x0.lineWidth=1;
+    const numDrums=Math.floor(3+col.depth*4);
+    for(let dr=1;dr<numDrums;dr++){
+      const dy=baseY-colH*dr/numDrums;
+      const lerpW=lerp(colW*0.45,colW*0.6,1-dr/numDrums);
+      x0.beginPath();x0.moveTo(col.x-lerpW,dy);x0.lineTo(col.x+lerpW,dy);x0.stroke();
+    }
+
+    // Capital (top) or jagged break
+    if(!col.broken){
+      // Ionic capital
+      x0.fillStyle=rgba(pc(col.ci),0.25);
+      const capW=colW*1.5,capH=colH*0.04;
+      x0.fillRect(col.x-capW/2,topY-capH,capW,capH);
+      x0.strokeStyle=rgba(pc(col.ci),0.5);x0.lineWidth=1.5;
+      x0.strokeRect(col.x-capW/2,topY-capH,capW,capH);
+      // Scroll volutes
+      x0.beginPath();x0.arc(col.x-capW/2,topY-capH/2,capH*0.8,0,Math.PI*2);x0.stroke();
+      x0.beginPath();x0.arc(col.x+capW/2,topY-capH/2,capH*0.8,0,Math.PI*2);x0.stroke();
+    } else {
+      // Jagged broken top with rubble
+      x0.strokeStyle=rgba(pc(col.ci),0.45);x0.lineWidth=2;
+      x0.beginPath();x0.moveTo(col.x-colW*0.45,topY);
+      for(let jag=0;jag<6;jag++){
+        x0.lineTo(col.x-colW*0.35+jag*(colW*0.15),topY+(jag%2===0?-colH*0.03:colH*0.015)*(1+Math.sin(jag)*0.5));
+      }
+      x0.lineTo(col.x+colW*0.45,topY);x0.stroke();
+    }
+
+    // Algae/moss patches
+    x0.shadowBlur=8;x0.shadowColor=rgba(pc(2),0.4);
+    for(let mg=0;mg<Math.floor(1+col.depth*3);mg++){
+      const mgy=baseY-colH*(0.15+mg*0.25);
+      x0.fillStyle=rgba(pc(2),0.1*(1+beat*0.1));
+      x0.beginPath();x0.ellipse(col.x+(mg%2===0?1:-1)*colW*0.3,mgy,colW*0.5,colH*0.015,0,0,Math.PI*2);x0.fill();
+    }
+
+    // Cracks with neon glow seeping through
+    if(col.broken||col.depth>0.5){
+      x0.strokeStyle=rgba(pc((col.ci+1)%4),(0.3+beat*0.2)*col.depth);
+      x0.lineWidth=1;x0.shadowBlur=10+beat*6;x0.shadowColor=pc((col.ci+1)%4);
+      for(let cr=0;cr<Math.floor(1+col.depth*2);cr++){
+        const cry=baseY-colH*(0.2+cr*0.3);
+        x0.beginPath();
+        x0.moveTo(col.x-colW*0.3,cry);
+        x0.lineTo(col.x-colW*0.05,cry-colH*0.04);
+        x0.lineTo(col.x+colW*0.15,cry+colH*0.01);
+        x0.lineTo(col.x+colW*0.3,cry-colH*0.02);
+        x0.stroke();
+      }
+    }
+
+    x0.shadowBlur=0;x0.globalAlpha=1;x0.restore();
+  }
+
+  // ══════════════════════════════════════════════════════
+  // POSEIDON HEAD — very large, centered, intimidating
+  // Detailed stone outline with neon glow through cracks
+  // Roughly half the screen, resting on sea floor
+  // ══════════════════════════════════════════════════════
+  const P=A.poseidon;
+  P.jawAngle+=(beat>0.5?P.jawDir*0.02:0);P.jawAngle*=0.95;
+  P.eyeGlow=lerp(P.eyeGlow,beat,0.12);
+  const pSz=Math.min(w*0.42,h*0.42);
+  const px=cx,py=floorY+pSz*0.05; // base resting on floor
+
+  x0.save();x0.translate(px,py);
+
+  // === Cracks with neon glow bleeding through (behind head outline) ===
+  const crackGlow=(0.4+beat*0.3);
+  x0.strokeStyle=rgba(pc(1),crackGlow);x0.lineWidth=1.5;
+  x0.shadowBlur=14+beat*10;x0.shadowColor=pc(1);
+  // Major crack lines across face
+  const cracks=[
+    [{x:-pSz*0.12,y:-pSz*0.9},{x:-pSz*0.2,y:-pSz*0.7},{x:-pSz*0.15,y:-pSz*0.5},{x:-pSz*0.25,y:-pSz*0.3}],
+    [{x:pSz*0.2,y:-pSz*0.85},{x:pSz*0.28,y:-pSz*0.65},{x:pSz*0.22,y:-pSz*0.45},{x:pSz*0.35,y:-pSz*0.2}],
+    [{x:-pSz*0.3,y:-pSz*0.55},{x:-pSz*0.15,y:-pSz*0.48},{x:0,y:-pSz*0.42},{x:pSz*0.1,y:-pSz*0.5}],
+    [{x:pSz*0.05,y:-pSz*0.3},{x:pSz*0.15,y:-pSz*0.15},{x:pSz*0.08,y:0}],
+    [{x:-pSz*0.35,y:-pSz*0.35},{x:-pSz*0.42,y:-pSz*0.18},{x:-pSz*0.38,y:0}],
+  ];
+  for(const crack of cracks){
+    x0.beginPath();x0.moveTo(crack[0].x,crack[0].y);
+    for(let i=1;i<crack.length;i++)x0.lineTo(crack[i].x,crack[i].y);
+    x0.stroke();
+    // Smaller branch cracks
+    for(let i=0;i<crack.length-1;i++){
+      if(Math.random()<0.6){
+        x0.beginPath();x0.moveTo(crack[i].x,crack[i].y);
+        x0.lineTo(crack[i].x+(Math.random()-0.5)*pSz*0.12,crack[i].y+(Math.random()-0.5)*pSz*0.08);
+        x0.stroke();
+      }
+    }
+  }
+
+  // === Head outline — massive stone face ===
+  x0.strokeStyle=rgba(pc(2),(0.7+beat*0.2));x0.lineWidth=3.5;
+  x0.shadowBlur=25+beat*15;x0.shadowColor=rgba(pc(2),0.8);
+
+  // Cranium/skull shape — wide, powerful
+  x0.beginPath();
+  x0.moveTo(-pSz*0.42,0); // chin left
+  x0.lineTo(-pSz*0.44,-pSz*0.08); // jawline left
+  x0.bezierCurveTo(-pSz*0.48,-pSz*0.2,-pSz*0.5,-pSz*0.35,-pSz*0.48,-pSz*0.5); // left cheek
+  x0.bezierCurveTo(-pSz*0.46,-pSz*0.62,-pSz*0.44,-pSz*0.72,-pSz*0.38,-pSz*0.8); // left temple
+  x0.bezierCurveTo(-pSz*0.3,-pSz*0.92,-pSz*0.15,-pSz*1.0,0,-pSz*1.02); // top of head
+  x0.bezierCurveTo(pSz*0.15,-pSz*1.0,pSz*0.3,-pSz*0.92,pSz*0.38,-pSz*0.8); // right temple
+  x0.bezierCurveTo(pSz*0.44,-pSz*0.72,pSz*0.46,-pSz*0.62,pSz*0.48,-pSz*0.5); // right cheek
+  x0.bezierCurveTo(pSz*0.5,-pSz*0.35,pSz*0.48,-pSz*0.2,pSz*0.44,-pSz*0.08); // right jaw
+  x0.lineTo(pSz*0.42,0); // chin right
+  x0.stroke();
+
+  // Chin/jaw strong squared shape
+  x0.beginPath();
+  x0.moveTo(-pSz*0.42,0);
+  x0.bezierCurveTo(-pSz*0.3,pSz*0.06,-pSz*0.1,pSz*0.08,0,pSz*0.08);
+  x0.bezierCurveTo(pSz*0.1,pSz*0.08,pSz*0.3,pSz*0.06,pSz*0.42,0);
+  x0.stroke();
+
+  // Brow ridge — heavy, stern
+  x0.lineWidth=4;
+  x0.beginPath();
+  x0.moveTo(-pSz*0.42,-pSz*0.52);
+  x0.bezierCurveTo(-pSz*0.3,-pSz*0.58,-pSz*0.15,-pSz*0.6,-pSz*0.05,-pSz*0.55);
+  x0.stroke();
+  x0.beginPath();
+  x0.moveTo(pSz*0.42,-pSz*0.52);
+  x0.bezierCurveTo(pSz*0.3,-pSz*0.58,pSz*0.15,-pSz*0.6,pSz*0.05,-pSz*0.55);
+  x0.stroke();
+
+  // Furrowed brow lines between eyes
+  x0.lineWidth=2;x0.strokeStyle=rgba(pc(2),(0.5+beat*0.15));
+  x0.beginPath();x0.moveTo(-pSz*0.05,-pSz*0.62);x0.lineTo(-pSz*0.02,-pSz*0.55);x0.stroke();
+  x0.beginPath();x0.moveTo(pSz*0.05,-pSz*0.62);x0.lineTo(pSz*0.02,-pSz*0.55);x0.stroke();
+
+  // === Eye sockets — deep, angular, intimidating ===
+  x0.lineWidth=3;x0.strokeStyle=rgba(pc(0),(0.7+beat*0.2));
+  x0.shadowBlur=20+beat*12;x0.shadowColor=rgba(pc(0),0.7);
+  // Left eye socket
+  x0.beginPath();
+  x0.moveTo(-pSz*0.32,-pSz*0.55);
+  x0.lineTo(-pSz*0.28,-pSz*0.62);
+  x0.lineTo(-pSz*0.12,-pSz*0.62);
+  x0.lineTo(-pSz*0.08,-pSz*0.55);
+  x0.lineTo(-pSz*0.12,-pSz*0.48);
+  x0.lineTo(-pSz*0.28,-pSz*0.48);
+  x0.closePath();x0.stroke();
+  // Dark socket interior
+  x0.fillStyle='rgba(0,0,0,0.6)';x0.fill();
+  // Right eye socket
+  x0.beginPath();
+  x0.moveTo(pSz*0.32,-pSz*0.55);
+  x0.lineTo(pSz*0.28,-pSz*0.62);
+  x0.lineTo(pSz*0.12,-pSz*0.62);
+  x0.lineTo(pSz*0.08,-pSz*0.55);
+  x0.lineTo(pSz*0.12,-pSz*0.48);
+  x0.lineTo(pSz*0.28,-pSz*0.48);
+  x0.closePath();x0.stroke();
+  x0.fillStyle='rgba(0,0,0,0.6)';x0.fill();
+
+  // === CENTERPIECE IN EYE SOCKETS ===
+  if(THEME.centerpiece){
+    cpRot+=0.014*(1+beat*0.3);cpPh+=0.013;
+    const eyeSz=pSz*0.08*(1+P.eyeGlow*0.5);
+    x0.shadowBlur=20+P.eyeGlow*25;x0.shadowColor=rgba(pc(0),0.95);
+    drawCPMini(x0,THEME.centerpiece,-pSz*0.2,-pSz*0.55,eyeSz,cpRot);
+    drawCPMini(x0,THEME.centerpiece,pSz*0.2,-pSz*0.55,eyeSz,-cpRot);
+    // Eye glow halo
+    const eyeHalo=x0.createRadialGradient(-pSz*0.2,-pSz*0.55,0,-pSz*0.2,-pSz*0.55,eyeSz*3);
+    eyeHalo.addColorStop(0,rgba(pc(0),(0.2+P.eyeGlow*0.3)));eyeHalo.addColorStop(1,'transparent');
+    x0.fillStyle=eyeHalo;x0.fillRect(-pSz*0.5,-pSz*0.8,pSz,pSz*0.5);
+    const eyeHalo2=x0.createRadialGradient(pSz*0.2,-pSz*0.55,0,pSz*0.2,-pSz*0.55,eyeSz*3);
+    eyeHalo2.addColorStop(0,rgba(pc(0),(0.2+P.eyeGlow*0.3)));eyeHalo2.addColorStop(1,'transparent');
+    x0.fillStyle=eyeHalo2;x0.fillRect(-pSz*0.5,-pSz*0.8,pSz,pSz*0.5);
+  }
   x0.shadowBlur=0;
 
-  // ── Road tiles — cracked mosaic ──────────────────────
-  for(const tile of A.roadTiles){
-    x0.fillStyle=rgba(pc(tile.ci),0.04);
-    x0.fillRect(tile.x,floorY,tile.w-1,h*0.025);
-    if(tile.crack){
-      x0.strokeStyle=rgba(pc(tile.ci),0.06*(1+beat*0.15));x0.lineWidth=1;
-      x0.shadowBlur=3;x0.shadowColor=pc(tile.ci);
-      x0.beginPath();x0.moveTo(tile.x+tile.w*0.2,floorY);x0.lineTo(tile.x+tile.w*0.6,floorY+h*0.018);x0.lineTo(tile.x+tile.w*0.9,floorY+h*0.008);x0.stroke();
-      x0.shadowBlur=0;
+  // === Nose — strong, angular, broken stone ===
+  x0.strokeStyle=rgba(pc(2),(0.6+beat*0.15));x0.lineWidth=2.5;
+  x0.shadowBlur=12;x0.shadowColor=pc(2);
+  x0.beginPath();
+  x0.moveTo(0,-pSz*0.5);
+  x0.lineTo(-pSz*0.04,-pSz*0.42);
+  x0.lineTo(-pSz*0.06,-pSz*0.32);
+  x0.lineTo(-pSz*0.08,-pSz*0.25);
+  x0.stroke();
+  x0.beginPath();
+  x0.moveTo(0,-pSz*0.5);
+  x0.lineTo(pSz*0.04,-pSz*0.42);
+  x0.lineTo(pSz*0.02,-pSz*0.32);
+  x0.lineTo(pSz*0.04,-pSz*0.25);
+  x0.stroke();
+  // Nostrils
+  x0.beginPath();x0.arc(-pSz*0.05,-pSz*0.24,pSz*0.025,0,Math.PI*2);x0.stroke();
+  x0.beginPath();x0.arc(pSz*0.02,-pSz*0.24,pSz*0.025,0,Math.PI*2);x0.stroke();
+
+  // === Cheekbone definition ===
+  x0.strokeStyle=rgba(pc(2),(0.35+beat*0.1));x0.lineWidth=2;
+  x0.beginPath();x0.moveTo(-pSz*0.38,-pSz*0.42);x0.bezierCurveTo(-pSz*0.32,-pSz*0.35,-pSz*0.2,-pSz*0.3,-pSz*0.12,-pSz*0.28);x0.stroke();
+  x0.beginPath();x0.moveTo(pSz*0.38,-pSz*0.42);x0.bezierCurveTo(pSz*0.32,-pSz*0.35,pSz*0.2,-pSz*0.3,pSz*0.12,-pSz*0.28);x0.stroke();
+
+  // === Mouth — stern, slightly open on beat ===
+  x0.strokeStyle=rgba(pc(0),(0.6+beat*0.2));x0.lineWidth=3;
+  x0.shadowBlur=12+beat*8;x0.shadowColor=pc(0);
+  const jawOpen=P.jawAngle*pSz*0.3;
+  // Upper lip
+  x0.beginPath();
+  x0.moveTo(-pSz*0.22,-pSz*0.12);
+  x0.bezierCurveTo(-pSz*0.1,-pSz*0.08,pSz*0.1,-pSz*0.08,pSz*0.22,-pSz*0.12);
+  x0.stroke();
+  // Lower lip
+  x0.beginPath();
+  x0.moveTo(-pSz*0.2,-pSz*0.08+jawOpen);
+  x0.bezierCurveTo(-pSz*0.08,-pSz*0.04+jawOpen,pSz*0.08,-pSz*0.04+jawOpen,pSz*0.2,-pSz*0.08+jawOpen);
+  x0.stroke();
+  // Teeth hints when open
+  if(jawOpen>2){
+    x0.strokeStyle=rgba(pc(2),(0.3+beat*0.15));x0.lineWidth=1.5;
+    for(let tk=-3;tk<=3;tk++){
+      const tx=tk*pSz*0.04;
+      x0.beginPath();x0.moveTo(tx,-pSz*0.1);x0.lineTo(tx,-pSz*0.08+jawOpen*0.4);x0.stroke();
     }
   }
 
-  // ── Rubble piles ─────────────────────────────────────
-  for(const rb of A.rubble){
-    x0.shadowBlur=6;x0.shadowColor=rgba(pc(rb.ci),0.3);
-    x0.fillStyle=rgba(pc(rb.ci),0.12*(1+beat*0.1));
-    x0.beginPath();x0.ellipse(rb.x,rb.y,rb.r*1.8,rb.r*0.5,0,0,Math.PI*2);x0.fill();
-    // Small rock chunks
-    for(let r=0;r<4;r++){
-      const rx=rb.x+(r-1.5)*rb.r*0.5;const ry=rb.y-(r%2)*rb.r*0.3;
-      x0.fillStyle=rgba(pc(rb.ci),0.2);
-      x0.beginPath();x0.ellipse(rx,ry,rb.r*0.3,rb.r*0.2,r*0.3,0,Math.PI*2);x0.fill();
-    }
-    x0.shadowBlur=0;
-  }
-
-  // ── Fallen column pieces ─────────────────────────────
-  for(const fc of A.fallenCols){
-    const algaeGlow=rgba(pc(fc.ci),0.18*(1+beat*0.15));
-    x0.shadowBlur=12;x0.shadowColor=algaeGlow;
-    x0.fillStyle=rgba(pc(fc.ci),0.15);
-    x0.fillRect(fc.x,fc.y-h*0.025,fc.w,h*0.025);
-    // Column drum rings along fallen piece
-    x0.strokeStyle=rgba(pc(fc.ci),0.25*(1+beat*0.1));x0.lineWidth=1.5;
-    for(let dr=0;dr<5;dr++){
-      const drX=fc.x+fc.w*(dr/4);
-      x0.beginPath();x0.moveTo(drX,fc.y-h*0.025);x0.lineTo(drX,fc.y);x0.stroke();
-    }
-    x0.shadowBlur=0;
-  }
-
-  // ── Toppled arch fragment ────────────────────────────
-  const arc=A.arch;
-  x0.shadowBlur=14;x0.shadowColor=rgba(pc(arc.ci),0.35);
-  x0.strokeStyle=rgba(pc(arc.ci),0.3*(1+beat*0.15));x0.lineWidth=4;
-  // Arch lying on its side — two pillars and arch curve, rotated ~70deg
-  x0.save();x0.translate(arc.x,arc.y);x0.rotate(0.4);
-  x0.beginPath();x0.moveTo(0,0);x0.lineTo(0,-arc.h);
-  x0.bezierCurveTo(0,-arc.h-arc.w*0.4,arc.w,-arc.h-arc.w*0.4,arc.w,-arc.h);
-  x0.lineTo(arc.w,0);x0.stroke();
-  x0.restore();x0.shadowBlur=0;
-
-  // ── Standing columns ─────────────────────────────────
-  for(const col of A.columns){
-    const algGlow=rgba(pc(col.ci),0.28*(1+beat*0.18));
-    x0.shadowBlur=16;x0.shadowColor=algGlow;
-    const colW=w*0.038;
-    // Column shaft — tapered (wider at base)
-    x0.fillStyle=rgba(pc(col.ci),0.16);
-    x0.beginPath();
-    x0.moveTo(col.x-colW*0.55,col.y);
-    x0.lineTo(col.x-colW*0.45,col.y-col.h);
-    x0.lineTo(col.x+colW*0.45,col.y-col.h);
-    x0.lineTo(col.x+colW*0.55,col.y);
-    x0.closePath();x0.fill();
-    // Glowing outline
-    x0.strokeStyle=rgba(pc(col.ci),0.35*(1+beat*0.2));x0.lineWidth=1.5;x0.stroke();
-    // Column drums — horizontal rings every ~8% height
-    x0.strokeStyle=rgba(pc(col.ci),0.2);x0.lineWidth=1;
-    for(let dr=1;dr<6;dr++){
-      const dy=col.y-col.h*dr/6;
-      x0.beginPath();x0.moveTo(col.x-colW*0.5,dy);x0.lineTo(col.x+colW*0.5,dy);x0.stroke();
-    }
-    // Capital (top)
-    if(!col.broken){
-      x0.fillStyle=rgba(pc(col.ci),0.22);
-      x0.fillRect(col.x-colW*0.7,col.y-col.h-h*0.012,colW*1.4,h*0.012);
-      x0.strokeStyle=rgba(pc(col.ci),0.4);x0.lineWidth=1.5;
-      x0.strokeRect(col.x-colW*0.7,col.y-col.h-h*0.012,colW*1.4,h*0.012);
-    } else {
-      // Jagged break at top
-      x0.strokeStyle=rgba(pc(col.ci),0.35);x0.lineWidth=1.5;
-      x0.beginPath();
-      x0.moveTo(col.x-colW*0.45,col.y-col.h);
-      for(let jag=0;jag<5;jag++){
-        x0.lineTo(col.x-colW*0.35+jag*(colW*0.18),(col.y-col.h)+(jag%2===0?-8:4));
-      }
-      x0.lineTo(col.x+colW*0.45,col.y-col.h);x0.stroke();
-    }
-    // Algae moss patches — green/teal glow spots on column
-    for(let mg=0;mg<3;mg++){
-      const mgy=col.y-col.h*(0.2+mg*0.3);
-      x0.fillStyle=rgba(pc(2),0.08*(1+beat*0.1));x0.shadowBlur=6;x0.shadowColor=pc(2);
-      x0.beginPath();x0.ellipse(col.x+(mg%2===0?1:-1)*colW*0.3,mgy,colW*0.4,h*0.008,0,0,Math.PI*2);x0.fill();
-    }
-    x0.shadowBlur=0;
-  }
-
-  // ── Poseidon Head — large central figure ──────────────
-  if(A.poseidon){
-    const P=A.poseidon,pSz=P.sz;
-    P.jawAngle+=(beat>0.6?P.jawDir*0.02:0);P.jawAngle*=0.95;
-    P.eyeGlow=lerp(P.eyeGlow,beat,0.1);
-    x0.save();x0.translate(P.x,P.y);
-    x0.shadowBlur=25+beat*15;x0.shadowColor=rgba(pc(0),0.7);
-    // Head shape — large rounded head rising from ocean floor
-    x0.strokeStyle=rgba(pc(2),0.6+beat*0.2);x0.lineWidth=3;
-    x0.beginPath();
-    x0.moveTo(-pSz*0.4,0); // chin left
-    x0.bezierCurveTo(-pSz*0.45,-pSz*0.2,-pSz*0.48,-pSz*0.5,-pSz*0.35,-pSz*0.75); // left jaw to temple
-    x0.bezierCurveTo(-pSz*0.25,-pSz*0.95,0,-pSz*1.0,pSz*0.05,-pSz*0.95); // top of head
-    x0.bezierCurveTo(pSz*0.3,-pSz*0.9,pSz*0.45,-pSz*0.7,pSz*0.48,-pSz*0.5); // right temple
-    x0.bezierCurveTo(pSz*0.5,-pSz*0.2,pSz*0.45,0,pSz*0.4,0); // right jaw
+  // === Beard — long flowing strands like stone turned seaweed ===
+  x0.strokeStyle=rgba(pc(3),(0.45+beat*0.15));x0.lineWidth=2.5;
+  x0.shadowBlur=10;x0.shadowColor=rgba(pc(3),0.4);
+  for(let b=0;b<9;b++){
+    const bx=-pSz*0.28+b*(pSz*0.07);
+    const sway=Math.sin(t*0.0015+b*0.7)*pSz*0.05;
+    const bLen=pSz*(0.35+b*0.02+Math.sin(b*1.2)*0.05);
+    x0.beginPath();x0.moveTo(bx,pSz*0.04);
+    x0.bezierCurveTo(bx+sway,pSz*0.04+bLen*0.3,bx-sway*1.2,pSz*0.04+bLen*0.6,bx+sway*1.5,pSz*0.04+bLen);
     x0.stroke();
-    // Beard — flowing tentacle-like strands
-    x0.strokeStyle=rgba(pc(3),0.4+beat*0.15);x0.lineWidth=2;
-    for(let b=0;b<7;b++){
-      const bx=-pSz*0.3+b*(pSz*0.1);
-      const sway=Math.sin(t*0.002+b*0.8)*pSz*0.06;
-      x0.beginPath();x0.moveTo(bx,0);
-      x0.bezierCurveTo(bx+sway,pSz*0.15,bx-sway,pSz*0.3,bx+sway*1.5,pSz*0.4+b*pSz*0.02);
-      x0.stroke();
-    }
-    // Crown / trident prongs on head
-    x0.strokeStyle=rgba(pc(1),0.5+beat*0.3);x0.lineWidth=2.5;
-    for(let p=0;p<3;p++){
-      const px=-pSz*0.15+p*pSz*0.15;
-      x0.beginPath();x0.moveTo(px,-pSz*0.85);
-      x0.lineTo(px+Math.sin(t*0.003+p)*3,-pSz*1.1-p*pSz*0.03);x0.stroke();
-      // prong tips
-      x0.beginPath();x0.arc(px,-pSz*1.1-p*pSz*0.03,3+beat*2,0,Math.PI*2);
-      x0.fillStyle=rgba(pc(1),0.7);x0.fill();
-    }
-    // Nose
-    x0.strokeStyle=rgba(pc(2),0.5);x0.lineWidth=2;
-    x0.beginPath();x0.moveTo(0,-pSz*0.45);x0.lineTo(-pSz*0.06,-pSz*0.25);x0.lineTo(pSz*0.02,-pSz*0.2);x0.stroke();
-    // Mouth — opens with beat (jaw)
-    x0.strokeStyle=rgba(pc(0),0.5+beat*0.2);x0.lineWidth=2;
-    x0.beginPath();
-    x0.moveTo(-pSz*0.18,-pSz*0.08+P.jawAngle*pSz*0.5);
-    x0.quadraticCurveTo(0,-pSz*0.02+P.jawAngle*pSz*0.8,pSz*0.18,-pSz*0.08+P.jawAngle*pSz*0.5);
-    x0.stroke();
-    // Eyes — mini centerpieces!
-    if(THEME.centerpiece){
-      const eyeSz=pSz*0.08*(1+P.eyeGlow*0.4);
-      x0.shadowBlur=15+P.eyeGlow*20;x0.shadowColor=rgba(pc(0),0.9);
-      drawCPMini(x0,THEME.centerpiece,-pSz*0.18,-pSz*0.55,eyeSz,cpRot);
-      drawCPMini(x0,THEME.centerpiece,pSz*0.18,-pSz*0.55,eyeSz,-cpRot);
-    } else {
-      // Fallback glowing eyes
-      x0.fillStyle=rgba(pc(0),0.7+P.eyeGlow*0.3);
-      x0.beginPath();x0.arc(-pSz*0.18,-pSz*0.55,pSz*0.06,0,Math.PI*2);x0.fill();
-      x0.beginPath();x0.arc(pSz*0.18,-pSz*0.55,pSz*0.06,0,Math.PI*2);x0.fill();
-    }
-    x0.shadowBlur=0;x0.restore();
   }
 
-  // ── Power source centerpiece — in central ruins ───────
-  if(THEME.centerpiece){
-    const cpX=cx,cpY=floorY-h*0.06;
-    const cpSz=Math.min(w,h)*(0.08+beat*0.025);
-    cpRot+=0.012;cpPh+=0.013;
-    const cpGlow=x0.createRadialGradient(cpX,cpY,0,cpX,cpY,cpSz*3);
-    cpGlow.addColorStop(0,rgba(pc(0),0.2*(1+beat*0.4)));
-    cpGlow.addColorStop(0.4,rgba(pc(1),0.07));
-    cpGlow.addColorStop(1,'transparent');
-    x0.fillStyle=cpGlow;x0.fillRect(0,0,w,h);
-    x0.shadowBlur=cpSz*0.8;x0.shadowColor=rgba(pc(0),0.9);
-    drawCPMini(x0,THEME.centerpiece,cpX,cpY,cpSz,cpRot);
-    x0.shadowBlur=0;
+  // === Crown/trident ornament on head ===
+  x0.strokeStyle=rgba(pc(1),(0.6+beat*0.3));x0.lineWidth=3;
+  x0.shadowBlur=18+beat*12;x0.shadowColor=rgba(pc(1),0.8);
+  // Central trident
+  for(let p=0;p<5;p++){
+    const pxOff=-pSz*0.16+p*pSz*0.08;
+    const pHeight=pSz*(p===2?0.22:(p===1||p===3)?0.16:0.1);
+    x0.beginPath();x0.moveTo(pxOff,-pSz*0.95);
+    x0.lineTo(pxOff+Math.sin(t*0.002+p)*2,-pSz*0.95-pHeight);x0.stroke();
+    // Prong tips glow
+    x0.fillStyle=rgba(pc(1),(0.8+beat*0.2));
+    x0.beginPath();x0.arc(pxOff,-pSz*0.95-pHeight,3+beat*2,0,Math.PI*2);x0.fill();
   }
+  // Crown band
+  x0.strokeStyle=rgba(pc(1),(0.5+beat*0.2));x0.lineWidth=2;
+  x0.beginPath();
+  x0.moveTo(-pSz*0.32,-pSz*0.88);
+  x0.bezierCurveTo(-pSz*0.15,-pSz*0.93,pSz*0.15,-pSz*0.93,pSz*0.32,-pSz*0.88);
+  x0.stroke();
 
-  // ── Destruction debris (from kraken) ─────────────────
+  // === Missing chunk — broken piece missing from upper right ===
+  x0.strokeStyle=rgba(pc(2),(0.5+beat*0.15));x0.lineWidth=2.5;
+  x0.beginPath();
+  x0.moveTo(pSz*0.25,-pSz*0.88);
+  x0.lineTo(pSz*0.32,-pSz*0.82);
+  x0.lineTo(pSz*0.28,-pSz*0.76);
+  x0.lineTo(pSz*0.35,-pSz*0.7);
+  x0.stroke();
+
+  // === Wrinkle/detail lines for age ===
+  x0.strokeStyle=rgba(pc(2),(0.2+beat*0.08));x0.lineWidth=1;
+  // Forehead wrinkles
+  for(let wr=0;wr<3;wr++){
+    const wry=-pSz*(0.72+wr*0.06);
+    x0.beginPath();x0.moveTo(-pSz*0.2,wry);x0.bezierCurveTo(-pSz*0.05,wry-pSz*0.015,pSz*0.05,wry-pSz*0.015,pSz*0.2,wry);x0.stroke();
+  }
+  // Nasolabial folds
+  x0.strokeStyle=rgba(pc(2),(0.25+beat*0.1));x0.lineWidth=1.5;
+  x0.beginPath();x0.moveTo(-pSz*0.15,-pSz*0.3);x0.bezierCurveTo(-pSz*0.18,-pSz*0.2,-pSz*0.2,-pSz*0.12,-pSz*0.18,-pSz*0.05);x0.stroke();
+  x0.beginPath();x0.moveTo(pSz*0.11,-pSz*0.3);x0.bezierCurveTo(pSz*0.14,-pSz*0.2,pSz*0.16,-pSz*0.12,pSz*0.14,-pSz*0.05);x0.stroke();
+
+  x0.shadowBlur=0;x0.restore();
+
+  // ══════════════════════════════════════════════════════
+  // DESTRUCTION DEBRIS (from kraken surprise)
+  // ══════════════════════════════════════════════════════
   for(let i=A.debris.length-1;i>=0;i--){
     const d=A.debris[i];
     d.x+=d.vx;d.y+=d.vy;d.vy+=0.04;d.vx*=0.99;
@@ -4722,7 +5013,9 @@ function drawAtlantis(t){
     x0.fillRect(-d.sz/2,-d.sz/2,d.sz,d.sz);x0.shadowBlur=0;x0.restore();
   }
 
-  // ── KRAKEN ───────────────────────────────────────────
+  // ══════════════════════════════════════════════════════
+  // KRAKEN SURPRISE
+  // ══════════════════════════════════════════════════════
   if(A.kraken){
     const K=A.kraken;
     K.age+=16;K.alpha=Math.min(0.9,K.alpha+0.012);
@@ -4742,7 +5035,7 @@ function drawAtlantis(t){
       x0.shadowBlur=0;x0.restore();
     }
 
-    // Tentacles — each grabs a different part of the ruins
+    // Tentacles
     for(const ten of K.tentacles){
       ten.ph+=0.018*(1+beat*0.4);
       const grabProgress=Math.min(1,K.age/2000);
@@ -4750,7 +5043,6 @@ function drawAtlantis(t){
       x0.strokeStyle=rgba(pc(ten.ci),0.75);
       x0.shadowBlur=18;x0.shadowColor=rgba(pc(ten.ci),0.6);
       x0.lineWidth=ten.thickness*(1+beat*0.1);x0.lineCap='round';
-      // Draw tentacle as bezier with sucker dots
       const startX=ten.originX,startY=ten.originY;
       const midX=ten.midX+Math.sin(ten.ph)*20;
       const midY=ten.midY+Math.cos(ten.ph*0.7)*15;
@@ -4758,7 +5050,7 @@ function drawAtlantis(t){
       const endY=ten.targetY+Math.cos(ten.ph*0.9)*6*(1-grabProgress);
       x0.beginPath();x0.moveTo(startX,startY);
       x0.bezierCurveTo(midX,midY,midX+20,endY-30,endX,endY);x0.stroke();
-      // Sucker dots along tentacle
+      // Sucker dots
       x0.lineWidth=1;x0.shadowBlur=4;
       for(let sk=0;sk<5;sk++){
         const frac=(sk+1)/6;
@@ -4771,7 +5063,9 @@ function drawAtlantis(t){
     }
   }
 
-  // ── WHIRLPOOL ────────────────────────────────────────
+  // ══════════════════════════════════════════════════════
+  // WHIRLPOOL SURPRISE
+  // ══════════════════════════════════════════════════════
   if(A.whirlpool){
     const WP=A.whirlpool;
     WP.rot+=WP.speed*(1+beat*0.4);
@@ -4780,7 +5074,6 @@ function drawAtlantis(t){
     if(WP.fading)WP.alpha=Math.max(0,WP.alpha-0.01);
     if(WP.alpha<=0&&WP.fading){A.whirlpool=null;}
 
-    // Spiraling rings
     for(let ring=0;ring<8;ring++){
       const rFrac=ring/7;
       const rR=WP.radius*(1-rFrac*0.85);
@@ -4789,12 +5082,10 @@ function drawAtlantis(t){
       x0.lineWidth=2-rFrac*1.5;
       x0.shadowBlur=10*(1-rFrac)+beat*5;x0.shadowColor=pc(ring%4);
       x0.beginPath();
-      // Spiral arc — not full circle, offset by rotation
       const startA=WP.rot+ring*0.7;
       x0.arc(WP.x,WP.y,Math.max(2,rR),startA,startA+Math.PI*1.6);
       x0.stroke();
     }
-    // Dark vortex center
     const vg=x0.createRadialGradient(WP.x,WP.y,0,WP.x,WP.y,WP.radius*0.3);
     vg.addColorStop(0,'rgba(0,0,0,'+WP.alpha*0.9+')');vg.addColorStop(1,'transparent');
     x0.fillStyle=vg;x0.fillRect(0,0,w,h);
@@ -4802,109 +5093,108 @@ function drawAtlantis(t){
     for(const f of [...A.anglerfish,...A.mantas,...A.eels]){
       if(WP.alpha>0.4){
         const dx=WP.x-f.x,dy=WP.y-f.y,dist=Math.hypot(dx,dy)||1;
-        if(dist<WP.radius*1.5){
-          f.x+=dx/dist*1.5*WP.alpha;f.y+=dy/dist*1.5*WP.alpha;
-        }
+        if(dist<WP.radius*1.5){f.x+=dx/dist*1.5*WP.alpha;f.y+=dy/dist*1.5*WP.alpha;}
       }
     }
     x0.shadowBlur=0;
   }
 
-  // ── SEA CREATURES ────────────────────────────────────
+  // ══════════════════════════════════════════════════════
+  // SEA CREATURES — gliding, majestic, slightly larger
+  // ══════════════════════════════════════════════════════
 
   // Eels — weave through ruins with segmented body
   for(const eel of A.eels){
-    eel.ph+=eel.phSpeed*(1+beat*0.3);
-    eel.x+=eel.vx*(1+energy*0.2);
+    eel.ph+=eel.phSpeed*(1+beat*0.2);
+    eel.x+=eel.vx*(1+energy*0.15);
     if(eel.x<-eel.sz)eel.x=w+eel.sz;
     if(eel.x>w+eel.sz)eel.x=-eel.sz;
-    x0.save();x0.shadowBlur=12;x0.shadowColor=rgba(pc(eel.ci),0.7);
-    x0.strokeStyle=rgba(pc(eel.ci),0.65);x0.lineWidth=5+beat*2;x0.lineCap='round';
+    x0.save();x0.shadowBlur=14;x0.shadowColor=rgba(pc(eel.ci),0.7);
+    x0.strokeStyle=rgba(pc(eel.ci),0.65);x0.lineWidth=6+beat*2;x0.lineCap='round';
     x0.beginPath();
     for(let seg=0;seg<eel.segments;seg++){
       const sx=eel.x-eel.vx*seg*(eel.sz/eel.segments);
-      const sy=eel.y+Math.sin(eel.ph+seg*0.5)*18*(1+beat*0.3);
+      const sy=eel.y+Math.sin(eel.ph+seg*0.45)*20*(1+beat*0.2);
       seg===0?x0.moveTo(sx,sy):x0.lineTo(sx,sy);
     }
     x0.stroke();
-    // Eel head — glowing eye
-    x0.fillStyle=rgba(pc(eel.ci),0.8);x0.beginPath();x0.ellipse(eel.x,eel.y,10+beat*2,7,eel.vx>0?0:Math.PI,0,Math.PI*2);x0.fill();
-    x0.fillStyle='rgba(255,255,100,0.9)';x0.shadowBlur=8;x0.shadowColor='rgba(255,255,0,1)';
-    x0.beginPath();x0.arc(eel.x+(eel.vx>0?5:-5),eel.y-1,3*(1+beat*0.3),0,Math.PI*2);x0.fill();
+    // Head with eye
+    x0.fillStyle=rgba(pc(eel.ci),0.8);x0.beginPath();x0.ellipse(eel.x,eel.y,12+beat*2,8,eel.vx>0?0:Math.PI,0,Math.PI*2);x0.fill();
+    x0.fillStyle='rgba(255,255,100,0.9)';x0.shadowBlur=10;x0.shadowColor='rgba(255,255,0,1)';
+    x0.beginPath();x0.arc(eel.x+(eel.vx>0?6:-6),eel.y-1,3.5*(1+beat*0.3),0,Math.PI*2);x0.fill();
     x0.lineCap='butt';x0.shadowBlur=0;x0.restore();
   }
 
-  // Anglerfish — lurk mid-water with glowing lure
+  // Anglerfish — lurk mid-water
   for(const af of A.anglerfish){
-    af.ph+=0.02*(1+beat*0.3);af.mouthPh+=0.04;af.lurePh+=0.05+Math.random()*0.02;
-    af.x+=af.vx*(1+energy*0.15);
-    if(af.x<-80)af.x=w+80;if(af.x>w+80)af.x=-80;
+    af.ph+=0.015*(1+beat*0.2);af.mouthPh+=0.03;af.lurePh+=0.04+Math.random()*0.01;
+    af.x+=af.vx*(1+energy*0.1);
+    if(af.x<-100)af.x=w+100;if(af.x>w+100)af.x=-100;
     const dir=af.vx>0?1:-1;
-    x0.save();x0.translate(af.x,af.y+Math.sin(af.ph)*8);
-    x0.scale(dir,1);x0.shadowBlur=16;x0.shadowColor=rgba(pc(af.ci),0.7);
-    // Body — bulbous
+    x0.save();x0.translate(af.x,af.y+Math.sin(af.ph)*6);
+    x0.scale(dir,1);x0.shadowBlur=18;x0.shadowColor=rgba(pc(af.ci),0.7);
+    // Body
     x0.fillStyle=rgba(pc(af.ci),0.5);
     x0.beginPath();x0.ellipse(0,0,af.sz,af.sz*0.65,0,0,Math.PI*2);x0.fill();
-    // Mouth — hinged open slightly
-    const mA=0.2+Math.sin(af.mouthPh)*0.12;
+    // Mouth
+    const mA=0.2+Math.sin(af.mouthPh)*0.1;
     x0.fillStyle=rgba(pc(af.ci),0.7);
     x0.beginPath();x0.moveTo(af.sz*0.85,0);
     x0.lineTo(af.sz*0.4,-mA*af.sz*0.6);x0.lineTo(af.sz*0.4,mA*af.sz*0.6);x0.closePath();x0.fill();
-    // Jagged teeth
+    // Teeth
     x0.strokeStyle='rgba(220,220,180,0.8)';x0.lineWidth=1.5;
-    for(let tk=0;tk<4;tk++){
-      const tx=af.sz*(0.5+tk*0.09),ty=mA*af.sz*(0.15+tk*0.1);
-      x0.beginPath();x0.moveTo(tx,-ty);x0.lineTo(tx+4,-ty-8*(1-tk*0.1));x0.moveTo(tx,ty);x0.lineTo(tx+4,ty+6*(1-tk*0.1));x0.stroke();
+    for(let tk=0;tk<5;tk++){
+      const tx=af.sz*(0.48+tk*0.08),ty=mA*af.sz*(0.12+tk*0.1);
+      x0.beginPath();x0.moveTo(tx,-ty);x0.lineTo(tx+4,-ty-9*(1-tk*0.1));x0.moveTo(tx,ty);x0.lineTo(tx+4,ty+7*(1-tk*0.1));x0.stroke();
     }
     // Eye
-    x0.fillStyle='rgba(255,200,50,0.9)';x0.shadowBlur=12;x0.shadowColor='rgba(255,200,0,1)';
-    x0.beginPath();x0.arc(af.sz*0.25,-af.sz*0.2,af.sz*0.15*(1+beat*0.15),0,Math.PI*2);x0.fill();
+    x0.fillStyle='rgba(255,200,50,0.9)';x0.shadowBlur=14;x0.shadowColor='rgba(255,200,0,1)';
+    x0.beginPath();x0.arc(af.sz*0.25,-af.sz*0.2,af.sz*0.16*(1+beat*0.15),0,Math.PI*2);x0.fill();
     x0.fillStyle='rgba(0,0,0,0.8)';x0.shadowBlur=0;
-    x0.beginPath();x0.arc(af.sz*0.27,-af.sz*0.2,af.sz*0.07,0,Math.PI*2);x0.fill();
-    // Bioluminescent lure on rod above head
+    x0.beginPath();x0.arc(af.sz*0.27,-af.sz*0.2,af.sz*0.08,0,Math.PI*2);x0.fill();
+    // Lure
     const lureRodX=-af.sz*0.2,lureRodY=-af.sz*0.75;
     const lureX=lureRodX+Math.sin(af.lurePh)*12,lureY=lureRodY+Math.cos(af.lurePh*0.7)*8;
     x0.strokeStyle=rgba(pc((af.ci+1)%4),0.5);x0.lineWidth=1.5;
     x0.beginPath();x0.moveTo(-af.sz*0.1,-af.sz*0.5);x0.lineTo(lureX,lureY);x0.stroke();
-    x0.fillStyle=rgba(pc((af.ci+1)%4),0.95);x0.shadowBlur=20+Math.sin(af.lurePh)*8;x0.shadowColor=pc((af.ci+1)%4);
-    x0.beginPath();x0.arc(lureX,lureY,4+beat*3,0,Math.PI*2);x0.fill();
+    x0.fillStyle=rgba(pc((af.ci+1)%4),0.95);x0.shadowBlur=22+Math.sin(af.lurePh)*8;x0.shadowColor=pc((af.ci+1)%4);
+    x0.beginPath();x0.arc(lureX,lureY,5+beat*3,0,Math.PI*2);x0.fill();
     x0.shadowBlur=0;x0.restore();
   }
 
-  // Manta rays — glide overhead in upper water
+  // Manta rays — glide overhead
   for(const mr of A.mantas){
-    mr.ph+=0.008*(1+beat*0.2);mr.waveAmp+=(beat*0.15-mr.waveAmp)*0.1;
-    mr.x+=mr.vx*(1+energy*0.2);
+    mr.ph+=0.006*(1+beat*0.15);mr.waveAmp+=(beat*0.12-mr.waveAmp)*0.08;
+    mr.x+=mr.vx*(1+energy*0.15);
     if(mr.x<-mr.sz*2)mr.x=w+mr.sz*2;if(mr.x>w+mr.sz*2)mr.x=-mr.sz*2;
     const dir=mr.vx>0?1:-1;
     const wingFlap=Math.sin(mr.ph)*mr.sz*(0.12+mr.waveAmp*0.25);
-    x0.save();x0.translate(mr.x,mr.y+Math.sin(mr.ph*0.4)*12);x0.scale(dir,1);
-    x0.shadowBlur=20;x0.shadowColor=rgba(pc(mr.ci),0.5);
-    // Main body — diamond shape
-    x0.fillStyle=rgba(pc(mr.ci),0.35);
+    x0.save();x0.translate(mr.x,mr.y+Math.sin(mr.ph*0.4)*10);x0.scale(dir,1);
+    x0.shadowBlur=22;x0.shadowColor=rgba(pc(mr.ci),0.55);
+    // Body
+    x0.fillStyle=rgba(pc(mr.ci),0.4);
     x0.beginPath();
-    x0.moveTo(0,-mr.sz*0.12);                    // nose
-    x0.bezierCurveTo(mr.sz*0.3,-mr.sz*0.08,mr.sz*0.55,wingFlap*0.5,mr.sz*0.6,wingFlap);
+    x0.moveTo(0,-mr.sz*0.12);
+    x0.bezierCurveTo(mr.sz*0.3,-mr.sz*0.08,mr.sz*0.55,wingFlap*0.5,mr.sz*0.65,wingFlap);
     x0.bezierCurveTo(mr.sz*0.3,wingFlap*0.8,0,mr.sz*0.15,0,mr.sz*0.15);
-    x0.bezierCurveTo(0,mr.sz*0.15,-mr.sz*0.3,wingFlap*0.8,-mr.sz*0.6,wingFlap);
+    x0.bezierCurveTo(0,mr.sz*0.15,-mr.sz*0.3,wingFlap*0.8,-mr.sz*0.65,wingFlap);
     x0.bezierCurveTo(-mr.sz*0.55,wingFlap*0.5,-mr.sz*0.3,-mr.sz*0.08,0,-mr.sz*0.12);
     x0.closePath();x0.fill();
-    // Wing outline glow
-    x0.strokeStyle=rgba(pc(mr.ci),0.6);x0.lineWidth=1.5;x0.stroke();
-    // Belly dots pattern
-    x0.fillStyle=rgba(pc((mr.ci+2)%4),0.25);
-    for(let dp=0;dp<5;dp++){x0.beginPath();x0.arc((dp-2)*mr.sz*0.08,mr.sz*0.04,mr.sz*0.03,0,Math.PI*2);x0.fill();}
+    // Outline
+    x0.strokeStyle=rgba(pc(mr.ci),0.65);x0.lineWidth=1.5;x0.stroke();
+    // Belly dots
+    x0.fillStyle=rgba(pc((mr.ci+2)%4),0.3);
+    for(let dp=0;dp<5;dp++){x0.beginPath();x0.arc((dp-2)*mr.sz*0.08,mr.sz*0.04,mr.sz*0.035,0,Math.PI*2);x0.fill();}
     // Tail
-    x0.strokeStyle=rgba(pc(mr.ci),0.45);x0.lineWidth=3;
-    x0.beginPath();x0.moveTo(-mr.sz*0.08,mr.sz*0.12);x0.bezierCurveTo(-mr.sz*0.1,mr.sz*0.3,-mr.sz*0.05,mr.sz*0.45,mr.sz*0.05,mr.sz*0.55);x0.stroke();
+    x0.strokeStyle=rgba(pc(mr.ci),0.5);x0.lineWidth=3;
+    x0.beginPath();x0.moveTo(-mr.sz*0.08,mr.sz*0.12);x0.bezierCurveTo(-mr.sz*0.1,mr.sz*0.3,-mr.sz*0.05,mr.sz*0.5,mr.sz*0.05,mr.sz*0.6);x0.stroke();
     x0.shadowBlur=0;x0.restore();
   }
 
-  // ── Bubbles ───────────────────────────────────────────
+  // ── Bubbles — natural fade at top ──────────────────
   for(let bi=A.bubbles.length-1;bi>=0;bi--){
     const b=A.bubbles[bi];
     b.y+=b.vy*(A.bubbleStorm?4:1);b.x+=b.vx+Math.sin(b.ph+t*0.001)*0.3;b.ph+=0.03;
-    // Natural fade-out at top instead of abrupt vanish
     const fadeZone=h*0.08;
     let fadeAlpha=1;
     if(b.y<fadeZone)fadeAlpha=Math.max(0,b.y/fadeZone);
@@ -4916,8 +5206,7 @@ function drawAtlantis(t){
       x0.shadowBlur=15;x0.shadowColor=rgba(pc(b.ci),0.8);
       x0.strokeStyle=rgba(pc(b.ci),0.85*fadeAlpha);x0.lineWidth=2;
       x0.beginPath();x0.arc(b.x,b.y,b.r*2.5*(1+beat*0.2),0,Math.PI*2);x0.stroke();
-      x0.fillStyle=rgba(pc(b.ci),0.15*fadeAlpha);x0.fill();
-      x0.shadowBlur=0;
+      x0.fillStyle=rgba(pc(b.ci),0.15*fadeAlpha);x0.fill();x0.shadowBlur=0;
     } else {
       x0.strokeStyle=rgba(pc(b.ci),(0.3+beat*0.1)*fadeAlpha);x0.lineWidth=1;
       x0.beginPath();x0.arc(b.x,b.y,b.r,0,Math.PI*2);x0.stroke();
@@ -4938,13 +5227,13 @@ function drawCarnival(t){
         ci:i%4,phase:'rising',trailLen:12,
         particles:[],burstR:0,burstLife:0,
       })),
-      tents:Array.from({length:12},(_,i)=>{
+      tents:Array.from({length:14},(_,i)=>{
         const numStripes=5+Math.floor(Math.random()*4);
         const isSquare=Math.random()>0.5; // mix peaked and squared
         return{
-          x:i/11*w*1.05-w*0.02,
-          w:w*0.075+Math.random()*w*0.05,
-          h:h*(0.12+Math.random()*0.1),
+          x:i/13*w*1.08-w*0.04,
+          w:w*0.08+Math.random()*w*0.05,
+          h:h*(0.15+Math.random()*0.12),
           ci:i%4,ci2:(i+2)%4,numStripes,
           flag:Math.random()>0.5,
           flagPh:Math.random()*Math.PI*2,
@@ -4957,7 +5246,6 @@ function drawCarnival(t){
         rot:Math.random()*Math.PI*2,rotS:(Math.random()-0.5)*0.1,
         sz:4+Math.random()*8,ci:Math.floor(Math.random()*4),
       })),
-      tentLights:Array.from({length:60},(_,i)=>({angle:i/60*Math.PI*2,ci:i%4,ph:Math.random()*Math.PI*2,orbitR:0.28+Math.random()*0.08})),
       clown:null,
       clownAlpha:0,
       superFW:false,
@@ -4975,8 +5263,8 @@ function drawCarnival(t){
   sky.addColorStop(1,'rgba(15,5,35,0.9)');
   x0.fillStyle=sky;x0.fillRect(0,0,w,h);
 
-  // Ground
-  x0.fillStyle='rgba(8,5,15,1)';x0.fillRect(0,h*0.78,w,h*0.22);
+  // Ground — lower strip at actual bottom
+  x0.fillStyle='rgba(8,5,15,1)';x0.fillRect(0,h*0.82,w,h*0.18);
 
   // ── FIREWORKS BG ──────────────────────────────────────
   const superFW = C.superFW;
@@ -4997,11 +5285,11 @@ function drawCarnival(t){
       x0.beginPath();x0.arc(fw.x,fw.y,superFW?3:2,0,Math.PI*2);x0.fill();x0.shadowBlur=0;
       if(fw.y<h*(superFW?0.08:0.12)+Math.random()*h*0.15||Math.random()<0.008){
         fw.phase='burst';
-        const numP=superFW?80:40;
+        const numP=superFW?80:50;
         fw.particles=Array.from({length:numP},(_,i)=>{
           const a=i/numP*Math.PI*2;
-          const spd=superFW?(Math.random()*7+3):(Math.random()*4+1.5);
-          return{x:fw.x,y:fw.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,life:1,ci:fw.ci,ci2:(fw.ci+(Math.floor(Math.random()*3)+1))%4,r:superFW?(3+Math.random()*3):(2+Math.random()*2)};
+          const spd=superFW?(Math.random()*7+3):(Math.random()*5+2);
+          return{x:fw.x,y:fw.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,life:1,ci:fw.ci,ci2:(fw.ci+(Math.floor(Math.random()*3)+1))%4,r:superFW?(3+Math.random()*3):(2.5+Math.random()*2.5)};
         });
         // Add secondary ring for super
         if(superFW){
@@ -5017,11 +5305,11 @@ function drawCarnival(t){
       // Burst particles
       let alive=false;
       for(const p of fw.particles){
-        p.x+=p.vx;p.y+=p.vy;p.vy+=0.12;p.vx*=0.97;p.vy*=0.97;p.life-=superFW?0.012:0.018;
+        p.x+=p.vx;p.y+=p.vy;p.vy+=0.1;p.vx*=0.98;p.vy*=0.98;p.life-=superFW?0.01:0.014;
         if(p.life<=0)continue;
         alive=true;
-        x0.fillStyle=rgba(pc(p.life>0.5?p.ci:p.ci2),p.life*0.9);
-        x0.shadowBlur=superFW?(10+beat*8):(5+beat*4);x0.shadowColor=pc(p.ci);
+        x0.fillStyle=rgba(pc(p.life>0.5?p.ci:p.ci2),p.life*0.95);
+        x0.shadowBlur=superFW?(12+beat*10):(8+beat*6);x0.shadowColor=pc(p.ci);
         x0.beginPath();x0.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);x0.fill();x0.shadowBlur=0;
       }
       if(!alive){
@@ -5081,36 +5369,28 @@ function drawCarnival(t){
     x0.strokeStyle=rgba(pc(s%4),hyperWheel?0.7:0.4);
     x0.lineWidth=hyperWheel?3:2;x0.shadowBlur=hyperWheel?10:4;x0.shadowColor=pc(s%4);x0.stroke();
   }
-
-  // Spoke lights
-  for(let sl=0;sl<12;sl++){
-    const a=sl/12*Math.PI*2;
-    for(let r2=0.35;r2<=0.95;r2+=0.2){
-      const lx=Math.cos(a)*ferrisR*r2,ly=Math.sin(a)*ferrisR*r2;
-      x0.fillStyle=rgba(pc(sl%4),(hyperWheel?0.9:0.6)*(0.5+Math.sin(t*0.004+sl)*0.5)+beat*(hyperWheel?0.5:0.2));
-      x0.shadowBlur=hyperWheel?12:6;x0.shadowColor=pc(sl%4);
-      x0.beginPath();x0.arc(lx,ly,hyperWheel?4:3,0,Math.PI*2);x0.fill();
-    }
-  }
   x0.shadowBlur=0;x0.restore();
 
-  // Gondolas — simple neon dots on rim (no centerpieces)
+  // Gondolas — mini centerpieces as gondola cars
   cpRot+=hyperWheel?0.06:0.015;cpPh+=0.013;
+  const gondolaSz=Math.min(w,h)*(hyperWheel?0.04:0.03+beat*0.005);
   for(let s=0;s<12;s++){
     const a=s/12*Math.PI*2+C.ferrisRot;
     const gx=ferrisCX+Math.cos(a)*ferrisR,gy=ferrisCY+Math.sin(a)*ferrisR;
-    x0.fillStyle=rgba(pc(s%4),(hyperWheel?0.9:0.7)+beat*0.15);
-    x0.shadowBlur=hyperWheel?10:5;x0.shadowColor=pc(s%4);
-    x0.beginPath();x0.arc(gx,gy,hyperWheel?5:4,0,Math.PI*2);x0.fill();x0.shadowBlur=0;
+    x0.globalAlpha=hyperWheel?(0.9+beat*0.1):(0.75+beat*0.15);
+    x0.shadowBlur=hyperWheel?12:6;x0.shadowColor=pc(s%4);
+    drawCPMini(x0,THEME.centerpiece,gx,gy,gondolaSz,-C.ferrisRot+cpRot);
+    x0.shadowBlur=0;
   }
+  x0.globalAlpha=1;
 
   // Support legs
   x0.strokeStyle='rgba(100,80,60,0.8)';x0.lineWidth=8;
-  x0.beginPath();x0.moveTo(ferrisCX-ferrisR*0.15,ferrisCY+ferrisR);x0.lineTo(ferrisCX-ferrisR*0.5,h*0.78);x0.stroke();
-  x0.beginPath();x0.moveTo(ferrisCX+ferrisR*0.15,ferrisCY+ferrisR);x0.lineTo(ferrisCX+ferrisR*0.5,h*0.78);x0.stroke();
+  x0.beginPath();x0.moveTo(ferrisCX-ferrisR*0.15,ferrisCY+ferrisR);x0.lineTo(ferrisCX-ferrisR*0.5,h*0.82);x0.stroke();
+  x0.beginPath();x0.moveTo(ferrisCX+ferrisR*0.15,ferrisCY+ferrisR);x0.lineTo(ferrisCX+ferrisR*0.5,h*0.82);x0.stroke();
 
-  // ── CIRCUS TENTS — grounded on bottom edge like midway skyline ──
-  const tentBaseY=h*0.78;
+  // ── CIRCUS TENTS — grounded at bottom edge like midway skyline ──
+  const tentBaseY=h; // tents sit on actual bottom edge of screen
   for(const tent of C.tents){
     const tx=tent.x,tw=tent.w,th2=tent.h;
     const peakX=tx+tw*0.5,peakY=tentBaseY-th2;
@@ -5179,22 +5459,11 @@ function drawCarnival(t){
 
     // String lights along base
     for(let lt=0;lt<6;lt++){
-      const lx=tx+lt/5*tw,ly=tentBaseY+4;
+      const lx=tx+lt/5*tw,ly=tentBaseY-6;
       x0.fillStyle=rgba(pc((lt+tent.ci)%4),(0.6+Math.sin(t*0.005+lt+tent.ci)*0.4)+beat*0.3);
       x0.shadowBlur=6;x0.shadowColor=pc((lt+tent.ci)%4);
       x0.beginPath();x0.arc(lx,ly,3,0,Math.PI*2);x0.fill();x0.shadowBlur=0;
     }
-  }
-
-  // ── TENT LIGHTS — orbit in sky ────────────────────────
-  for(const tl of C.tentLights){
-    tl.ph+=0.025*(1+beat*0.2);
-    const lx=cx+Math.cos(tl.angle+t*0.0003)*w*tl.orbitR;
-    const ly=h*0.3+Math.sin(tl.angle+t*0.0004)*h*0.12;
-    const br=Math.sin(tl.ph)*0.5+0.5;
-    x0.fillStyle=rgba(pc(tl.ci),0.5+br*0.4+beat*0.2);
-    x0.shadowBlur=8+beat*4;x0.shadowColor=pc(tl.ci);
-    x0.beginPath();x0.arc(lx,ly,3,0,Math.PI*2);x0.fill();x0.shadowBlur=0;
   }
 
   // ── CONFETTI ─────────────────────────────────────────
