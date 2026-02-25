@@ -966,6 +966,7 @@ let beatReactionIdx=0,beatCount=0;
 let energyHist=[],surpriseFired=false,surpriseArmed=false,midShifted=false;
 let energyPeak=0,climaxArmed=false;
 let gridGlitch=false;
+let devSurpriseLock=false; // when true, automatic surprise detection is suppressed (dev panel control)
 
 // ═══ ENERGY SPIKE DETECTION — climax finder ═══
 function pushEnergy(e){
@@ -1017,10 +1018,10 @@ function triggerBeat(){
   if(sc==='OMNIA_NIGHTCLUB'&&SD.chandelierY!=null)SD.chandelierY=Math.max(H()*0.05,SD.chandelierY-20*(1+progMult));
   // Surprise detection — fires at climax (last 40% of song, peak energy)
   pushEnergy(SM.energy);
-  if(!surpriseFired&&songProg>0.55){
+  if(!devSurpriseLock&&!surpriseFired&&songProg>0.55){
     if(spikeDetected()){setTimeout(fireSurprise,200);surpriseFired=true;}
   }
-  if(!surpriseFired&&songProg>0.88){setTimeout(fireSurprise,0);surpriseFired=true;}
+  if(!devSurpriseLock&&!surpriseFired&&songProg>0.88){setTimeout(fireSurprise,0);surpriseFired=true;}
 }
 function spawnCracks(){const cx=W()/2,cy=H()/2;beatFX.crackLines=Array.from({length:8},()=>{const a=Math.random()*Math.PI*2,len=Math.random()*Math.max(W(),H())*0.7+100;const segs=[];let x2=cx,y2=cy;for(let i=0;i<6;i++){x2+=Math.cos(a+(Math.random()-0.5)*0.8)*len/6;y2+=Math.sin(a+(Math.random()-0.5)*0.8)*len/6;segs.push({x:x2,y:y2});}return{segs,life:1,ci:Math.floor(Math.random()*4)};});}
 
@@ -7402,6 +7403,7 @@ requestAnimationFrame(render);
 // ═══ TRANSITION ═══
 async function transition(name,artist,theme){
   if(inTrans)return;inTrans=true;
+  devSurpriseLock=false; // release dev lock — real playback takes over
   const wash=document.getElementById('wash'),splash=document.getElementById('splash');
   const c=h2r(theme.palette[0]);
   wash.style.background=`radial-gradient(ellipse at 50% 40%,rgba(${c.r},${c.g},${c.b},0.92) 0%,rgba(0,0,0,0.97) 70%)`;
@@ -7612,9 +7614,12 @@ async function init(){
 
   // ── Cancel active surprise ──
   function cancelSurprise(){
-    if(activeSurpriseVariant===null)return;
+    // Keep the lock ON so initScene's reset of surpriseFired doesn't cause auto-fire
+    devSurpriseLock=true;
     // Re-init scene to reset all surprise-related SD state
     initScene();
+    // After initScene resets surpriseFired=false, mark it as fired to block auto-triggers
+    surpriseFired=true;
     // Reset beat FX
     beatFX.speedBoost=0;beatFX.invertA=0;beatFX.shockwaveA=0;beatFX.slamS=1;beatFX.gravityWave=0;
     // Clear surprise overlay
@@ -7641,13 +7646,23 @@ async function init(){
 
   // ── Jump to scene ──
   function jumpToScene(sceneName){
-    // Cancel any active surprise first
-    cancelSurprise();
+    // Lock surprise system while we're switching
+    devSurpriseLock=true;
+    // Cancel any active surprise (without re-initing, since we're about to do that)
+    activeSurpriseVariant=null;
+    updateSurpriseButtons();
+    beatFX.speedBoost=0;beatFX.invertA=0;beatFX.shockwaveA=0;beatFX.slamS=1;beatFX.gravityWave=0;
+    document.getElementById('surpriseOverlay').style.opacity='0';
+    document.getElementById('gameOverScreen').style.display='none';
+    document.getElementById('comicPanel').style.display='none';
+    // Switch scene
     THEME.scene=sceneName;
     THEME.bgColor=THEME.bgColor||'#000010';
     THEME.sceneSpeed=THEME.sceneSpeed||1;
     THEME.sceneIntensity=THEME.sceneIntensity||0.7;
     initScene();
+    // After initScene resets surpriseFired=false, block auto-firing
+    surpriseFired=true;
     document.getElementById('sceneTag').textContent=sceneName.replace(/_/g,' ')+' — DEV';
     console.log('[dev] jumped to scene:',sceneName);
   }
@@ -7679,10 +7694,12 @@ async function init(){
   });
 
   function fireDevSurprise(variant){
+    // Lock automatic surprise system
+    devSurpriseLock=true;
     // Reset scene state first so surprise starts clean
     initScene();
-    // Ensure surprise system state allows firing
-    surpriseFired=false;
+    // Block auto-triggers after initScene resets surpriseFired
+    surpriseFired=true;
     midShifted=true; // prevent mid-shift
     // Call fireSurprise with the forced variant
     fireSurprise(variant);
