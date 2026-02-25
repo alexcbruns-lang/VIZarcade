@@ -39,6 +39,34 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
 #gameOverScreen{position:fixed;inset:0;z-index:76;pointer-events:none;display:none;align-items:center;justify-content:center;background:#000;font-family:'Bebas Neue',sans-serif;font-size:clamp(4rem,12vw,10rem);letter-spacing:0.2em;color:#f00;text-shadow:0 0 40px #f00}
 #fsBtn{position:fixed;bottom:2.5rem;right:calc(72px + 3rem);z-index:85;background:none;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.28);font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;padding:0.4rem 0.7rem;cursor:pointer;transition:all 0.2s;display:none;pointer-events:all}
 #fsBtn:hover{border-color:#06ffd8;color:#06ffd8}
+
+/* ═══ DEV PANEL ═══ */
+#devPanel{position:fixed;top:0;right:0;width:320px;max-height:100vh;z-index:300;background:rgba(8,8,16,0.94);border-left:1px solid rgba(0,255,65,0.2);font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:#b0ffb0;overflow-y:auto;display:none;backdrop-filter:blur(8px);scrollbar-width:thin;scrollbar-color:rgba(0,255,65,0.3) transparent;pointer-events:all;cursor:default}
+#devPanel.open{display:flex;flex-direction:column}
+#devPanel::-webkit-scrollbar{width:4px}#devPanel::-webkit-scrollbar-thumb{background:rgba(0,255,65,0.3);border-radius:2px}
+.dp-header{padding:10px 14px 8px;border-bottom:1px solid rgba(0,255,65,0.15);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.dp-header h2{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#00ff41;letter-spacing:0.3em;margin:0;text-shadow:0 0 12px rgba(0,255,65,0.5)}
+.dp-close{background:none;border:1px solid rgba(255,0,110,0.3);color:#ff006e;cursor:pointer;font-size:0.7rem;padding:2px 8px;font-family:'Share Tech Mono',monospace;letter-spacing:0.1em}
+.dp-close:hover{background:rgba(255,0,110,0.15);border-color:#ff006e}
+.dp-section{padding:10px 14px;border-bottom:1px solid rgba(0,255,65,0.08)}
+.dp-section h3{font-size:0.6rem;letter-spacing:0.35em;color:#06ffd8;margin:0 0 8px;text-transform:uppercase;text-shadow:0 0 6px rgba(6,255,216,0.4)}
+.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.dp-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.dp-btn{background:rgba(0,255,65,0.06);border:1px solid rgba(0,255,65,0.15);color:#b0ffb0;font-family:'Share Tech Mono',monospace;font-size:0.58rem;padding:5px 4px;cursor:pointer;letter-spacing:0.05em;text-align:center;transition:all 0.12s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dp-btn:hover{background:rgba(0,255,65,0.15);border-color:rgba(0,255,65,0.4);color:#00ff41}
+.dp-btn.active{background:rgba(0,255,65,0.2);border-color:#00ff41;color:#00ff41;box-shadow:0 0 8px rgba(0,255,65,0.3)}
+.dp-btn.fire{background:rgba(255,0,110,0.08);border-color:rgba(255,0,110,0.25);color:#ff80b0}
+.dp-btn.fire:hover{background:rgba(255,0,110,0.2);border-color:#ff006e;color:#ff006e}
+.dp-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.dp-row label{flex-shrink:0;width:65px;font-size:0.58rem;letter-spacing:0.1em;color:#7acc7a}
+.dp-row input[type=range]{flex:1;accent-color:#00ff41;height:3px}
+.dp-row .dp-val{flex-shrink:0;width:35px;text-align:right;font-size:0.58rem;color:#00ff41}
+.dp-info{padding:8px 14px;font-size:0.55rem;color:rgba(0,255,65,0.35);text-align:center;letter-spacing:0.15em;border-bottom:1px solid rgba(0,255,65,0.08)}
+.dp-scene-scroll{max-height:190px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(0,255,65,0.2) transparent}
+.dp-badge{display:inline-block;padding:1px 5px;font-size:0.5rem;letter-spacing:0.08em;border-radius:2px;margin-left:4px}
+.dp-badge.live{background:rgba(255,0,110,0.2);color:#ff006e;border:1px solid rgba(255,0,110,0.3)}
+.dp-monitor{padding:6px 14px;font-size:0.55rem;color:#7acc7a;letter-spacing:0.06em;line-height:1.7;border-bottom:1px solid rgba(0,255,65,0.08);flex-shrink:0}
+.dp-monitor span{color:#00ff41}
 </style>
 </head>
 <body>
@@ -72,6 +100,67 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
   <div id="pgWrap"><div id="pgBar"></div></div>
 </div>
 <button id="fsBtn">⛶ FS</button>
+
+<!-- ═══ DEV PANEL ═══ -->
+<div id="devPanel">
+  <div class="dp-header">
+    <h2>⚙ DEV PANEL</h2>
+    <button class="dp-close" id="dpClose">✕ ESC</button>
+  </div>
+  <div class="dp-monitor" id="dpMonitor">
+    Scene: <span id="dpCurScene">—</span> &nbsp;│&nbsp; CP: <span id="dpCurCP">—</span><br>
+    Energy: <span id="dpEnergy">0</span> &nbsp;│&nbsp; BPM: <span id="dpBPM">0</span> &nbsp;│&nbsp; Beat: <span id="dpBeatCt">0</span><br>
+    Prog: <span id="dpProg">0%</span> &nbsp;│&nbsp; Surprise: <span id="dpSurprise">—</span>
+  </div>
+  <div class="dp-section">
+    <h3>▸ Jump to Scene</h3>
+    <div class="dp-scene-scroll">
+      <div class="dp-grid" id="dpSceneGrid"></div>
+    </div>
+  </div>
+  <div class="dp-section">
+    <h3>▸ Fire Surprise</h3>
+    <div class="dp-grid-3" id="dpSurpriseGrid">
+      <button class="dp-btn fire" data-var="0">Variant 0</button>
+      <button class="dp-btn fire" data-var="1">Variant 1</button>
+      <button class="dp-btn fire" data-var="2">Variant 2</button>
+    </div>
+    <div style="margin-top:6px">
+      <button class="dp-btn fire" id="dpFireRandom" style="width:100%">🎲 Random Surprise</button>
+    </div>
+  </div>
+  <div class="dp-section">
+    <h3>▸ Centerpiece</h3>
+    <div class="dp-scene-scroll" style="max-height:140px">
+      <div class="dp-grid-3" id="dpCPGrid"></div>
+    </div>
+  </div>
+  <div class="dp-section">
+    <h3>▸ Simulated Audio</h3>
+    <div class="dp-row"><label>Energy</label><input type="range" id="dpSimEnergy" min="0" max="100" value="60"><span class="dp-val" id="dpSimEnergyVal">0.60</span></div>
+    <div class="dp-row"><label>BPM</label><input type="range" id="dpSimBPM" min="60" max="200" value="120"><span class="dp-val" id="dpSimBPMVal">120</span></div>
+    <div class="dp-row"><label>Progress</label><input type="range" id="dpSimProg" min="0" max="100" value="0"><span class="dp-val" id="dpSimProgVal">0%</span></div>
+    <div style="margin-top:6px;display:flex;gap:4px">
+      <button class="dp-btn" id="dpSimToggle" style="flex:1">▶ Enable Sim</button>
+      <button class="dp-btn" id="dpSimBeat" style="flex:1">⚡ Manual Beat</button>
+    </div>
+  </div>
+  <div class="dp-section">
+    <h3>▸ Quick Actions</h3>
+    <div class="dp-grid">
+      <button class="dp-btn" id="dpFlash">Flash</button>
+      <button class="dp-btn" id="dpComicBurst">Comic Burst</button>
+      <button class="dp-btn" id="dpShockwave">Shockwave</button>
+      <button class="dp-btn" id="dpInvert">Invert</button>
+      <button class="dp-btn" id="dpSlam">Bass Slam</button>
+      <button class="dp-btn" id="dpGameOver">Game Over</button>
+      <button class="dp-btn" id="dpResetHist">Reset History</button>
+      <button class="dp-btn" id="dpCycleInfo">Cycle Info</button>
+    </div>
+  </div>
+  <div class="dp-info">Press <span style="color:#ff006e">D D D</span> or <span style="color:#ff006e">?dev=1</span> to toggle</div>
+</div>
+
 <script>
 // ═══ AUTH ═══
 const CLIENT_ID='c4a8270f8bc6453490fc8bf4b9de5c42';
@@ -7460,6 +7549,235 @@ async function init(){
     setInterval(poll,5000);
   }
 }
+// ═══ DEV PANEL ═══
+(function initDevPanel(){
+  const panel=document.getElementById('devPanel');
+  if(!panel)return;
+  let devOpen=false,simMode=false;
+  let simEnergy=0.6,simBPM=120,simProg=0,simProgAuto=false;
+
+  // ── Toggle logic: triple-D or ?dev=1 ──
+  let dPresses=[],dTimeout;
+  function toggleDev(){
+    devOpen=!devOpen;
+    panel.classList.toggle('open',devOpen);
+    if(devOpen)buildSceneGrid();
+  }
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&devOpen){toggleDev();return;}
+    if(e.key.toLowerCase()!=='d'||e.ctrlKey||e.metaKey||e.altKey)return;
+    dPresses.push(Date.now());
+    clearTimeout(dTimeout);
+    dTimeout=setTimeout(()=>{dPresses=[];},800);
+    if(dPresses.length>=3){
+      const span=dPresses[dPresses.length-1]-dPresses[dPresses.length-3];
+      if(span<800){toggleDev();dPresses=[];}
+    }
+  });
+  if(new URLSearchParams(location.search).get('dev')==='1'){
+    setTimeout(toggleDev,500);
+  }
+
+  // ── Close button ──
+  document.getElementById('dpClose').addEventListener('click',toggleDev);
+
+  // ── Build scene grid ──
+  function buildSceneGrid(){
+    const grid=document.getElementById('dpSceneGrid');
+    if(grid.children.length>0)return; // already built
+    ALL_SCENES.forEach(s=>{
+      const btn=document.createElement('button');
+      btn.className='dp-btn';
+      btn.textContent=s.replace(/_/g,' ');
+      btn.addEventListener('click',()=>jumpToScene(s));
+      grid.appendChild(btn);
+    });
+  }
+
+  // ── Build CP grid ──
+  (function buildCPGrid(){
+    const grid=document.getElementById('dpCPGrid');
+    ALL_CPS.forEach(cp=>{
+      const btn=document.createElement('button');
+      btn.className='dp-btn';
+      btn.textContent=cp.replace(/_/g,' ');
+      btn.addEventListener('click',()=>{
+        THEME.centerpiece=cp;
+        THEME.centerpieceScale=THEME.centerpieceScale||0.5;
+      });
+      grid.appendChild(btn);
+    });
+  })();
+
+  // ── Jump to scene ──
+  function jumpToScene(sceneName){
+    // Create a minimal theme with current palette or defaults
+    const palette=THEME.palette||['#06ffd8','#8338ec','#ff006e','#ffbe0b'];
+    const cp=THEME.centerpiece||'skull';
+    THEME.scene=sceneName;
+    THEME.bgColor=THEME.bgColor||'#000010';
+    THEME.sceneSpeed=THEME.sceneSpeed||1;
+    THEME.sceneIntensity=THEME.sceneIntensity||0.7;
+    initScene();
+    // Update UI tag
+    document.getElementById('sceneTag').textContent=sceneName.replace(/_/g,' ')+' — DEV';
+    console.log('[dev] jumped to scene:',sceneName);
+  }
+
+  // ── Surprise buttons ──
+  document.getElementById('dpSurpriseGrid').addEventListener('click',e=>{
+    const btn=e.target.closest('[data-var]');
+    if(!btn)return;
+    const v=parseInt(btn.dataset.var);
+    fireDevSurprise(v);
+  });
+  document.getElementById('dpFireRandom').addEventListener('click',()=>{
+    fireDevSurprise(Math.floor(Math.random()*3));
+  });
+
+  function fireDevSurprise(variant){
+    // Temporarily override Math.random to force the desired variant
+    const origRandom=Math.random;
+    // fireSurprise uses Math.floor(Math.random()*3) to pick variant
+    // We need it to return variant/3 + epsilon so floor gives us our variant
+    let callCount=0;
+    Math.random=function(){
+      callCount++;
+      // The first random call in fireSurprise may be the midShift check (0.05 probability)
+      // We want it to NOT trigger midShift, so return > 0.05
+      // The second random call picks the variant
+      if(callCount===1)return 0.5; // skip midShift
+      if(callCount===2)return variant/3+0.001; // force variant
+      return origRandom.call(Math);
+    };
+    // Ensure surprise can fire
+    const savedSF=surpriseFired;
+    surpriseFired=false;
+    midShifted=true; // prevent mid-shift
+    try{
+      fireSurprise();
+    }finally{
+      Math.random=origRandom;
+      surpriseFired=savedSF;
+    }
+    console.log('[dev] fired surprise variant',variant,'for scene',THEME.scene);
+  }
+
+  // ── Sim audio controls ──
+  const simEnergySlider=document.getElementById('dpSimEnergy');
+  const simBPMSlider=document.getElementById('dpSimBPM');
+  const simProgSlider=document.getElementById('dpSimProg');
+
+  simEnergySlider.addEventListener('input',e=>{
+    simEnergy=parseInt(e.target.value)/100;
+    document.getElementById('dpSimEnergyVal').textContent=simEnergy.toFixed(2);
+    if(simMode){MS.energy=simEnergy;SM.energy=simEnergy;}
+  });
+  simBPMSlider.addEventListener('input',e=>{
+    simBPM=parseInt(e.target.value);
+    document.getElementById('dpSimBPMVal').textContent=simBPM;
+    if(simMode)MS.beatInterval=Math.round(60000/simBPM);
+  });
+  simProgSlider.addEventListener('input',e=>{
+    simProg=parseInt(e.target.value)/100;
+    document.getElementById('dpSimProgVal').textContent=Math.round(simProg*100)+'%';
+    if(simMode){
+      songProg=simProg;
+      progMult=0.55+songProg*0.7;
+      MS.duration=180000;
+      MS.analysisStart=Date.now()-simProg*MS.duration;
+    }
+  });
+
+  document.getElementById('dpSimToggle').addEventListener('click',function(){
+    simMode=!simMode;
+    this.textContent=simMode?'■ Disable Sim':'▶ Enable Sim';
+    this.classList.toggle('active',simMode);
+    if(simMode){
+      // If no token (not logged in), fake one so render loop runs
+      if(!token){token='DEV_MODE';
+        document.getElementById('login').style.display='none';
+        document.getElementById('ui').style.display='block';
+        document.getElementById('fsBtn').style.display='block';
+        initScene();
+      }
+      MS.energy=simEnergy;SM.energy=simEnergy;
+      MS.beatInterval=Math.round(60000/simBPM);
+      MS.duration=180000;
+      MS.analysisStart=Date.now()-simProg*180000;
+      console.log('[dev] sim mode ON');
+    }else{
+      if(token==='DEV_MODE')token=null;
+      console.log('[dev] sim mode OFF');
+    }
+  });
+
+  document.getElementById('dpSimBeat').addEventListener('click',()=>{
+    SM.beatPulse=1;beatCount++;triggerBeat();
+  });
+
+  // ── Quick actions ──
+  document.getElementById('dpFlash').addEventListener('click',()=>flash(pc(0),400));
+  document.getElementById('dpComicBurst').addEventListener('click',doComicBurst);
+  document.getElementById('dpShockwave').addEventListener('click',()=>{beatFX.shockwaveR=0;beatFX.shockwaveA=0.9;});
+  document.getElementById('dpInvert').addEventListener('click',()=>{beatFX.invertA=0.8;});
+  document.getElementById('dpSlam').addEventListener('click',()=>{beatFX.slamS=1.25;});
+  document.getElementById('dpGameOver').addEventListener('click',showGameOver);
+  document.getElementById('dpResetHist').addEventListener('click',()=>{
+    sceneHist=[];cpHist=[];sceneLastSeen={};sceneCycle=[];sceneWeights={};
+    ls('sw_sh','[]');ls('sw_ch','[]');ls('sw_ls','{}');ls('sw_cyc','[]');ls('sw_wt','{}');
+    songCount=0;ls('sw_n','0');
+    console.log('[dev] rotation history reset');
+  });
+  document.getElementById('dpCycleInfo').addEventListener('click',()=>{
+    const remaining=ALL_SCENES.filter(s=>!sceneCycle.includes(s));
+    console.log('[dev] Cycle progress:',sceneCycle.length+'/'+ALL_SCENES.length);
+    console.log('[dev] Played:',sceneCycle.join(', '));
+    console.log('[dev] Remaining:',remaining.join(', ')||'(cycle complete)');
+    alert('Cycle: '+sceneCycle.length+'/'+ALL_SCENES.length+'\n\nPlayed:\n'+sceneCycle.map(s=>s.replace(/_/g,' ')).join(', ')+'\n\nRemaining:\n'+(remaining.map(s=>s.replace(/_/g,' ')).join(', ')||'(cycle complete — next song starts fresh)'));
+  });
+
+  // ── Live monitor update ──
+  let monitorRAF;
+  function updateMonitor(){
+    if(!devOpen){monitorRAF=requestAnimationFrame(updateMonitor);return;}
+    document.getElementById('dpCurScene').textContent=(THEME.scene||'—').replace(/_/g,' ');
+    document.getElementById('dpCurCP').textContent=(THEME.centerpiece||'none').replace(/_/g,' ');
+    document.getElementById('dpEnergy').textContent=SM.energy.toFixed(2);
+    document.getElementById('dpBPM').textContent=MS.beatInterval>0?Math.round(60000/MS.beatInterval):'—';
+    document.getElementById('dpBeatCt').textContent=beatCount;
+    document.getElementById('dpProg').textContent=Math.round(songProg*100)+'%';
+    document.getElementById('dpSurprise').textContent=surpriseFired?'FIRED':'armed';
+
+    // Highlight active scene button
+    const btns=document.getElementById('dpSceneGrid').children;
+    for(let i=0;i<btns.length;i++){
+      btns[i].classList.toggle('active',ALL_SCENES[i]===THEME.scene);
+    }
+    monitorRAF=requestAnimationFrame(updateMonitor);
+  }
+  monitorRAF=requestAnimationFrame(updateMonitor);
+
+  // ── Sim mode: keep energy/progress synced each frame ──
+  function simLoop(){
+    if(simMode){
+      MS.energy=simEnergy;
+      // Auto-advance progress if sim is on
+      if(simProg<1){
+        simProg+=0.00005;
+        songProg=simProg;
+        progMult=0.55+songProg*0.7;
+        simProgSlider.value=Math.round(simProg*100);
+        document.getElementById('dpSimProgVal').textContent=Math.round(simProg*100)+'%';
+      }
+    }
+    requestAnimationFrame(simLoop);
+  }
+  requestAnimationFrame(simLoop);
+
+  console.log('[dev] panel ready — press D×3 or add ?dev=1 to URL');
+})();
+
 init();
 </script>
 </body>
