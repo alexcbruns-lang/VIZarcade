@@ -280,8 +280,8 @@ function flash(color,ms){const o=document.getElementById('surpriseOverlay');o.st
 // Schedule a series of timed events
 function sequence(events){events.forEach(([delay,fn])=>setTimeout(fn,delay));}
 
-function fireSurprise(){
-  if(!midShifted&&Math.random()<0.05&&songProg>0.3&&songProg<0.75){
+function fireSurprise(forcedVariant){
+  if(forcedVariant==null&&!midShifted&&Math.random()<0.05&&songProg>0.3&&songProg<0.75){
     midShifted=true;
     const f=getForbidCPs(),pool=ALL_SCENES.filter(s=>s!==THEME.scene);
     const newScene=rndEl(pool);
@@ -291,7 +291,7 @@ function fireSurprise(){
     return;
   }
   const sc=THEME.scene;
-  const variant=Math.floor(Math.random()*3); // up to 3 variants per scene
+  const variant=forcedVariant!=null?forcedVariant:Math.floor(Math.random()*3); // up to 3 variants per scene
 
   if(sc==='WARP_SPEED'){
     if(variant===0){
@@ -7554,7 +7554,8 @@ async function init(){
   const panel=document.getElementById('devPanel');
   if(!panel)return;
   let devOpen=false,simMode=false;
-  let simEnergy=0.6,simBPM=120,simProg=0,simProgAuto=false;
+  let simEnergy=0.6,simBPM=120,simProg=0;
+  let activeSurpriseVariant=null; // track which variant button is active
 
   // ── Toggle logic: triple-D or ?dev=1 ──
   let dPresses=[],dTimeout;
@@ -7584,7 +7585,7 @@ async function init(){
   // ── Build scene grid ──
   function buildSceneGrid(){
     const grid=document.getElementById('dpSceneGrid');
-    if(grid.children.length>0)return; // already built
+    if(grid.children.length>0)return;
     ALL_SCENES.forEach(s=>{
       const btn=document.createElement('button');
       btn.className='dp-btn';
@@ -7609,17 +7610,44 @@ async function init(){
     });
   })();
 
+  // ── Cancel active surprise ──
+  function cancelSurprise(){
+    if(activeSurpriseVariant===null)return;
+    // Re-init scene to reset all surprise-related SD state
+    initScene();
+    // Reset beat FX
+    beatFX.speedBoost=0;beatFX.invertA=0;beatFX.shockwaveA=0;beatFX.slamS=1;beatFX.gravityWave=0;
+    // Clear surprise overlay
+    const o=document.getElementById('surpriseOverlay');
+    o.style.transition='opacity 0.3s';o.style.opacity='0';
+    // Clear any game over / comic panels
+    document.getElementById('gameOverScreen').style.display='none';
+    document.getElementById('comicPanel').style.display='none';
+    // Deactivate button
+    activeSurpriseVariant=null;
+    updateSurpriseButtons();
+    console.log('[dev] surprise cancelled');
+  }
+
+  // ── Update surprise button highlights ──
+  function updateSurpriseButtons(){
+    const btns=document.getElementById('dpSurpriseGrid').querySelectorAll('[data-var]');
+    btns.forEach(btn=>{
+      const v=parseInt(btn.dataset.var);
+      btn.classList.toggle('active',v===activeSurpriseVariant);
+    });
+    document.getElementById('dpFireRandom').classList.toggle('active',activeSurpriseVariant!=null&&![0,1,2].includes(activeSurpriseVariant));
+  }
+
   // ── Jump to scene ──
   function jumpToScene(sceneName){
-    // Create a minimal theme with current palette or defaults
-    const palette=THEME.palette||['#06ffd8','#8338ec','#ff006e','#ffbe0b'];
-    const cp=THEME.centerpiece||'skull';
+    // Cancel any active surprise first
+    cancelSurprise();
     THEME.scene=sceneName;
     THEME.bgColor=THEME.bgColor||'#000010';
     THEME.sceneSpeed=THEME.sceneSpeed||1;
     THEME.sceneIntensity=THEME.sceneIntensity||0.7;
     initScene();
-    // Update UI tag
     document.getElementById('sceneTag').textContent=sceneName.replace(/_/g,' ')+' — DEV';
     console.log('[dev] jumped to scene:',sceneName);
   }
@@ -7629,37 +7657,35 @@ async function init(){
     const btn=e.target.closest('[data-var]');
     if(!btn)return;
     const v=parseInt(btn.dataset.var);
+    // Toggle: if same variant is active, cancel it
+    if(activeSurpriseVariant===v){
+      cancelSurprise();
+      return;
+    }
+    // Cancel previous surprise if one is active
+    if(activeSurpriseVariant!==null)cancelSurprise();
+    // Fire the new one
     fireDevSurprise(v);
+    activeSurpriseVariant=v;
+    updateSurpriseButtons();
   });
+
   document.getElementById('dpFireRandom').addEventListener('click',()=>{
-    fireDevSurprise(Math.floor(Math.random()*3));
+    if(activeSurpriseVariant!==null){cancelSurprise();return;}
+    const v=Math.floor(Math.random()*3);
+    fireDevSurprise(v);
+    activeSurpriseVariant=v;
+    updateSurpriseButtons();
   });
 
   function fireDevSurprise(variant){
-    // Temporarily override Math.random to force the desired variant
-    const origRandom=Math.random;
-    // fireSurprise uses Math.floor(Math.random()*3) to pick variant
-    // We need it to return variant/3 + epsilon so floor gives us our variant
-    let callCount=0;
-    Math.random=function(){
-      callCount++;
-      // The first random call in fireSurprise may be the midShift check (0.05 probability)
-      // We want it to NOT trigger midShift, so return > 0.05
-      // The second random call picks the variant
-      if(callCount===1)return 0.5; // skip midShift
-      if(callCount===2)return variant/3+0.001; // force variant
-      return origRandom.call(Math);
-    };
-    // Ensure surprise can fire
-    const savedSF=surpriseFired;
+    // Reset scene state first so surprise starts clean
+    initScene();
+    // Ensure surprise system state allows firing
     surpriseFired=false;
     midShifted=true; // prevent mid-shift
-    try{
-      fireSurprise();
-    }finally{
-      Math.random=origRandom;
-      surpriseFired=savedSF;
-    }
+    // Call fireSurprise with the forced variant
+    fireSurprise(variant);
     console.log('[dev] fired surprise variant',variant,'for scene',THEME.scene);
   }
 
@@ -7694,7 +7720,6 @@ async function init(){
     this.textContent=simMode?'■ Disable Sim':'▶ Enable Sim';
     this.classList.toggle('active',simMode);
     if(simMode){
-      // If no token (not logged in), fake one so render loop runs
       if(!token){token='DEV_MODE';
         document.getElementById('login').style.display='none';
         document.getElementById('ui').style.display='block';
@@ -7738,31 +7763,29 @@ async function init(){
   });
 
   // ── Live monitor update ──
-  let monitorRAF;
   function updateMonitor(){
-    if(!devOpen){monitorRAF=requestAnimationFrame(updateMonitor);return;}
-    document.getElementById('dpCurScene').textContent=(THEME.scene||'—').replace(/_/g,' ');
-    document.getElementById('dpCurCP').textContent=(THEME.centerpiece||'none').replace(/_/g,' ');
-    document.getElementById('dpEnergy').textContent=SM.energy.toFixed(2);
-    document.getElementById('dpBPM').textContent=MS.beatInterval>0?Math.round(60000/MS.beatInterval):'—';
-    document.getElementById('dpBeatCt').textContent=beatCount;
-    document.getElementById('dpProg').textContent=Math.round(songProg*100)+'%';
-    document.getElementById('dpSurprise').textContent=surpriseFired?'FIRED':'armed';
-
-    // Highlight active scene button
-    const btns=document.getElementById('dpSceneGrid').children;
-    for(let i=0;i<btns.length;i++){
-      btns[i].classList.toggle('active',ALL_SCENES[i]===THEME.scene);
+    if(devOpen){
+      document.getElementById('dpCurScene').textContent=(THEME.scene||'—').replace(/_/g,' ');
+      document.getElementById('dpCurCP').textContent=(THEME.centerpiece||'none').replace(/_/g,' ');
+      document.getElementById('dpEnergy').textContent=SM.energy.toFixed(2);
+      document.getElementById('dpBPM').textContent=MS.beatInterval>0?Math.round(60000/MS.beatInterval):'—';
+      document.getElementById('dpBeatCt').textContent=beatCount;
+      document.getElementById('dpProg').textContent=Math.round(songProg*100)+'%';
+      document.getElementById('dpSurprise').textContent=activeSurpriseVariant!==null?('V'+activeSurpriseVariant+' ACTIVE'):(surpriseFired?'FIRED':'armed');
+      // Highlight active scene button
+      const btns=document.getElementById('dpSceneGrid').children;
+      for(let i=0;i<btns.length;i++){
+        btns[i].classList.toggle('active',ALL_SCENES[i]===THEME.scene);
+      }
     }
-    monitorRAF=requestAnimationFrame(updateMonitor);
+    requestAnimationFrame(updateMonitor);
   }
-  monitorRAF=requestAnimationFrame(updateMonitor);
+  requestAnimationFrame(updateMonitor);
 
   // ── Sim mode: keep energy/progress synced each frame ──
   function simLoop(){
     if(simMode){
       MS.energy=simEnergy;
-      // Auto-advance progress if sim is on
       if(simProg<1){
         simProg+=0.00005;
         songProg=simProg;
