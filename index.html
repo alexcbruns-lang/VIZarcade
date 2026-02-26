@@ -276,10 +276,8 @@ const CP_INTEGRATED_SCENES = new Set(['WARP_SPEED', 'DEEP_SEA', 'STORM_CHASER', 
 // ══ MODULE: auth.js ══
 // ═══ AUTH — Spotify OAuth PKCE ═══
 
-
 const CLIENT_ID = 'c4a8270f8bc6453490fc8bf4b9de5c42';
 // Redirect URI must match exactly what's in the Spotify Developer Dashboard
-// Current dashboard entry: https://spotify-visualizer-ecru.vercel.app/callback
 const REDIR = location.origin + '/callback';
 const SCOPE = 'user-read-currently-playing user-read-playback-state';
 
@@ -298,47 +296,63 @@ async function sha256b64(s) {
 function showErr(msg) {
   const el = document.getElementById('loginErr');
   el.textContent = msg; el.style.display = 'block';
-  document.getElementById('loginBtn').textContent = 'TRY AGAIN';
+  document.getElementById('loginBtn').textContent = '▶  TRY AGAIN';
 }
 
 async function doLogin() {
-  const v = rnd(64), c = await sha256b64(v);
-  ls('pv', v);
-  console.log('[auth] login — redirect_uri=' + REDIR);
-  location.href = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({
-    client_id: CLIENT_ID, response_type: 'code', redirect_uri: REDIR,
-    scope: SCOPE, code_challenge_method: 'S256', code_challenge: c, show_dialog: 'true'
-  });
+  try {
+    showErr('Connecting to Spotify…');
+    const v = rnd(64);
+    const c = await sha256b64(v);
+    ls('pv', v);
+    const url = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({
+      client_id: CLIENT_ID, response_type: 'code', redirect_uri: REDIR,
+      scope: SCOPE, code_challenge_method: 'S256', code_challenge: c, show_dialog: 'true'
+    });
+    console.log('[auth] login — redirect_uri=' + REDIR);
+    // Use window.location.assign for better iOS compatibility
+    window.location.assign(url);
+  } catch (e) {
+    showErr('Login error: ' + (e.message || e));
+    console.error('[auth] doLogin failed:', e);
+  }
 }
 
 async function exchToken(code) {
   const v = lg('pv');
   console.log('[auth] exchToken code=' + code.slice(0, 8) + ' verifier=' + (v ? 'ok' : 'MISSING'));
   if (!v) { showErr('Auth error: session data lost. Try again.'); return null; }
-  const r = await fetch('https://accounts.spotify.com/api/token', {
-    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: CLIENT_ID, grant_type: 'authorization_code', code, redirect_uri: REDIR, code_verifier: v })
-  });
-  const d = await r.json();
-  console.log('[auth] token response:', r.status, Object.keys(d).join(','));
-  if (d.access_token) {
-    ls('at', d.access_token); ls('ats', Date.now());
-    if (d.refresh_token) ls('rt', d.refresh_token);
-    localStorage.removeItem('pv');
-    return d.access_token;
+  try {
+    const r = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: CLIENT_ID, grant_type: 'authorization_code', code, redirect_uri: REDIR, code_verifier: v })
+    });
+    const d = await r.json();
+    console.log('[auth] token response:', r.status, Object.keys(d).join(','));
+    if (d.access_token) {
+      ls('at', d.access_token); ls('ats', Date.now());
+      if (d.refresh_token) ls('rt', d.refresh_token);
+      localStorage.removeItem('pv');
+      return d.access_token;
+    }
+    showErr('Spotify error: ' + (d.error_description || d.error || 'unknown'));
+    return null;
+  } catch (e) {
+    showErr('Token exchange failed: ' + (e.message || e));
+    return null;
   }
-  showErr('Spotify error: ' + (d.error_description || d.error || 'unknown'));
-  return null;
 }
 
 async function refreshAT() {
   const rt = lg('rt'); if (!rt) return null;
-  const r = await fetch('https://accounts.spotify.com/api/token', {
-    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: CLIENT_ID, grant_type: 'refresh_token', refresh_token: rt })
-  });
-  const d = await r.json();
-  if (d.access_token) { ls('at', d.access_token); ls('ats', Date.now()); return d.access_token; }
+  try {
+    const r = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: CLIENT_ID, grant_type: 'refresh_token', refresh_token: rt })
+    });
+    const d = await r.json();
+    if (d.access_token) { ls('at', d.access_token); ls('ats', Date.now()); return d.access_token; }
+  } catch (e) { console.warn('[auth] refresh failed:', e); }
   return null;
 }
 
@@ -353,8 +367,6 @@ function logout() {
   document.getElementById('ui').style.display = 'none';
   document.getElementById('fsBtn').style.display = 'none';
 }
-
-
 
 
 // ══ MODULE: particles.js ══
@@ -8775,7 +8787,16 @@ document.getElementById('nextSceneBtn').addEventListener('click', () => {
 });
 
 // ── Provider selection buttons ──
-document.getElementById('loginBtn').addEventListener('click', () => startProvider('spotify'));
+// Spotify: check for existing token first; if none, call doLogin directly
+// (must stay synchronous from the tap event for iOS navigation to work)
+document.getElementById('loginBtn').addEventListener('click', () => {
+  const existing = getAT();
+  if (existing) {
+    startProvider('spotify');
+  } else {
+    doLogin();
+  }
+});
 const appleBtn = document.getElementById('appleMusicBtn');
 if (appleBtn) appleBtn.addEventListener('click', () => startProvider('apple'));
 const localBtn = document.getElementById('localAudioBtn');
