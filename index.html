@@ -8232,8 +8232,8 @@ MusicProviders.local = {
       // ── DJ CROSSFADE TRANSITION: detect energy dip-and-rise pattern ──
       if (!this._dipDetected && this._transitionCooldown <= 0) {
         const dropAmount = olderAvg - recentAvg;
-        // Require a large drop (0.3+) from a reasonably active baseline (0.4+)
-        if (dropAmount > 0.3 && olderAvg > 0.4) {
+        // Require a meaningful drop (0.22+) from an active baseline (0.35+)
+        if (dropAmount > 0.22 && olderAvg > 0.35) {
           this._dipDetected = true;
           this._dipEnergy = recentAvg;
           this._preDipEnergy = olderAvg;
@@ -8243,8 +8243,8 @@ MusicProviders.local = {
       if (this._dipDetected) {
         const timeSinceDip = Date.now() - (this._dipTime || 0);
         const riseAmount = recentAvg - this._dipEnergy;
-        // Require a strong rise (0.2+) after at least 2s
-        if (riseAmount > 0.2 && recentAvg > this._dipEnergy + 0.15 && timeSinceDip > 2000) {
+        // Require a clear rise (0.15+) after at least 1.75s
+        if (riseAmount > 0.15 && recentAvg > this._dipEnergy + 0.12 && timeSinceDip > 1750) {
           console.log('[local] DJ crossfade detected — dip:', this._preDipEnergy.toFixed(2),
             '→', this._dipEnergy.toFixed(2), '→ rise:', recentAvg.toFixed(2));
           this._dipDetected = false;
@@ -8264,14 +8264,14 @@ MusicProviders.local = {
         const veryRecentAvg = veryRecent.reduce((a, b) => a + b, 0) / veryRecent.length;
         if (this._hardCutState === 0) {
           // Watch for sudden drop to near-silence while previously playing
-          if (veryRecentAvg < 0.03 && olderAvg > 0.3) {
+          if (veryRecentAvg < 0.04 && olderAvg > 0.28) {
             this._hardCutState = 1;
             this._hardCutTime = Date.now();
           }
         } else if (this._hardCutState === 1) {
           const timeSinceCut = Date.now() - (this._hardCutTime || 0);
           // Audio came back — new song started
-          if (veryRecentAvg > 0.2) {
+          if (veryRecentAvg > 0.18) {
             console.log('[local] hard cut detected — silence then new audio');
             this._hardCutState = 0;
             this._transitionCooldown = 120000; // shared 120s cooldown
