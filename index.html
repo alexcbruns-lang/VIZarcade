@@ -7775,7 +7775,11 @@ MusicProviders.spotify = {
       if (!token) token = await refreshAT();
       console.log('[spotify] stored token: ' + (token ? 'found' : 'none'));
     }
-    if (!token) return false;
+    if (!token) {
+      // No token and no code — redirect to Spotify login
+      doLogin();
+      return false; // Page will redirect, init doesn't complete
+    }
 
     // Start polling
     this.poll();
