@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="apple-music-developer-token" content="">
 <title>Synthwave</title>
+<script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js" async></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -24,7 +26,7 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
 .scanlines{position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.025) 2px,rgba(0,0,0,0.025) 4px);pointer-events:none;z-index:100}
 #ui{position:fixed;z-index:80;inset:0;pointer-events:none;display:none}
 #trackName{position:absolute;bottom:2.5rem;left:2.5rem;max-width:50vw;font-family:'Bebas Neue',sans-serif;font-size:clamp(1.2rem,2.8vw,2.2rem);letter-spacing:0.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 0 40px currentColor;transition:color 3s}
-#artistName{position:absolute;bottom:calc(2.5rem - 1.6rem);left:2.5rem;font-size:0.62rem;letter-spacing:0.3em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.9);text-transform:uppercase}
+#artistName{position:absolute;bottom:calc(2.5rem - 1.8rem);left:2.5rem;font-size:0.82rem;letter-spacing:0.25em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.9);text-transform:uppercase}
 #sceneTag{position:absolute;top:2rem;left:2.5rem;font-size:0.88rem;letter-spacing:0.3em;color:#06ffd8;text-transform:uppercase;text-shadow:0 0 12px rgba(6,255,216,0.7),0 1px 3px rgba(0,0,0,0.9)}
 #albumArt{position:absolute;bottom:2.5rem;right:2.5rem;width:72px;height:72px;object-fit:cover;opacity:0.55;border:1px solid rgba(255,255,255,0.07)}
 #pgWrap{position:absolute;bottom:0;left:0;right:0;height:2px;background:rgba(255,255,255,0.04)}
@@ -7711,20 +7713,32 @@ async function spGet(ep){
 
 // ══ MODULE: musicProvider.js ══
 // ═══ MUSIC PROVIDER — Abstract layer for multiple music sources ═══
-// Providers: Spotify, Apple Music, Local Audio (mic/file)
+// Providers: Spotify, Apple Music, Local Audio (mic/file/system)
 // All providers feed the same interface: MS, track metadata, poll cycle
 
 // ── Provider registry ──
 const MusicProviders = {};
 let activeProvider = null;
 
-// ── Base provider interface ──
-// Every provider must implement:
-//   name         — display name
-//   init()       — authenticate / set up, returns true if ready
-//   poll()       — fetch current track state, update MS + UI
-//   destroy()    — cleanup (disconnect, stop polling, etc.)
-//   getGenres()  — return genre tags for AI theme (best-effort)
+// ── Track info visibility helper ──
+function setTrackInfo(track, artist, showInfo) {
+  const trackEl = document.getElementById('trackName');
+  const artistEl = document.getElementById('artistName');
+  if (showInfo && track) {
+    trackEl.textContent = track;
+    trackEl.style.display = '';
+  } else {
+    trackEl.textContent = '';
+    trackEl.style.display = 'none';
+  }
+  if (showInfo && artist) {
+    artistEl.textContent = artist;
+    artistEl.style.display = '';
+  } else {
+    artistEl.textContent = '';
+    artistEl.style.display = 'none';
+  }
+}
 
 // ═══════════════════════════════════════════════════════════
 // ── SPOTIFY PROVIDER ──
@@ -7769,10 +7783,9 @@ MusicProviders.spotify = {
     MS.energy = d.is_playing ? 0.6 : 0.3;
     if (tid !== lastTid) {
       lastTid = tid;
-      document.getElementById('trackName').textContent = tr.name;
-      document.getElementById('artistName').textContent = tr.artists.map(a => a.name).join(', ');
+      setTrackInfo(tr.name, tr.artists.map(a => a.name).join(', '), true);
       const art = tr.album && tr.album.images && tr.album.images[0] ? tr.album.images[0].url : null;
-      if (art) document.getElementById('albumArt').src = art;
+      if (art) { document.getElementById('albumArt').src = art; document.getElementById('albumArt').style.display = ''; }
       loadTheme(tid, tr.name, tr.artists.map(a => a.name).join(', '),
         tr.artists.map(a => a.id), tr.explicit, tr.duration_ms);
     }
@@ -7800,30 +7813,62 @@ MusicProviders.apple = {
   _music: null,  // MusicKit instance
 
   async init() {
-    // MusicKit JS must be loaded
+    // Wait for MusicKit JS to load (async script)
     if (typeof MusicKit === 'undefined') {
-      console.error('[apple] MusicKit JS not loaded');
-      showErr('Apple Music requires MusicKit. Add the MusicKit JS script tag.');
-      return false;
+      showErr('Loading Apple Music…');
+      const loaded = await new Promise(resolve => {
+        let waited = 0;
+        const check = setInterval(() => {
+          waited += 200;
+          if (typeof MusicKit !== 'undefined') { clearInterval(check); resolve(true); }
+          else if (waited > 8000) { clearInterval(check); resolve(false); }
+        }, 200);
+      });
+      if (!loaded) {
+        showErr('Apple Music failed to load. Check your connection and try again.');
+        return false;
+      }
     }
+
     try {
-      this._music = MusicKit.getInstance();
+      // Get developer token — try meta tag first, then server endpoint
+      let devToken = '';
+      const metaTag = document.querySelector('meta[name="apple-music-developer-token"]');
+      if (metaTag && metaTag.content) {
+        devToken = metaTag.content;
+      } else {
+        // Try fetching from server
+        try {
+          const r = await fetch('/api/apple-token');
+          if (r.ok) {
+            const d = await r.json();
+            devToken = d.token || '';
+          }
+        } catch (e) { /* server endpoint not available */ }
+      }
+
+      if (!devToken) {
+        showErr('Apple Music requires a developer token. Set the apple-music-developer-token meta tag or provide a /api/apple-token endpoint.');
+        return false;
+      }
+
+      // Configure MusicKit
+      try {
+        this._music = MusicKit.getInstance();
+      } catch (e) {
+        // Not yet configured
+      }
       if (!this._music) {
-        // Configure MusicKit — developer token must be set in page or fetched from server
-        const devToken = document.querySelector('meta[name="apple-music-developer-token"]');
-        if (!devToken) {
-          showErr('Apple Music: missing developer token. Set meta tag apple-music-developer-token.');
-          return false;
-        }
         await MusicKit.configure({
-          developerToken: devToken.content,
+          developerToken: devToken,
           app: { name: 'VIZarcade', build: '1.0' }
         });
         this._music = MusicKit.getInstance();
       }
-      // Authorize (shows Apple sign-in)
+
+      // Authorize (shows Apple sign-in popup)
       await this._music.authorize();
-      token = 'APPLE_MUSIC';  // Flag that we're authenticated
+      token = 'APPLE_MUSIC';
       console.log('[apple] authorized');
     } catch (e) {
       console.error('[apple] auth failed', e);
@@ -7859,10 +7904,9 @@ MusicProviders.apple = {
       lastTid = tid;
       const trackName = attrs.name || 'Unknown Track';
       const artistName = attrs.artistName || 'Unknown Artist';
-      document.getElementById('trackName').textContent = trackName;
-      document.getElementById('artistName').textContent = artistName;
+      setTrackInfo(trackName, artistName, true);
       const art = attrs.artwork ? MusicKit.formatArtworkURL(attrs.artwork, 300, 300) : null;
-      if (art) document.getElementById('albumArt').src = art;
+      if (art) { document.getElementById('albumArt').src = art; document.getElementById('albumArt').style.display = ''; }
       loadTheme(tid, trackName, artistName, [], false, durMs);
     }
   },
@@ -7885,7 +7929,7 @@ MusicProviders.apple = {
 
 // ═══════════════════════════════════════════════════════════
 // ── LOCAL AUDIO PROVIDER ──
-// Uses Web Audio API to analyze mic input or local audio files
+// Uses Web Audio API to analyze mic, audio files, or system audio
 // ═══════════════════════════════════════════════════════════
 MusicProviders.local = {
   name: 'Local Audio',
@@ -7893,19 +7937,20 @@ MusicProviders.local = {
   _analyser: null,
   _source: null,
   _audioEl: null,
+  _stream: null,
   _freqData: null,
   _interval: null,
-  _trackName: 'Local Audio',
+  _trackName: '',
   _fileName: '',
   _startTime: 0,
   _duration: 0,
-  _mode: null,  // 'mic' or 'file'
+  _mode: null,  // 'mic', 'file', or 'system'
 
   async init() {
     token = 'LOCAL_AUDIO';
     // Show the local audio selector
     const mode = await this._showModeSelector();
-    if (!mode) return false;
+    if (!mode) { token = null; return false; }
     this._mode = mode;
 
     try {
@@ -7917,17 +7962,44 @@ MusicProviders.local = {
 
       if (mode === 'mic') {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        this._stream = stream;
         this._source = this._audioCtx.createMediaStreamSource(stream);
         this._source.connect(this._analyser);
-        this._trackName = 'Microphone Input';
-        this._duration = 0;  // indefinite
         this._startTime = Date.now();
-        document.getElementById('trackName').textContent = this._trackName;
-        document.getElementById('artistName').textContent = 'Live Audio';
-        loadTheme('mic_' + Date.now(), this._trackName, 'Live Audio', [], false, 300000);
+        // Hide track/artist for mic — no meaningful info to show
+        setTrackInfo('', '', false);
+        document.getElementById('albumArt').style.display = 'none';
+        loadTheme('mic_' + Date.now(), 'Microphone', 'Live Audio', [], false, 300000);
+      } else if (mode === 'system') {
+        // System audio via getDisplayMedia
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,  // required by the API even if we only want audio
+          audio: true
+        });
+        this._stream = stream;
+        // Stop the video track immediately — we only need audio
+        stream.getVideoTracks().forEach(t => t.stop());
+        const audioTracks = stream.getAudioTracks();
+        if (!audioTracks.length) {
+          showErr('No audio track captured. Make sure to select a tab or screen that is playing audio, and check "Share audio" if prompted.');
+          this._cleanup();
+          token = null;
+          return false;
+        }
+        this._source = this._audioCtx.createMediaStreamSource(stream);
+        this._source.connect(this._analyser);
+        this._startTime = Date.now();
+        // Hide track/artist for system audio
+        setTrackInfo('', '', false);
+        document.getElementById('albumArt').style.display = 'none';
+        loadTheme('sys_' + Date.now(), 'System Audio', 'System', [], false, 300000);
+        // If the user stops sharing, clean up
+        audioTracks[0].onended = () => {
+          console.log('[local] system audio sharing stopped');
+          stopProvider();
+        };
       } else {
-        // File mode — handled via _handleFile which is triggered by the file picker
-        // We'll set up after file is loaded
+        // File mode — handled via _handleFile triggered by the file picker
       }
 
       // Start analysis loop
@@ -7936,7 +8008,16 @@ MusicProviders.local = {
       return true;
     } catch (e) {
       console.error('[local] init failed', e);
-      showErr('Audio access failed: ' + (e.message || e));
+      // Friendly error messages for common failures
+      if (e.name === 'NotAllowedError') {
+        showErr('Permission denied. Please allow audio access and try again.');
+      } else if (e.name === 'NotFoundError') {
+        showErr('No audio source found. Make sure your device has a microphone.');
+      } else {
+        showErr('Audio access failed: ' + (e.message || e));
+      }
+      this._cleanup();
+      token = null;
       return false;
     }
   },
@@ -7945,29 +8026,37 @@ MusicProviders.local = {
     return new Promise(resolve => {
       const overlay = document.createElement('div');
       overlay.id = 'localAudioSelector';
-      overlay.style.cssText = 'position:fixed;inset:0;z-index:250;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.95);gap:20px;';
-      overlay.innerHTML = `
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:0.3em;color:#06ffd8;text-shadow:0 0 20px #06ffd8">LOCAL AUDIO SOURCE</div>
-        <button id="localMicBtn" class="btn" style="min-width:260px">🎤 &nbsp;MICROPHONE</button>
-        <button id="localFileBtn" class="btn" style="min-width:260px">📁 &nbsp;AUDIO FILE</button>
-        <input type="file" id="localFilePicker" accept="audio/*" style="display:none">
-        <button id="localCancelBtn" style="background:none;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);padding:0.6rem 2rem;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:0.7rem;letter-spacing:0.2em;margin-top:10px">CANCEL</button>
-      `;
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:250;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.95);gap:16px;';
+      // Check if getDisplayMedia is available for system audio
+      const hasSystemAudio = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+      overlay.innerHTML =
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.8rem;letter-spacing:0.3em;color:#06ffd8;text-shadow:0 0 20px #06ffd8">LOCAL AUDIO SOURCE</div>' +
+        '<button id="localMicBtn" class="btn" style="min-width:280px">\uD83C\uDFA4 \u00a0MICROPHONE</button>' +
+        '<button id="localSysBtn" class="btn" style="min-width:280px;' + (hasSystemAudio ? '' : 'opacity:0.3;cursor:not-allowed;') + '">\uD83D\uDD0A \u00a0SYSTEM AUDIO</button>' +
+        '<button id="localFileBtn" class="btn" style="min-width:280px">\uD83D\uDCC1 \u00a0AUDIO FILE</button>' +
+        '<input type="file" id="localFilePicker" accept="audio/*" style="display:none">' +
+        (hasSystemAudio ? '' : '<div style="font-size:0.55rem;color:rgba(255,255,255,0.25);letter-spacing:0.15em;margin-top:-8px">System audio not supported in this browser</div>') +
+        '<button id="localCancelBtn" style="background:none;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);padding:0.6rem 2rem;cursor:pointer;font-family:\'Share Tech Mono\',monospace;font-size:0.7rem;letter-spacing:0.2em;margin-top:10px">CANCEL</button>';
       document.body.appendChild(overlay);
 
       document.getElementById('localMicBtn').onclick = () => {
         overlay.remove();
         resolve('mic');
       };
+      document.getElementById('localSysBtn').onclick = () => {
+        if (!hasSystemAudio) return;
+        overlay.remove();
+        resolve('system');
+      };
       document.getElementById('localFileBtn').onclick = () => {
         document.getElementById('localFilePicker').click();
       };
-      document.getElementById('localFilePicker').onchange = async (e) => {
+      document.getElementById('localFilePicker').onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
         overlay.remove();
         this._fileName = file.name.replace(/\.[^.]+$/, '');
-        // We'll load the file after init returns
+        // Load the file after init returns
         setTimeout(() => this._handleFile(file), 100);
         resolve('file');
       };
@@ -8004,16 +8093,15 @@ MusicProviders.local = {
       this._duration = (this._audioEl.duration || 180) * 1000;
       this._startTime = Date.now();
 
-      document.getElementById('trackName').textContent = this._trackName;
-      document.getElementById('artistName').textContent = 'Local File';
-      const art = document.getElementById('albumArt');
-      art.src = '';
-      art.style.display = 'none';
+      // Show filename as track, hide artist
+      setTrackInfo(this._trackName, '', false);
+      document.getElementById('trackName').style.display = '';
+      document.getElementById('albumArt').style.display = 'none';
 
       this._audioEl.play();
-      loadTheme('file_' + Date.now(), this._trackName, 'Local File', [], false, this._duration);
+      loadTheme('file_' + Date.now(), this._trackName, '', [], false, this._duration);
 
-      // On track end, re-trigger theme for looping or next file
+      // On track end, re-trigger theme for looping
       this._audioEl.onended = () => {
         this._audioEl.currentTime = 0;
         this._audioEl.play();
@@ -8031,13 +8119,11 @@ MusicProviders.local = {
 
     // Compute energy from frequency data
     const bins = this._freqData;
-    let sum = 0, bassSum = 0, midSum = 0;
+    let sum = 0, bassSum = 0;
     const bassEnd = Math.floor(bins.length * 0.15);
-    const midEnd = Math.floor(bins.length * 0.5);
     for (let i = 0; i < bins.length; i++) {
       sum += bins[i];
       if (i < bassEnd) bassSum += bins[i];
-      else if (i < midEnd) midSum += bins[i];
     }
     const energy = Math.min(1, (sum / bins.length / 255) * 2.0);
     const bass = bassEnd > 0 ? (bassSum / bassEnd / 255) : 0;
@@ -8067,7 +8153,7 @@ MusicProviders.local = {
       MS.duration = this._duration || 180000;
       MS.analysisStart = Date.now() - MS.progress;
     } else {
-      // Mic mode — synthetic progress (cycles every 5 minutes)
+      // Mic/system mode — synthetic progress (cycles every 5 minutes)
       const elapsed = Date.now() - this._startTime;
       const cycleDur = 300000;
       MS.progress = elapsed % cycleDur;
@@ -8077,21 +8163,29 @@ MusicProviders.local = {
   },
 
   async getGenres() {
-    // No genre data for local audio
     return [];
+  },
+
+  _cleanup() {
+    if (this._stream) {
+      this._stream.getTracks().forEach(t => t.stop());
+      this._stream = null;
+    }
+    if (this._audioEl) { this._audioEl.pause(); this._audioEl.src = ''; this._audioEl = null; }
+    if (this._source) { try { this._source.disconnect(); } catch (e) { /* ok */ } this._source = null; }
+    if (this._audioCtx) { try { this._audioCtx.close(); } catch (e) { /* ok */ } this._audioCtx = null; }
+    this._analyser = null;
+    this._freqData = null;
   },
 
   destroy() {
     if (this._interval) { clearInterval(this._interval); this._interval = null; }
-    if (this._audioEl) { this._audioEl.pause(); this._audioEl.src = ''; }
-    if (this._source) { try { this._source.disconnect(); } catch (e) { /* ok */ } }
-    if (this._audioCtx) { try { this._audioCtx.close(); } catch (e) { /* ok */ } }
-    this._audioCtx = null;
-    this._analyser = null;
-    this._source = null;
-    this._audioEl = null;
-    this._freqData = null;
+    this._cleanup();
     this._mode = null;
+    // Restore track info visibility for next provider
+    document.getElementById('trackName').style.display = '';
+    document.getElementById('artistName').style.display = '';
+    document.getElementById('albumArt').style.display = '';
   }
 };
 
