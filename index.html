@@ -17,6 +17,8 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
 .tagline{position:relative;z-index:1;font-size:0.65rem;letter-spacing:0.5em;color:#00cc33;margin:0.5rem 0 0.4rem;text-transform:uppercase;text-shadow:0 0 8px #00ff41}
 .btn{position:relative;z-index:1;padding:1.1rem 3.5rem;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.35em;color:#000;background:#00ff41;border:none;cursor:pointer;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));box-shadow:0 0 20px rgba(0,255,65,0.7),0 0 40px rgba(0,255,65,0.3),inset 0 1px 0 rgba(255,255,255,0.3);text-shadow:none;transition:all 0.12s;font-weight:900}
 .btn:hover{background:#00ff99;box-shadow:0 0 30px rgba(0,255,153,0.9),0 0 60px rgba(0,255,65,0.5),inset 0 1px 0 rgba(255,255,255,0.4);transform:translateY(-2px)}
+#appleMusicBtn:hover{background:#ff5e66!important;box-shadow:0 0 30px rgba(252,60,68,0.9),0 0 60px rgba(252,60,68,0.5)!important}
+#localAudioBtn:hover{background:#33ffdf!important;box-shadow:0 0 30px rgba(6,255,216,0.9),0 0 60px rgba(6,255,216,0.5)!important}
 #loginErr{position:relative;z-index:1;color:#ff006e;font-size:0.62rem;letter-spacing:0.15em;margin-top:1.2rem;max-width:420px;text-align:center;display:none}#coinDisplay{position:relative;z-index:1;font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:0.4em;color:#ff0;text-shadow:0 0 10px #ff0,0 0 20px rgba(255,200,0,0.5);margin:0 0 2rem;animation:coinBlink 1s step-end infinite}
 @keyframes coinBlink{0%,100%{opacity:1}50%{opacity:0.2}}#arcadeScore{position:absolute;top:1.5rem;left:0;right:0;display:flex;justify-content:space-between;padding:0 2rem;z-index:1;font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:0.35em;color:#ff0;text-shadow:0 0 8px #ff0}
 .scanlines{position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.025) 2px,rgba(0,0,0,0.025) 4px);pointer-events:none;z-index:100}
@@ -80,6 +82,8 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
   <div class="tagline">AI Festival Visual Engine</div>
   <div id="coinDisplay">— INSERT COIN —</div>
   <button id="loginBtn" class="btn">▶ &nbsp;CONNECT SPOTIFY</button>
+  <button id="appleMusicBtn" class="btn" style="margin-top:10px;background:#fc3c44;box-shadow:0 0 20px rgba(252,60,68,0.7),0 0 40px rgba(252,60,68,0.3);font-size:1.1rem">♫ &nbsp;APPLE MUSIC</button>
+  <button id="localAudioBtn" class="btn" style="margin-top:10px;background:#06ffd8;box-shadow:0 0 20px rgba(6,255,216,0.7),0 0 40px rgba(6,255,216,0.3);font-size:1.1rem">🎤 &nbsp;LOCAL AUDIO</button>
   <div id="loginErr"></div>
 </div>
 <div id="wash"></div>
@@ -7657,19 +7661,15 @@ async function transition(name,artist,theme){
 // ══ MODULE: ai.js ══
 // ═══ AI THEME LOADER ═══
 
-
-
-
-
-// ═══ AI THEME LOADER ═══
 const ARTIST_CTX={'marshmello':'Marshmello white marshmallow helmet X eyes. EDM festival.','daft punk':'Daft Punk robot helmets. French house. Disco. Tron neon.','deadmau5':'Mouse head helmet. Progressive house. Dark neon.','pink floyd':'Prism rainbow. Flying pigs. Psychedelic prog rock.','the weeknd':'Neon 80s. Red black. Blinding Lights city highways.','david bowie':'Ziggy Stardust lightning bolt. Glam. Cosmic.','queen':'Stadium rock. Operatic grandeur. Freddie Mercury.','nirvana':'Grunge. Dark raw distorted energy.','eminem':'Detroit. 8 Mile. Raw urban intense.','kendrick lamar':'Compton. DNA. DAMN imagery.','taylor swift':'Sparkles. Eras. Stadium spectacle.','billie eilish':'Dark green black. Spider webs. Haunted.','coldplay':'Colorful confetti. Neon wristbands. Cosmos.','radiohead':'Dystopian glitch. OK Computer robot anxiety.','metallica':'Thrash metal. Lightning bolt. Fire skulls.','skrillex':'Heavy dubstep. Glitch alien.','flume':'Organic futurism. Bioluminescent crystals.'};
 function getArtistCtx(name){const k=name.toLowerCase();for(const[n,v]of Object.entries(ARTIST_CTX))if(k.includes(n))return v;return null;}
 function extractKW(title){const stop=new Set(['a','an','the','in','of','to','and','or','i','my','me','you','is','it','by','on','for','with','as','be','was']);return title.toLowerCase().replace(/[^\w\s]/g,'').split(/\s+/).filter(w=>w.length>2&&!stop.has(w)).slice(0,6);}
 
 async function loadTheme(tid,name,artist,artistIds,isExplicit,durationMs){
   if(aiCache[tid]){applyTheme(name,artist,aiCache[tid]);return;}
+  // Use provider-agnostic genre fetch
   let genres=[];
-  try{const a=await spGet(`artists?ids=${artistIds.slice(0,3).join(',')}`);if(a?.artists)genres=a.artists.flatMap(x=>x.genres||[]).slice(0,8);}catch{}
+  try{genres=await getProviderGenres(artistIds);}catch{}
   const streakDesc=sessionStreak<3?'early session':sessionStreak<6?'warmed up — go wilder':sessionStreak<10?'deep session — darker and more extreme':sessionStreak<15?'long session — full maximalist chaos':'marathon — most extreme worlds, nothing held back';
   const shortlist=getSceneShortlist();
   try{
@@ -7696,37 +7696,448 @@ function applyTheme(name, artist, theme) {
 }
 
 
-
-
 // ══ MODULE: spotify.js ══
-// ═══ SPOTIFY API ═══
+// ═══ SPOTIFY API HELPER ═══
+// spGet is used by the Spotify provider for API calls
+// poll() has moved to MusicProviders.spotify in musicProvider.js
 
-
-
-
-// ═══ SPOTIFY API ═══
 async function spGet(ep){
   const r=await fetch('https://api.spotify.com/v1/'+ep,{headers:{Authorization:'Bearer '+token}});
   if(r.status===401){const nt=await refreshAT();if(nt)token=nt;else{logout();return null;}}
   if(!r.ok||r.status===204)return null;
   try{return await r.json()}catch{return null}
 }
-async function poll(){
-  const d=await spGet('me/player/currently-playing');
-  if(!d?.item)return;
-  const tr=d.item,tid=tr.id;
-  MS.progress=d.progress_ms||0;MS.duration=tr.duration_ms||180000;MS.analysisStart=Date.now()-MS.progress;
-  MS.beatInterval=500;MS.energy=d.is_playing?0.6:0.3;
-  if(tid!==lastTid){
-    lastTid=tid;
-    document.getElementById('trackName').textContent=tr.name;
-    document.getElementById('artistName').textContent=tr.artists.map(a=>a.name).join(', ');
-    const art=tr.album?.images?.[0]?.url;if(art)document.getElementById('albumArt').src=art;
-    loadTheme(tid,tr.name,tr.artists.map(a=>a.name).join(', '),tr.artists.map(a=>a.id),tr.explicit,tr.duration_ms);
+
+
+// ══ MODULE: musicProvider.js ══
+// ═══ MUSIC PROVIDER — Abstract layer for multiple music sources ═══
+// Providers: Spotify, Apple Music, Local Audio (mic/file)
+// All providers feed the same interface: MS, track metadata, poll cycle
+
+// ── Provider registry ──
+const MusicProviders = {};
+let activeProvider = null;
+
+// ── Base provider interface ──
+// Every provider must implement:
+//   name         — display name
+//   init()       — authenticate / set up, returns true if ready
+//   poll()       — fetch current track state, update MS + UI
+//   destroy()    — cleanup (disconnect, stop polling, etc.)
+//   getGenres()  — return genre tags for AI theme (best-effort)
+
+// ═══════════════════════════════════════════════════════════
+// ── SPOTIFY PROVIDER ──
+// ═══════════════════════════════════════════════════════════
+MusicProviders.spotify = {
+  name: 'Spotify',
+  _interval: null,
+
+  async init() {
+    // Check for OAuth callback
+    const p = new URLSearchParams(location.search), code = p.get('code');
+    console.log('[spotify] init — code=' + (code ? 'present' : 'none'));
+    if (p.get('error')) {
+      showErr('Spotify error: ' + p.get('error'));
+      return false;
+    }
+    if (code) {
+      history.replaceState({}, document.title, location.pathname);
+      token = await exchToken(code);
+      if (!token) return false;
+    } else {
+      token = getAT();
+      if (!token) token = await refreshAT();
+      console.log('[spotify] stored token: ' + (token ? 'found' : 'none'));
+    }
+    if (!token) return false;
+
+    // Start polling
+    this.poll();
+    this._interval = setInterval(() => this.poll(), 5000);
+    return true;
+  },
+
+  async poll() {
+    const d = await spGet('me/player/currently-playing');
+    if (!d || !d.item) return;
+    const tr = d.item, tid = tr.id;
+    MS.progress = d.progress_ms || 0;
+    MS.duration = tr.duration_ms || 180000;
+    MS.analysisStart = Date.now() - MS.progress;
+    MS.beatInterval = 500;
+    MS.energy = d.is_playing ? 0.6 : 0.3;
+    if (tid !== lastTid) {
+      lastTid = tid;
+      document.getElementById('trackName').textContent = tr.name;
+      document.getElementById('artistName').textContent = tr.artists.map(a => a.name).join(', ');
+      const art = tr.album && tr.album.images && tr.album.images[0] ? tr.album.images[0].url : null;
+      if (art) document.getElementById('albumArt').src = art;
+      loadTheme(tid, tr.name, tr.artists.map(a => a.name).join(', '),
+        tr.artists.map(a => a.id), tr.explicit, tr.duration_ms);
+    }
+  },
+
+  async getGenres(artistIds) {
+    try {
+      const a = await spGet('artists?ids=' + artistIds.slice(0, 3).join(','));
+      if (a && a.artists) return a.artists.flatMap(x => x.genres || []).slice(0, 8);
+    } catch (e) { console.warn('[spotify] genre fetch failed', e); }
+    return [];
+  },
+
+  destroy() {
+    if (this._interval) { clearInterval(this._interval); this._interval = null; }
   }
+};
+
+// ═══════════════════════════════════════════════════════════
+// ── APPLE MUSIC PROVIDER ──
+// ═══════════════════════════════════════════════════════════
+MusicProviders.apple = {
+  name: 'Apple Music',
+  _interval: null,
+  _music: null,  // MusicKit instance
+
+  async init() {
+    // MusicKit JS must be loaded
+    if (typeof MusicKit === 'undefined') {
+      console.error('[apple] MusicKit JS not loaded');
+      showErr('Apple Music requires MusicKit. Add the MusicKit JS script tag.');
+      return false;
+    }
+    try {
+      this._music = MusicKit.getInstance();
+      if (!this._music) {
+        // Configure MusicKit — developer token must be set in page or fetched from server
+        const devToken = document.querySelector('meta[name="apple-music-developer-token"]');
+        if (!devToken) {
+          showErr('Apple Music: missing developer token. Set meta tag apple-music-developer-token.');
+          return false;
+        }
+        await MusicKit.configure({
+          developerToken: devToken.content,
+          app: { name: 'VIZarcade', build: '1.0' }
+        });
+        this._music = MusicKit.getInstance();
+      }
+      // Authorize (shows Apple sign-in)
+      await this._music.authorize();
+      token = 'APPLE_MUSIC';  // Flag that we're authenticated
+      console.log('[apple] authorized');
+    } catch (e) {
+      console.error('[apple] auth failed', e);
+      showErr('Apple Music sign-in failed: ' + (e.message || e));
+      return false;
+    }
+
+    // Start polling
+    this.poll();
+    this._interval = setInterval(() => this.poll(), 3000);
+    return true;
+  },
+
+  async poll() {
+    if (!this._music) return;
+    const player = this._music.player;
+    if (!player || player.playbackState === MusicKit.PlaybackStates.none) return;
+
+    const item = player.nowPlayingItem;
+    if (!item) return;
+
+    const tid = item.id || item.songId || (item.attributes && item.attributes.name) || 'unknown';
+    const attrs = item.attributes || {};
+    const durMs = (attrs.durationInMillis || player.currentPlaybackDuration * 1000 || 180000);
+
+    MS.progress = (player.currentPlaybackTime || 0) * 1000;
+    MS.duration = durMs;
+    MS.analysisStart = Date.now() - MS.progress;
+    MS.beatInterval = 500;
+    MS.energy = (player.playbackState === MusicKit.PlaybackStates.playing) ? 0.6 : 0.3;
+
+    if (tid !== lastTid) {
+      lastTid = tid;
+      const trackName = attrs.name || 'Unknown Track';
+      const artistName = attrs.artistName || 'Unknown Artist';
+      document.getElementById('trackName').textContent = trackName;
+      document.getElementById('artistName').textContent = artistName;
+      const art = attrs.artwork ? MusicKit.formatArtworkURL(attrs.artwork, 300, 300) : null;
+      if (art) document.getElementById('albumArt').src = art;
+      loadTheme(tid, trackName, artistName, [], false, durMs);
+    }
+  },
+
+  async getGenres() {
+    // Apple Music genre info from nowPlayingItem
+    if (!this._music || !this._music.player.nowPlayingItem) return [];
+    const attrs = this._music.player.nowPlayingItem.attributes || {};
+    return attrs.genreNames || [];
+  },
+
+  destroy() {
+    if (this._interval) { clearInterval(this._interval); this._interval = null; }
+    if (this._music) {
+      try { this._music.unauthorize(); } catch (e) { /* ok */ }
+    }
+    this._music = null;
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// ── LOCAL AUDIO PROVIDER ──
+// Uses Web Audio API to analyze mic input or local audio files
+// ═══════════════════════════════════════════════════════════
+MusicProviders.local = {
+  name: 'Local Audio',
+  _audioCtx: null,
+  _analyser: null,
+  _source: null,
+  _audioEl: null,
+  _freqData: null,
+  _interval: null,
+  _trackName: 'Local Audio',
+  _fileName: '',
+  _startTime: 0,
+  _duration: 0,
+  _mode: null,  // 'mic' or 'file'
+
+  async init() {
+    token = 'LOCAL_AUDIO';
+    // Show the local audio selector
+    const mode = await this._showModeSelector();
+    if (!mode) return false;
+    this._mode = mode;
+
+    try {
+      this._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      this._analyser = this._audioCtx.createAnalyser();
+      this._analyser.fftSize = 256;
+      this._analyser.smoothingTimeConstant = 0.8;
+      this._freqData = new Uint8Array(this._analyser.frequencyBinCount);
+
+      if (mode === 'mic') {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        this._source = this._audioCtx.createMediaStreamSource(stream);
+        this._source.connect(this._analyser);
+        this._trackName = 'Microphone Input';
+        this._duration = 0;  // indefinite
+        this._startTime = Date.now();
+        document.getElementById('trackName').textContent = this._trackName;
+        document.getElementById('artistName').textContent = 'Live Audio';
+        loadTheme('mic_' + Date.now(), this._trackName, 'Live Audio', [], false, 300000);
+      } else {
+        // File mode — handled via _handleFile which is triggered by the file picker
+        // We'll set up after file is loaded
+      }
+
+      // Start analysis loop
+      this._interval = setInterval(() => this.poll(), 100);
+      console.log('[local] initialized in ' + mode + ' mode');
+      return true;
+    } catch (e) {
+      console.error('[local] init failed', e);
+      showErr('Audio access failed: ' + (e.message || e));
+      return false;
+    }
+  },
+
+  _showModeSelector() {
+    return new Promise(resolve => {
+      const overlay = document.createElement('div');
+      overlay.id = 'localAudioSelector';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:250;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.95);gap:20px;';
+      overlay.innerHTML = `
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:0.3em;color:#06ffd8;text-shadow:0 0 20px #06ffd8">LOCAL AUDIO SOURCE</div>
+        <button id="localMicBtn" class="btn" style="min-width:260px">🎤 &nbsp;MICROPHONE</button>
+        <button id="localFileBtn" class="btn" style="min-width:260px">📁 &nbsp;AUDIO FILE</button>
+        <input type="file" id="localFilePicker" accept="audio/*" style="display:none">
+        <button id="localCancelBtn" style="background:none;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);padding:0.6rem 2rem;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:0.7rem;letter-spacing:0.2em;margin-top:10px">CANCEL</button>
+      `;
+      document.body.appendChild(overlay);
+
+      document.getElementById('localMicBtn').onclick = () => {
+        overlay.remove();
+        resolve('mic');
+      };
+      document.getElementById('localFileBtn').onclick = () => {
+        document.getElementById('localFilePicker').click();
+      };
+      document.getElementById('localFilePicker').onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        overlay.remove();
+        this._fileName = file.name.replace(/\.[^.]+$/, '');
+        // We'll load the file after init returns
+        setTimeout(() => this._handleFile(file), 100);
+        resolve('file');
+      };
+      document.getElementById('localCancelBtn').onclick = () => {
+        overlay.remove();
+        resolve(null);
+      };
+    });
+  },
+
+  async _handleFile(file) {
+    try {
+      if (!this._audioCtx) {
+        this._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        this._analyser = this._audioCtx.createAnalyser();
+        this._analyser.fftSize = 256;
+        this._analyser.smoothingTimeConstant = 0.8;
+        this._freqData = new Uint8Array(this._analyser.frequencyBinCount);
+      }
+
+      this._audioEl = new Audio();
+      this._audioEl.crossOrigin = 'anonymous';
+      this._audioEl.src = URL.createObjectURL(file);
+      await new Promise((res, rej) => {
+        this._audioEl.oncanplaythrough = res;
+        this._audioEl.onerror = rej;
+      });
+
+      this._source = this._audioCtx.createMediaElementSource(this._audioEl);
+      this._source.connect(this._analyser);
+      this._analyser.connect(this._audioCtx.destination);
+
+      this._trackName = this._fileName || 'Audio File';
+      this._duration = (this._audioEl.duration || 180) * 1000;
+      this._startTime = Date.now();
+
+      document.getElementById('trackName').textContent = this._trackName;
+      document.getElementById('artistName').textContent = 'Local File';
+      const art = document.getElementById('albumArt');
+      art.src = '';
+      art.style.display = 'none';
+
+      this._audioEl.play();
+      loadTheme('file_' + Date.now(), this._trackName, 'Local File', [], false, this._duration);
+
+      // On track end, re-trigger theme for looping or next file
+      this._audioEl.onended = () => {
+        this._audioEl.currentTime = 0;
+        this._audioEl.play();
+        lastTid = null;  // Force new theme on loop
+      };
+    } catch (e) {
+      console.error('[local] file load failed', e);
+      showErr('Could not load audio file: ' + (e.message || e));
+    }
+  },
+
+  poll() {
+    if (!this._analyser || !this._freqData) return;
+    this._analyser.getByteFrequencyData(this._freqData);
+
+    // Compute energy from frequency data
+    const bins = this._freqData;
+    let sum = 0, bassSum = 0, midSum = 0;
+    const bassEnd = Math.floor(bins.length * 0.15);
+    const midEnd = Math.floor(bins.length * 0.5);
+    for (let i = 0; i < bins.length; i++) {
+      sum += bins[i];
+      if (i < bassEnd) bassSum += bins[i];
+      else if (i < midEnd) midSum += bins[i];
+    }
+    const energy = Math.min(1, (sum / bins.length / 255) * 2.0);
+    const bass = bassEnd > 0 ? (bassSum / bassEnd / 255) : 0;
+
+    // Beat detection from bass transients
+    if (!this._prevBass) this._prevBass = 0;
+    if (!this._beatCooldown) this._beatCooldown = 0;
+    this._beatCooldown = Math.max(0, this._beatCooldown - 100);
+    if (bass - this._prevBass > 0.15 && this._beatCooldown <= 0 && bass > 0.3) {
+      // Beat detected
+      this._beatCooldown = 250;  // min ms between beats
+      if (!this._lastBeatTime) this._lastBeatTime = Date.now();
+      const now = Date.now();
+      const interval = now - this._lastBeatTime;
+      if (interval > 200 && interval < 2000) {
+        // Smooth the beat interval
+        MS.beatInterval = MS.beatInterval * 0.7 + interval * 0.3;
+      }
+      this._lastBeatTime = now;
+    }
+    this._prevBass = bass;
+
+    MS.energy = energy;
+
+    if (this._mode === 'file' && this._audioEl) {
+      MS.progress = (this._audioEl.currentTime || 0) * 1000;
+      MS.duration = this._duration || 180000;
+      MS.analysisStart = Date.now() - MS.progress;
+    } else {
+      // Mic mode — synthetic progress (cycles every 5 minutes)
+      const elapsed = Date.now() - this._startTime;
+      const cycleDur = 300000;
+      MS.progress = elapsed % cycleDur;
+      MS.duration = cycleDur;
+      MS.analysisStart = Date.now() - MS.progress;
+    }
+  },
+
+  async getGenres() {
+    // No genre data for local audio
+    return [];
+  },
+
+  destroy() {
+    if (this._interval) { clearInterval(this._interval); this._interval = null; }
+    if (this._audioEl) { this._audioEl.pause(); this._audioEl.src = ''; }
+    if (this._source) { try { this._source.disconnect(); } catch (e) { /* ok */ } }
+    if (this._audioCtx) { try { this._audioCtx.close(); } catch (e) { /* ok */ } }
+    this._audioCtx = null;
+    this._analyser = null;
+    this._source = null;
+    this._audioEl = null;
+    this._freqData = null;
+    this._mode = null;
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// ── PROVIDER LIFECYCLE ──
+// ═══════════════════════════════════════════════════════════
+async function startProvider(key) {
+  if (activeProvider) {
+    activeProvider.destroy();
+    activeProvider = null;
+  }
+  const provider = MusicProviders[key];
+  if (!provider) { console.error('[provider] unknown:', key); return false; }
+
+  console.log('[provider] starting:', provider.name);
+  const ok = await provider.init();
+  if (ok) {
+    activeProvider = provider;
+    ls('lastProvider', key);
+    // Show main UI
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('ui').style.display = 'block';
+    document.getElementById('fsBtn').style.display = 'block';
+    initScene();
+    return true;
+  }
+  return false;
 }
 
+function stopProvider() {
+  if (activeProvider) {
+    activeProvider.destroy();
+    activeProvider = null;
+  }
+  token = null;
+  lastTid = null;
+  document.getElementById('login').style.display = 'flex';
+  document.getElementById('ui').style.display = 'none';
+  document.getElementById('fsBtn').style.display = 'none';
+}
 
+// ── Genre helper for AI theme (provider-agnostic) ──
+async function getProviderGenres(artistIds) {
+  if (!activeProvider) return [];
+  return activeProvider.getGenres(artistIds);
+}
 
 
 // ══ MODULE: render.js ══
@@ -8066,12 +8477,6 @@ function initDevPanel(){
 // ══ MODULE: main.js ══
 // ═══ VIZARCADE — Main Entry Point ═══
 
-
-
-
-
-
-
 // ── Resize handler ──
 addEventListener('resize', () => { resize(); if (token) initScene(); });
 
@@ -8086,8 +8491,12 @@ document.getElementById('fsBtn').addEventListener('click', () => {
   }
 });
 
-// ── Login button ──
-document.getElementById('loginBtn').addEventListener('click', doLogin);
+// ── Provider selection buttons ──
+document.getElementById('loginBtn').addEventListener('click', () => startProvider('spotify'));
+const appleBtn = document.getElementById('appleMusicBtn');
+if (appleBtn) appleBtn.addEventListener('click', () => startProvider('apple'));
+const localBtn = document.getElementById('localAudioBtn');
+if (localBtn) localBtn.addEventListener('click', () => startProvider('local'));
 
 // ── Arcade landing canvas animation ──
 (function initArcadeCanvas() {
@@ -8139,35 +8548,36 @@ initDevPanel();
 
 // ── Auth flow ──
 async function init() {
-  const p = new URLSearchParams(location.search), code = p.get('code');
-  console.log('[auth] init — code=' + (code ? 'present' : 'none'));
-  if (p.get('error')) {
-    const el = document.getElementById('loginErr');
-    el.textContent = 'Spotify error: ' + p.get('error');
-    el.style.display = 'block';
+  const p = new URLSearchParams(location.search);
+
+  // If returning from Spotify OAuth callback, go straight to Spotify provider
+  if (p.get('code')) {
+    await startProvider('spotify');
     return;
   }
-  if (code) {
-    history.replaceState({}, document.title, '/');
-    token = await exchToken(code);
-    if (!token) return;
-  } else {
-    token = getAT();
-    if (!token) token = await refreshAT();
-    console.log('[auth] stored token: ' + (token ? 'found' : 'none'));
+  if (p.get('error')) {
+    showErr('Spotify error: ' + p.get('error'));
+    return;
   }
-  if (token) {
+
+  // Check for saved Spotify session
+  const savedToken = getAT();
+  if (savedToken) {
+    token = savedToken;
     document.getElementById('login').style.display = 'none';
     document.getElementById('ui').style.display = 'block';
     document.getElementById('fsBtn').style.display = 'block';
     initScene();
-    poll();
-    setInterval(poll, 5000);
+    // Start Spotify polling directly
+    MusicProviders.spotify._interval = setInterval(() => MusicProviders.spotify.poll(), 5000);
+    activeProvider = MusicProviders.spotify;
+    MusicProviders.spotify.poll();
+    return;
   }
+
+  // No saved session — show login screen (provider buttons are already wired)
 }
 init();
-
-
 
 
 </script>
