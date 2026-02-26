@@ -278,8 +278,9 @@ const CP_INTEGRATED_SCENES = new Set(['WARP_SPEED', 'DEEP_SEA', 'STORM_CHASER', 
 
 
 const CLIENT_ID = 'c4a8270f8bc6453490fc8bf4b9de5c42';
-// Redirect back to the current page (works on any host, including GitHub Pages)
-const REDIR = location.origin + location.pathname;
+// Redirect URI must match exactly what's in the Spotify Developer Dashboard
+// Current dashboard entry: https://spotify-visualizer-ecru.vercel.app/callback
+const REDIR = location.origin + '/callback';
 const SCOPE = 'user-read-currently-playing user-read-playback-state';
 
 function rnd(n) {
@@ -7766,7 +7767,7 @@ MusicProviders.spotify = {
       return false;
     }
     if (code) {
-      history.replaceState({}, document.title, location.pathname);
+      history.replaceState({}, document.title, '/');
       token = await exchToken(code);
       if (!token) return false;
     } else {
