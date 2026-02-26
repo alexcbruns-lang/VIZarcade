@@ -43,6 +43,10 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
 #gameOverScreen{position:fixed;inset:0;z-index:76;pointer-events:none;display:none;align-items:center;justify-content:center;background:#000;font-family:'Bebas Neue',sans-serif;font-size:clamp(4rem,12vw,10rem);letter-spacing:0.2em;color:#f00;text-shadow:0 0 40px #f00}
 #fsBtn{position:fixed;bottom:2.5rem;right:calc(72px + 3rem);z-index:85;background:none;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.28);font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;padding:0.4rem 0.7rem;cursor:pointer;transition:all 0.2s;display:none;pointer-events:all}
 #fsBtn:hover{border-color:#06ffd8;color:#06ffd8}
+#backBtn{position:fixed;bottom:calc(2.5rem - 1.8rem);right:calc(72px + 3rem);z-index:85;background:none;border:1px solid rgba(255,255,255,0.07);color:rgba(255,255,255,0.2);font-family:'Share Tech Mono',monospace;font-size:0.55rem;letter-spacing:0.12em;padding:0.3rem 0.6rem;cursor:pointer;transition:all 0.2s;display:none;pointer-events:all}
+#backBtn:hover{border-color:#ff006e;color:#ff006e}
+#nextSceneBtn{position:fixed;bottom:0.6rem;left:2.5rem;z-index:85;background:none;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.28);font-family:'Share Tech Mono',monospace;font-size:0.85rem;padding:0.2rem 0.65rem;cursor:pointer;transition:all 0.2s;display:none;pointer-events:all}
+#nextSceneBtn:hover{border-color:#06ffd8;color:#06ffd8;text-shadow:0 0 8px #06ffd8}
 
 /* ═══ DEV PANEL ═══ */
 #devPanel{position:fixed;top:0;right:0;width:320px;max-height:100vh;z-index:300;background:rgba(8,8,16,0.94);border-left:1px solid rgba(0,255,65,0.2);font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:#b0ffb0;overflow-y:auto;display:none;backdrop-filter:blur(8px);scrollbar-width:thin;scrollbar-color:rgba(0,255,65,0.3) transparent;pointer-events:all;cursor:default}
@@ -106,6 +110,8 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
   <div id="pgWrap"><div id="pgBar"></div></div>
 </div>
 <button id="fsBtn">⛶ FS</button>
+<button id="backBtn">← BACK</button>
+<button id="nextSceneBtn">▶</button>
 
 <!-- ═══ DEV PANEL ═══ -->
 <div id="devPanel">
@@ -8133,13 +8139,11 @@ MusicProviders.local = {
     if (!this._beatCooldown) this._beatCooldown = 0;
     this._beatCooldown = Math.max(0, this._beatCooldown - 100);
     if (bass - this._prevBass > 0.15 && this._beatCooldown <= 0 && bass > 0.3) {
-      // Beat detected
-      this._beatCooldown = 250;  // min ms between beats
+      this._beatCooldown = 250;
       if (!this._lastBeatTime) this._lastBeatTime = Date.now();
       const now = Date.now();
       const interval = now - this._lastBeatTime;
       if (interval > 200 && interval < 2000) {
-        // Smooth the beat interval
         MS.beatInterval = MS.beatInterval * 0.7 + interval * 0.3;
       }
       this._lastBeatTime = now;
@@ -8159,6 +8163,76 @@ MusicProviders.local = {
       MS.progress = elapsed % cycleDur;
       MS.duration = cycleDur;
       MS.analysisStart = Date.now() - MS.progress;
+    }
+
+    // ── Local audio intelligence ──
+    // Track rolling energy for surprise + transition detection
+    if (!this._energyWindow) this._energyWindow = [];
+    if (!this._surpriseCooldown) this._surpriseCooldown = 0;
+    if (!this._transitionCooldown) this._transitionCooldown = 0;
+    if (!this._rollingPeak) this._rollingPeak = 0;
+    if (!this._dipDetected) this._dipDetected = false;
+    if (!this._dipEnergy) this._dipEnergy = 0;
+    if (!this._preDipEnergy) this._preDipEnergy = 0;
+
+    this._energyWindow.push(energy);
+    if (this._energyWindow.length > 80) this._energyWindow.shift(); // ~8 sec window at 100ms
+    this._surpriseCooldown = Math.max(0, this._surpriseCooldown - 100);
+    this._transitionCooldown = Math.max(0, this._transitionCooldown - 100);
+
+    // Update rolling peak (decays slowly)
+    if (energy > this._rollingPeak) this._rollingPeak = energy;
+    else this._rollingPeak *= 0.999;
+
+    if (this._energyWindow.length >= 20) {
+      const recent = this._energyWindow.slice(-6);
+      const older = this._energyWindow.slice(-30, -10);
+      const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+      const olderAvg = older.length > 0 ? older.reduce((a, b) => a + b, 0) / older.length : recentAvg;
+
+      // ── SURPRISE: fire during intense peaks ──
+      // Detect: energy is high, significantly above recent baseline, near rolling peak
+      if (this._surpriseCooldown <= 0 && !surpriseFired) {
+        const isIntense = recentAvg > 0.55 && recentAvg > olderAvg + 0.12;
+        const nearPeak = recentAvg > this._rollingPeak * 0.8;
+        if (isIntense && nearPeak) {
+          setTimeout(fireSurprise, 200);
+          surpriseFired = true;
+          this._surpriseCooldown = 30000; // 30s cooldown
+        }
+      }
+
+      // ── DJ TRANSITION: detect energy dip-and-rise pattern ──
+      // Phase 1: Detect a significant energy drop (the dip)
+      if (!this._dipDetected && this._transitionCooldown <= 0) {
+        const dropAmount = olderAvg - recentAvg;
+        if (dropAmount > 0.15 && olderAvg > 0.3) {
+          // Energy has dropped — mark the dip
+          this._dipDetected = true;
+          this._dipEnergy = recentAvg;
+          this._preDipEnergy = olderAvg;
+          this._dipTime = Date.now();
+        }
+      }
+      // Phase 2: After a dip, watch for energy to climb back up (the rise)
+      if (this._dipDetected) {
+        const timeSinceDip = Date.now() - (this._dipTime || 0);
+        const riseAmount = recentAvg - this._dipEnergy;
+        if (riseAmount > 0.1 && recentAvg > this._dipEnergy + 0.08 && timeSinceDip > 1500) {
+          // Energy dipped and is now rising — DJ transition detected
+          console.log('[local] DJ transition detected — dip:', this._preDipEnergy.toFixed(2),
+            '→', this._dipEnergy.toFixed(2), '→ rise:', recentAvg.toFixed(2));
+          this._dipDetected = false;
+          this._transitionCooldown = 20000; // 20s cooldown
+          surpriseFired = false; // reset surprise for new "song"
+          this._rollingPeak = recentAvg; // reset peak tracker
+          skipToNextScene();
+        }
+        // Timeout: if no rise within 15s, cancel dip detection
+        if (timeSinceDip > 15000) {
+          this._dipDetected = false;
+        }
+      }
     }
   },
 
@@ -8209,6 +8283,8 @@ async function startProvider(key) {
     document.getElementById('login').style.display = 'none';
     document.getElementById('ui').style.display = 'block';
     document.getElementById('fsBtn').style.display = 'block';
+    document.getElementById('backBtn').style.display = 'block';
+    document.getElementById('nextSceneBtn').style.display = 'block';
     initScene();
     return true;
   }
@@ -8225,6 +8301,47 @@ function stopProvider() {
   document.getElementById('login').style.display = 'flex';
   document.getElementById('ui').style.display = 'none';
   document.getElementById('fsBtn').style.display = 'none';
+  document.getElementById('backBtn').style.display = 'none';
+  document.getElementById('nextSceneBtn').style.display = 'none';
+  // Restore track info visibility
+  document.getElementById('trackName').style.display = '';
+  document.getElementById('artistName').style.display = '';
+  document.getElementById('albumArt').style.display = '';
+}
+
+// ── Skip to next scene (used by next-scene button and auto-transition) ──
+function skipToNextScene() {
+  if (inTrans) return;
+  // Pick a random scene different from current, respecting the variety system
+  const shortlist = getSceneShortlist().filter(s => s !== THEME.scene);
+  const scene = shortlist[0] || rndEl(ALL_SCENES.filter(s => s !== THEME.scene));
+  const cp = enforceCP(rndEl(ALL_CPS.filter(x => !getForbidCPs().includes(x))));
+  // Build a quick theme based on current palette but new scene
+  const palette = THEME.palette.slice();
+  // Rotate palette for visual variety
+  palette.push(palette.shift());
+  const theme = {
+    scene: scene,
+    label: '',
+    splashDesc: '',
+    palette: palette,
+    bgColor: THEME.bgColor,
+    centerpiece: cp,
+    centerpieceScale: 0.3 + Math.random() * 0.7,
+    centerpieceX: 0.3 + Math.random() * 0.4,
+    centerpieceY: 0.3 + Math.random() * 0.4,
+    centerpieceBehavior: rndEl(['rotate', 'pulse_beat', 'breathe', 'orbit_slow', 'bounce', 'drift']),
+    beatReactions: THEME.beatReactions || ['shockwave'],
+    sceneSpeed: 0.7 + Math.random() * 1.3,
+    sceneIntensity: 0.5 + Math.random() * 0.5,
+    energy: THEME.energy || 0.5,
+    chaos: Math.random() * 0.6
+  };
+  recordScene(scene);
+  recordCP(cp);
+  const trackEl = document.getElementById('trackName');
+  const artistEl = document.getElementById('artistName');
+  applyTheme(trackEl.textContent || '', artistEl.textContent || '', theme);
 }
 
 // ── Genre helper for AI theme (provider-agnostic) ──
@@ -8585,6 +8702,17 @@ document.getElementById('fsBtn').addEventListener('click', () => {
   }
 });
 
+// ── Back button — full disconnect, return to login ──
+document.getElementById('backBtn').addEventListener('click', () => {
+  stopProvider();
+});
+
+// ── Next scene button — skip to a new random scene ──
+document.getElementById('nextSceneBtn').addEventListener('click', () => {
+  if (inTrans) return;
+  skipToNextScene();
+});
+
 // ── Provider selection buttons ──
 document.getElementById('loginBtn').addEventListener('click', () => startProvider('spotify'));
 const appleBtn = document.getElementById('appleMusicBtn');
@@ -8661,15 +8789,16 @@ async function init() {
     document.getElementById('login').style.display = 'none';
     document.getElementById('ui').style.display = 'block';
     document.getElementById('fsBtn').style.display = 'block';
+    document.getElementById('backBtn').style.display = 'block';
+    document.getElementById('nextSceneBtn').style.display = 'block';
     initScene();
-    // Start Spotify polling directly
     MusicProviders.spotify._interval = setInterval(() => MusicProviders.spotify.poll(), 5000);
     activeProvider = MusicProviders.spotify;
     MusicProviders.spotify.poll();
     return;
   }
 
-  // No saved session — show login screen (provider buttons are already wired)
+  // No saved session — show login screen
 }
 init();
 
