@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-music-developer-token" content="">
 <title>Synthwave</title>
 <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js" async></script>
@@ -45,7 +48,7 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
 #fsBtn:hover{border-color:#06ffd8;color:#06ffd8}
 #backBtn{position:fixed;bottom:calc(2.5rem - 1.8rem);right:calc(72px + 3rem);z-index:85;background:none;border:1px solid rgba(255,255,255,0.07);color:rgba(255,255,255,0.2);font-family:'Share Tech Mono',monospace;font-size:0.55rem;letter-spacing:0.12em;padding:0.3rem 0.6rem;cursor:pointer;transition:all 0.2s;display:none;pointer-events:all}
 #backBtn:hover{border-color:#ff006e;color:#ff006e}
-#nextSceneBtn{position:fixed;bottom:0.6rem;left:2.5rem;z-index:85;background:none;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.28);font-family:'Share Tech Mono',monospace;font-size:0.85rem;padding:0.2rem 0.65rem;cursor:pointer;transition:all 0.2s;display:none;pointer-events:all}
+#nextSceneBtn{position:fixed;top:2rem;right:2.5rem;z-index:85;background:none;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.28);font-family:'Share Tech Mono',monospace;font-size:0.85rem;padding:0.2rem 0.65rem;cursor:pointer;transition:all 0.2s;display:none;pointer-events:all}
 #nextSceneBtn:hover{border-color:#06ffd8;color:#06ffd8;text-shadow:0 0 8px #06ffd8}
 
 /* ═══ DEV PANEL ═══ */
@@ -275,7 +278,8 @@ const CP_INTEGRATED_SCENES = new Set(['WARP_SPEED', 'DEEP_SEA', 'STORM_CHASER', 
 
 
 const CLIENT_ID = 'c4a8270f8bc6453490fc8bf4b9de5c42';
-const REDIR = location.origin + '/callback';
+// Redirect back to the current page (works on any host, including GitHub Pages)
+const REDIR = location.origin + location.pathname;
 const SCOPE = 'user-read-currently-playing user-read-playback-state';
 
 function rnd(n) {
@@ -8033,15 +8037,14 @@ MusicProviders.local = {
       const overlay = document.createElement('div');
       overlay.id = 'localAudioSelector';
       overlay.style.cssText = 'position:fixed;inset:0;z-index:250;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.95);gap:16px;';
-      // Check if getDisplayMedia is available for system audio
-      const hasSystemAudio = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+      // Check if getDisplayMedia is available for system audio (not available on mobile)
+      const hasSystemAudio = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) && !isMobile;
       overlay.innerHTML =
         '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.8rem;letter-spacing:0.3em;color:#06ffd8;text-shadow:0 0 20px #06ffd8">LOCAL AUDIO SOURCE</div>' +
         '<button id="localMicBtn" class="btn" style="min-width:280px">\uD83C\uDFA4 \u00a0MICROPHONE</button>' +
-        '<button id="localSysBtn" class="btn" style="min-width:280px;' + (hasSystemAudio ? '' : 'opacity:0.3;cursor:not-allowed;') + '">\uD83D\uDD0A \u00a0SYSTEM AUDIO</button>' +
+        (hasSystemAudio ? '<button id="localSysBtn" class="btn" style="min-width:280px">\uD83D\uDD0A \u00a0SYSTEM AUDIO</button>' : '') +
         '<button id="localFileBtn" class="btn" style="min-width:280px">\uD83D\uDCC1 \u00a0AUDIO FILE</button>' +
         '<input type="file" id="localFilePicker" accept="audio/*" style="display:none">' +
-        (hasSystemAudio ? '' : '<div style="font-size:0.55rem;color:rgba(255,255,255,0.25);letter-spacing:0.15em;margin-top:-8px">System audio not supported in this browser</div>') +
         '<button id="localCancelBtn" style="background:none;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);padding:0.6rem 2rem;cursor:pointer;font-family:\'Share Tech Mono\',monospace;font-size:0.7rem;letter-spacing:0.2em;margin-top:10px">CANCEL</button>';
       document.body.appendChild(overlay);
 
@@ -8049,11 +8052,13 @@ MusicProviders.local = {
         overlay.remove();
         resolve('mic');
       };
-      document.getElementById('localSysBtn').onclick = () => {
-        if (!hasSystemAudio) return;
-        overlay.remove();
-        resolve('system');
-      };
+      const sysBtn = document.getElementById('localSysBtn');
+      if (sysBtn) {
+        sysBtn.onclick = () => {
+          overlay.remove();
+          resolve('system');
+        };
+      }
       document.getElementById('localFileBtn').onclick = () => {
         document.getElementById('localFilePicker').click();
       };
@@ -8174,6 +8179,7 @@ MusicProviders.local = {
     if (!this._dipDetected) this._dipDetected = false;
     if (!this._dipEnergy) this._dipEnergy = 0;
     if (!this._preDipEnergy) this._preDipEnergy = 0;
+    if (!this._hardCutState) this._hardCutState = 0; // 0=watching, 1=silence detected
 
     this._energyWindow.push(energy);
     if (this._energyWindow.length > 80) this._energyWindow.shift(); // ~8 sec window at 100ms
@@ -8191,7 +8197,6 @@ MusicProviders.local = {
       const olderAvg = older.length > 0 ? older.reduce((a, b) => a + b, 0) / older.length : recentAvg;
 
       // ── SURPRISE: fire during intense peaks ──
-      // Detect: energy is high, significantly above recent baseline, near rolling peak
       if (this._surpriseCooldown <= 0 && !surpriseFired) {
         const isIntense = recentAvg > 0.55 && recentAvg > olderAvg + 0.12;
         const nearPeak = recentAvg > this._rollingPeak * 0.8;
@@ -8202,35 +8207,61 @@ MusicProviders.local = {
         }
       }
 
-      // ── DJ TRANSITION: detect energy dip-and-rise pattern ──
-      // Phase 1: Detect a significant energy drop (the dip)
+      // ── DJ CROSSFADE TRANSITION: detect energy dip-and-rise pattern ──
       if (!this._dipDetected && this._transitionCooldown <= 0) {
         const dropAmount = olderAvg - recentAvg;
-        if (dropAmount > 0.15 && olderAvg > 0.3) {
-          // Energy has dropped — mark the dip
+        // Require a large drop (0.3+) from a reasonably active baseline (0.4+)
+        if (dropAmount > 0.3 && olderAvg > 0.4) {
           this._dipDetected = true;
           this._dipEnergy = recentAvg;
           this._preDipEnergy = olderAvg;
           this._dipTime = Date.now();
         }
       }
-      // Phase 2: After a dip, watch for energy to climb back up (the rise)
       if (this._dipDetected) {
         const timeSinceDip = Date.now() - (this._dipTime || 0);
         const riseAmount = recentAvg - this._dipEnergy;
-        if (riseAmount > 0.1 && recentAvg > this._dipEnergy + 0.08 && timeSinceDip > 1500) {
-          // Energy dipped and is now rising — DJ transition detected
-          console.log('[local] DJ transition detected — dip:', this._preDipEnergy.toFixed(2),
+        // Require a strong rise (0.2+) after at least 2s
+        if (riseAmount > 0.2 && recentAvg > this._dipEnergy + 0.15 && timeSinceDip > 2000) {
+          console.log('[local] DJ crossfade detected — dip:', this._preDipEnergy.toFixed(2),
             '→', this._dipEnergy.toFixed(2), '→ rise:', recentAvg.toFixed(2));
           this._dipDetected = false;
-          this._transitionCooldown = 20000; // 20s cooldown
-          surpriseFired = false; // reset surprise for new "song"
-          this._rollingPeak = recentAvg; // reset peak tracker
+          this._transitionCooldown = 120000; // 120s cooldown
+          surpriseFired = false;
+          this._rollingPeak = recentAvg;
           skipToNextScene();
         }
-        // Timeout: if no rise within 15s, cancel dip detection
         if (timeSinceDip > 15000) {
           this._dipDetected = false;
+        }
+      }
+
+      // ── HARD CUT: detect abrupt silence then new audio (skip/next track) ──
+      if (this._transitionCooldown <= 0) {
+        const veryRecent = this._energyWindow.slice(-3);
+        const veryRecentAvg = veryRecent.reduce((a, b) => a + b, 0) / veryRecent.length;
+        if (this._hardCutState === 0) {
+          // Watch for sudden drop to near-silence while previously playing
+          if (veryRecentAvg < 0.03 && olderAvg > 0.3) {
+            this._hardCutState = 1;
+            this._hardCutTime = Date.now();
+          }
+        } else if (this._hardCutState === 1) {
+          const timeSinceCut = Date.now() - (this._hardCutTime || 0);
+          // Audio came back — new song started
+          if (veryRecentAvg > 0.2) {
+            console.log('[local] hard cut detected — silence then new audio');
+            this._hardCutState = 0;
+            this._transitionCooldown = 120000; // shared 120s cooldown
+            this._dipDetected = false;
+            surpriseFired = false;
+            this._rollingPeak = veryRecentAvg;
+            skipToNextScene();
+          }
+          // Timeout: if silence lasts more than 8s, reset (just a pause, not a cut)
+          if (timeSinceCut > 8000) {
+            this._hardCutState = 0;
+          }
         }
       }
     }
@@ -8688,19 +8719,44 @@ function initDevPanel(){
 // ══ MODULE: main.js ══
 // ═══ VIZARCADE — Main Entry Point ═══
 
+// ── Mobile / iOS detection ──
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && window.innerWidth < 1024);
+const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+
+// Hide custom cursor on touch devices
+if (isMobile) {
+  document.getElementById('cur').style.display = 'none';
+  document.body.style.cursor = 'auto';
+}
+
 // ── Resize handler ──
 addEventListener('resize', () => { resize(); if (token) initScene(); });
 
 // ── Fullscreen button ──
-document.getElementById('fsBtn').addEventListener('click', () => {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-    document.getElementById('fsBtn').textContent = '✕ EXIT';
+const fsBtn = document.getElementById('fsBtn');
+if (isIOS) {
+  if (isStandalone) {
+    // Already in standalone/fullscreen mode
+    fsBtn.style.display = 'none';
   } else {
-    document.exitFullscreen();
-    document.getElementById('fsBtn').textContent = '⛶ FS';
+    // Show "Add to Home Screen" hint instead
+    fsBtn.textContent = '📱 HOME';
+    fsBtn.addEventListener('click', () => {
+      alert('To go fullscreen on iOS:\n\n1. Tap the Share button (↑)\n2. Tap "Add to Home Screen"\n3. Open VIZarcade from your home screen\n\nThis launches the app without browser chrome.');
+    });
   }
-});
+} else {
+  fsBtn.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      fsBtn.textContent = '✕ EXIT';
+    } else {
+      document.exitFullscreen();
+      fsBtn.textContent = '⛶ FS';
+    }
+  });
+}
 
 // ── Back button — full disconnect, return to login ──
 document.getElementById('backBtn').addEventListener('click', () => {
