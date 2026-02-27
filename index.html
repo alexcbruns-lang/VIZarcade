@@ -646,7 +646,7 @@ function drawCyberGrid(t){
     SD.cyberGrid={gridZ:0,glitching:false,glitchTimer:0,speedBoost:1,speedTimer:0,spiral:false,spiralTimer:0,spiralAngle:0,
       worldX:0,worldXTarget:0,
       tronStreaks:Array.from({length:9},(_,i)=>({x:Math.random()*w,y:Math.random()*horizon,dirX:Math.random()<0.5?1:-1,dirY:0,speed:2+Math.random()*3,ci:i%4,alpha:0.5+Math.random()*0.4,width:4+Math.random()*5,trail:[],maxTrail:30+Math.floor(Math.random()*30),turnTimer:80+Math.floor(Math.random()*120)})),
-      obstacles:Array.from({length:2},(_,i)=>({lane:0.3+Math.random()*0.4,z:i*0.5,type:Math.floor(Math.random()*3),ci:i%4,baseH:0.4+Math.random()*0.3,baseW:0.2+Math.random()*0.15,dodged:false})),
+      obstacles:Array.from({length:2},(_,i)=>({lane:0.3+Math.random()*0.4,z:0.05+i*0.4,type:Math.floor(Math.random()*3),ci:i%4,baseH:0.4+Math.random()*0.3,baseW:0.2+Math.random()*0.15,dodged:false})),
     };
   }
   const CG=SD.cyberGrid;
@@ -672,13 +672,13 @@ function drawCyberGrid(t){
     return horizon+curved*roadH;
   }
   function zToSpread(z){
-    // How wide the road is at this depth — narrower near horizon
-    return (1-z*0.92)*w*0.7;
+    // How wide the road is at this depth — narrow at horizon (z=0), wide near you (z=1)
+    return z*w*0.7;
   }
   function worldToScreenX(lane,z){
     // lane 0=left edge, 0.5=center, 1=right edge
-    // worldX shifts the ENTIRE scene left/right
-    const center=w/2+CG.worldX*(1-z*0.8); // shift diminishes toward horizon
+    // worldX shifts the ENTIRE scene; shift is bigger near you (z=1), smaller at horizon (z=0)
+    const center=w/2+CG.worldX*(z*0.95);
     const spread=zToSpread(z);
     return center+(lane-0.5)*spread*2;
   }
@@ -710,18 +710,18 @@ function drawCyberGrid(t){
   const spiralOff=CG.spiral?CG.spiralAngle:0;
   CG.gridZ=(CG.gridZ+effectiveSpeed*0.012)%1; // grid scroll phase
 
-  // Horizontal rows — rushing toward you
+  // Horizontal rows — rushing toward you (from horizon to bottom)
   for(let r=0;r<ROWS;r++){
-    const rawZ=1-(r/ROWS+CG.gridZ)%1; // z=0 near you, z=1 at horizon
+    const rawZ=((r/ROWS+CG.gridZ)%1); // z=0 at horizon, z=1 near you
     const sy=zToScreenY(rawZ);
     if(sy<horizon-2||sy>h+2)continue;
     const spread=zToSpread(rawZ);
-    const cx=w/2+CG.worldX*(1-rawZ*0.8);
-    const alpha=(0.08+(1-rawZ)*0.5)*THEME.sceneIntensity*(1+beat*0.4);
+    const cx=w/2+CG.worldX*(rawZ*0.95);
+    const alpha=(0.08+rawZ*0.5)*THEME.sceneIntensity*(1+beat*0.4);
     const ci=Math.floor(r/3+corruption*8)%4;
     x0.strokeStyle=rgba(pc(ci),alpha);
-    x0.lineWidth=1+(1-rawZ)*3.5;
-    x0.shadowBlur=(1-rawZ)>0.5?10+corruption*15+beat*8:0;x0.shadowColor=pc(ci);
+    x0.lineWidth=1+rawZ*3.5;
+    x0.shadowBlur=rawZ>0.5?10+corruption*15+beat*8:0;x0.shadowColor=pc(ci);
     x0.beginPath();x0.moveTo(cx-spread,sy);x0.lineTo(cx+spread,sy);x0.stroke();
   }
   x0.shadowBlur=0;
@@ -740,13 +740,13 @@ function drawCyberGrid(t){
   x0.shadowBlur=0;
 
   // ── Obstacles — planted ON the grid, move with it ──
-  // They share the same z-scroll as grid lines, same worldX shift
+  // z=0 at horizon, z=1 at you. Obstacles spawn near 0 and rush toward 1.
   for(const obs of CG.obstacles){
-    obs.z-=effectiveSpeed*0.012; // rushing toward you (z decreases)
+    obs.z+=effectiveSpeed*0.012; // rushing toward you (z increases)
 
-    // Respawn at horizon when they reach you (or pass off-screen to side)
-    if(obs.z<-0.15){
-      obs.z=0.95+Math.random()*0.05;
+    // Respawn at horizon when they pass you
+    if(obs.z>1.15){
+      obs.z=Math.random()*0.05;
       obs.lane=0.25+Math.random()*0.5;
       obs.type=Math.floor(Math.random()*3);obs.ci=Math.floor(Math.random()*4);
       obs.baseH=0.4+Math.random()*0.3;obs.baseW=0.2+Math.random()*0.15;
@@ -755,25 +755,24 @@ function drawCyberGrid(t){
     }
 
     // Trigger steer when obstacle is getting close
-    if(!obs.dodged&&obs.z<0.4&&obs.z>0.3){
+    if(!obs.dodged&&obs.z>0.55&&obs.z<0.65){
       obs.dodged=true;
-      // Steer AWAY — if obstacle is right of center, steer left (shift world right)
-      // Magnitude is huge so object ends up way off to one side
-      const dir=(obs.lane>0.5)?1:-1; // positive = shift world right = you go left
+      // Steer AWAY — if obstacle is right of center, shift world right (you go left)
+      const dir=(obs.lane>0.5)?1:-1;
       CG.worldXTarget=dir*(w*0.5+Math.random()*w*0.25);
     }
 
     // Project obstacle onto screen using same coordinate system as grid
     const screenY=zToScreenY(obs.z);
     const screenX=worldToScreenX(obs.lane,obs.z);
-    const depthScale=(1-obs.z); // bigger when closer (z=0)
+    const depthScale=obs.z; // bigger when closer (z=1 = near you)
     const ow=obs.baseW*w*depthScale*1.2;
     const oh=obs.baseH*h*depthScale*1.0;
     const oy=screenY-oh; // sits on the ground
 
-    // Skip if off-screen (successfully dodged past the side!)
+    // Skip if off-screen sides (successfully dodged!)
     if(screenX+ow/2<-30||screenX-ow/2>w+30)continue;
-    // Skip if above horizon (hasn't appeared yet)
+    // Skip if above horizon (not visible yet)
     if(screenY<horizon)continue;
 
     const oA=Math.min(1,(0.3+depthScale*0.7)*(1+beat*0.4));
@@ -834,7 +833,7 @@ function drawCyberGrid(t){
   if(THEME.centerpiece){
     cpRot+=0.012*(1+energy*0.2);cpPh+=0.013;
     const gs=Math.min(w,h)*(0.09+beat*0.02)*(1+corruption*0.15);
-    const cpX=w/2+CG.worldX*0.15+(CG.spiral?Math.sin(CG.spiralAngle)*w*0.06:0);
+    const cpX=w/2+CG.worldX*0.05+(CG.spiral?Math.sin(CG.spiralAngle)*w*0.06:0);
     const cpY=horizon-h*0.12;
     x0.globalAlpha=0.75+beat*0.15;x0.shadowBlur=12+beat*12;x0.shadowColor=pc(0);
     drawCPMini(x0,THEME.centerpiece,cpX,cpY,gs,cpRot);x0.globalAlpha=1;x0.shadowBlur=0;
