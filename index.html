@@ -648,8 +648,8 @@ function drawCyberGrid(t){
       steerX:0,steerTarget:0,
       // Center obstacles — these get dodged
       obstacles:[
-        {lane:0.4+Math.random()*0.2, z:-0.05, type:Math.floor(Math.random()*3), ci:0, dodged:false},
-        {lane:0.4+Math.random()*0.2, z:0.45, type:Math.floor(Math.random()*3), ci:2, dodged:false}
+        {lane:(Math.random()<0.5?0.3:0.6)+Math.random()*0.1, z:-0.05, type:Math.floor(Math.random()*3), ci:0, dodged:false},
+        {lane:(Math.random()<0.5?0.3:0.6)+Math.random()*0.1, z:0.45, type:Math.floor(Math.random()*3), ci:2, dodged:false}
       ],
       // Scenery obstacles — edges, never dodged, just atmosphere
       scenery:Array.from({length:6},(_,i)=>({
@@ -828,7 +828,7 @@ function drawCyberGrid(t){
     // Respawn at horizon
     if(obs.z > 1.15){
       obs.z = -0.05 - Math.random() * 0.1;
-      obs.lane = 0.35 + Math.random() * 0.3;
+      obs.lane = Math.random() < 0.5 ? 0.3 + Math.random() * 0.1 : 0.6 + Math.random() * 0.1;
       obs.type = Math.floor(Math.random() * 3);
       obs.ci = Math.floor(Math.random() * 4);
       obs.dodged = false;
@@ -841,7 +841,7 @@ function drawCyberGrid(t){
     if(!obs.dodged && obs.z > 0.5 && obs.z < 0.6){
       obs.dodged = true;
       var dir2 = (obs.lane > 0.5) ? 1 : -1;
-      CG.steerTarget = dir2 * (w * 0.08 + Math.random() * w * 0.04);
+      CG.steerTarget = dir2 * (w * 0.22 + Math.random() * w * 0.08);
     }
 
     var ow = 0.22 * w * sz * 1.4;
