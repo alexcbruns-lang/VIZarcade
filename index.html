@@ -675,7 +675,7 @@ function drawCyberGrid(t){
   //   Road spans full screen width at bottom (d=1), converges at horizon (d=0)
   // ════════════════════════════════════════════════════════
   function dToY(d){ return horizon + Math.pow(d, 0.7) * (h - horizon); }
-  function dToHalfWidth(d){ return w * 0.15 + d * w * 0.35; }
+  function dToHalfWidth(d){ return w * 0.5; }
   function laneToX(lane, d){
     var cx = w/2 + CG.steerX * d;
     return cx + (lane - 0.5) * dToHalfWidth(d) * 2;
@@ -706,31 +706,27 @@ function drawCyberGrid(t){
   // ════════════════════════════════════════════════════════
   // GRID — horizontal lines scroll from horizon toward you
   // ════════════════════════════════════════════════════════
-  var ROWS=20, COLS=22;
+  var ROWS=20, COLS=32;
   CG.gridPhase = (CG.gridPhase + speed * 0.014) % 1;
 
   for(var r=0; r<ROWS; r++){
-    // d goes 0→1 (horizon→you), offset by scrolling phase
     var d = ((r / ROWS) + CG.gridPhase) % 1;
     var sy = dToY(d);
     if(sy < horizon - 2) continue;
-    var hw = dToHalfWidth(d);
-    var cx = w/2 + CG.steerX * d;
-    var spiralW2 = CG.spiral ? 1 + Math.sin(CG.spiralAngle + d * 3) * 0.15 : 1;
-    var alpha2 = (0.08 + d * 0.55) * THEME.sceneIntensity * (1 + beat * 0.4);
+    var alpha2 = (0.15 + d * 0.65) * THEME.sceneIntensity * (1 + beat * 0.5);
     var ci2 = Math.floor(r/3 + corruption*8) % 4;
     x0.strokeStyle = rgba(pc(ci2), alpha2);
-    x0.lineWidth = 1 + d * 4;
-    x0.shadowBlur = d > 0.5 ? 10 + corruption*15 + beat*8 : 0;
+    x0.lineWidth = 1.5 + d * 4;
+    x0.shadowBlur = 6 + d * 18 + corruption*12 + beat*10;
     x0.shadowColor = pc(ci2);
     x0.beginPath();
-    x0.moveTo(cx - hw * spiralW2, sy);
-    x0.lineTo(cx + hw * spiralW2, sy);
+    x0.moveTo(0, sy);
+    x0.lineTo(w, sy);
     x0.stroke();
   }
   x0.shadowBlur=0;
 
-  // Vertical lines — wide at bottom, converge at horizon
+  // Vertical lines — full width grid, slight perspective convergence
   for(var c=0; c<=COLS; c++){
     var lane = c / COLS;
     var sm2 = CG.spiral ? Math.sin(CG.spiralAngle + c*0.3) * 0.04 : 0;
@@ -738,8 +734,8 @@ function drawCyberGrid(t){
     var botX2 = laneToX(lane + sm2, 1.0);
     x0.beginPath(); x0.moveTo(topX2, horizon); x0.lineTo(botX2, h);
     var nx2 = Math.abs(lane - 0.5) * 2;
-    x0.strokeStyle = rgba(pc(1), (nx2 < 0.1 ? 0.5 : 0.2) * THEME.sceneIntensity * (1+beat*0.2));
-    x0.lineWidth = 1; x0.shadowBlur = 3; x0.shadowColor = pc(1); x0.stroke();
+    x0.strokeStyle = rgba(pc(1), (nx2 < 0.15 ? 0.6 : 0.3) * THEME.sceneIntensity * (1+beat*0.3));
+    x0.lineWidth = 1; x0.shadowBlur = 5 + beat*4; x0.shadowColor = pc(1); x0.stroke();
   }
   x0.shadowBlur=0;
 
