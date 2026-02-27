@@ -642,8 +642,9 @@ function drawCyberGrid(t){
     SD.cyberGrid={gridZ:0,glitching:false,glitchTimer:0,speedBoost:1,speedTimer:0,spiral:false,spiralTimer:0,spiralAngle:0,
       swerveOffset:0,swerveTarget:0,
       tronStreaks:Array.from({length:9},(_,i)=>({x:Math.random()*w,y:Math.random()*vpy,dirX:Math.random()<0.5?1:-1,dirY:0,speed:2+Math.random()*3,ci:i%4,alpha:0.5+Math.random()*0.4,width:4+Math.random()*5,trail:[],maxTrail:30+Math.floor(Math.random()*30),turnTimer:80+Math.floor(Math.random()*120)})),
-      obstacles:Array.from({length:5},(_,i)=>({lane:Math.random(),z:0.1+i*0.18,type:Math.floor(Math.random()*3),ci:i%4,height:0.12+Math.random()*0.28,width:0.06+Math.random()*0.1,dodged:false})),
+      obstacles:Array.from({length:6},(_,i)=>({lane:0.15+Math.random()*0.7,z:0.05+i*0.16,type:Math.floor(Math.random()*3),ci:i%4,height:0.25+Math.random()*0.3,width:0.14+Math.random()*0.1,dodged:false})),
       dataStreams:Array.from({length:14},(_,i)=>({x:(i/14)*w,y:Math.random()*h,speed:1+Math.random()*2,ci:i%4,char:Math.floor(Math.random()*96)})),
+      sparks:[],
     };
   }
   const CG=SD.cyberGrid;
@@ -652,15 +653,22 @@ function drawCyberGrid(t){
   if(CG.spiralTimer>0){CG.spiralTimer-=16;CG.spiralAngle+=0.04+energy*0.02;if(CG.spiralTimer<=0)CG.spiral=false;}
   const corruption=songProg*0.3;
   const effectiveSpeed=CG.speedBoost*(1+energy*0.25)*progMult*THEME.sceneSpeed;
-  // Swerve easing
-  CG.swerveOffset+=(CG.swerveTarget-CG.swerveOffset)*0.15;
-  if(Math.abs(CG.swerveTarget)>1)CG.swerveTarget*=0.96;
-  if(Math.abs(CG.swerveTarget)<2)CG.swerveTarget*=0.92;
+
+  // ── Swerve: bottom-of-screen shifts (YOU dodge), VP stays fixed ──
+  // Easing gets snappier with energy: smooth at low energy, jerky at high
+  const swerveEase=0.08+energy*0.14;
+  CG.swerveOffset+=(CG.swerveTarget-CG.swerveOffset)*swerveEase;
+  if(Math.abs(CG.swerveTarget)>1)CG.swerveTarget*=0.94;
+  if(Math.abs(CG.swerveTarget)<2)CG.swerveTarget*=0.90;
   const swerve=CG.swerveOffset;
-  // BG
+  // baseX = your position at the bottom of the screen
+  const baseX=vpx+swerve;
+
+  // ── BG ──
   x0.fillStyle='rgba(0,2,12,1)';x0.fillRect(0,0,w,h);
   const skyG=x0.createLinearGradient(0,0,0,vpy);skyG.addColorStop(0,'rgba(0,0,20,1)');skyG.addColorStop(1,'rgba(0,10,40,0.8)');x0.fillStyle=skyG;x0.fillRect(0,0,w,vpy);
-  // Tron streaks — sky only, thick, 90° turns
+
+  // ── Tron streaks — sky only, thick, 90° turns ──
   for(const ts of CG.tronStreaks){
     ts.turnTimer--;if(ts.turnTimer<=0){if(ts.dirX!==0){ts.dirY=Math.random()<0.5?1:-1;ts.dirX=0;}else{ts.dirX=Math.random()<0.5?1:-1;ts.dirY=0;}ts.turnTimer=40+Math.floor(Math.random()*100);}
     const spd=ts.speed*(CG.speedBoost*0.5)*(1+beat*0.2);ts.x+=ts.dirX*spd;ts.y+=ts.dirY*spd;
@@ -672,30 +680,153 @@ function drawCyberGrid(t){
     x0.shadowBlur=16+beat*10;x0.fillStyle=rgba(pc(ts.ci),0.95+beat*0.05);x0.beginPath();x0.arc(ts.x,ts.y,ts.width*0.8,0,Math.PI*2);x0.fill();x0.shadowBlur=0;
   }
   x0.lineCap='butt';x0.lineJoin='miter';x0.shadowBlur=0;
-  // Glitch
+
+  // ── Glitch surprise overlay ──
   if(CG.glitching){const gA=0.3+Math.random()*0.2;x0.fillStyle=rgba(pc(0),gA);for(let i=0;i<20;i++)x0.fillRect(0,Math.random()*h,w,Math.random()*35+2);for(let i=0;i<6;i++){x0.fillStyle=rgba(pc(i%4),0.08);x0.fillRect(Math.random()*w,0,Math.random()*80+10,h);}}
-  // Grid — slower cruising
-  const GRID=14,COLS=20;const spiralOff=CG.spiral?CG.spiralAngle:0;CG.gridZ+=effectiveSpeed*0.004;
-  const svpx=vpx+swerve;
-  for(let row=0;row<GRID;row++){const z=((row/GRID+CG.gridZ)%1);const py=vpy+Math.pow(z,1.4)*(h-vpy);const wf=Math.pow(z,0.8);const px1=svpx-wf*vpx*(1+spiralOff*z*0.3),px2=svpx+wf*(w-vpx)*(1+spiralOff*z*0.3);const alpha=(0.06+z*0.55)*THEME.sceneIntensity*(1+beat*0.4);const ci=Math.floor(row/3+corruption*8)%4;x0.strokeStyle=rgba(pc(ci),alpha);x0.lineWidth=1.5+z*3;x0.shadowBlur=z>0.65?12+corruption*20+beat*8:0;x0.shadowColor=pc(ci);x0.beginPath();x0.moveTo(px1,py);x0.lineTo(px2,py);x0.stroke();}
-  x0.shadowBlur=0;
-  for(let col=0;col<=COLS;col++){const nx=(col/COLS-0.5)*2;const sm=CG.spiral?Math.sin(CG.spiralAngle+col*0.3)*0.15:0;x0.beginPath();x0.moveTo(svpx+nx*vpx*0.02,vpy);x0.lineTo(vpx+(nx+sm)*w*0.5,h);x0.strokeStyle=rgba(pc(1),(Math.abs(nx)<0.15?0.5:0.18)*THEME.sceneIntensity*(1+beat*0.2));x0.lineWidth=1;x0.shadowBlur=3;x0.shadowColor=pc(1);x0.stroke();}
-  x0.shadowBlur=0;
-  // Obstacles — fewer, swerve dodge
-  CG.obstacles.sort((a,b)=>a.z-b.z);
-  for(const obs of CG.obstacles){obs.z+=effectiveSpeed*0.005;if(obs.z>1){obs.z=0.02+Math.random()*0.08;obs.lane=Math.random();obs.type=Math.floor(Math.random()*3);obs.ci=Math.floor(Math.random()*4);obs.height=0.12+Math.random()*0.28;obs.width=0.06+Math.random()*0.1;obs.dodged=false;}
-    if(!obs.dodged&&obs.z>0.7&&obs.z<0.78){obs.dodged=true;CG.swerveTarget=(obs.lane>0.5?-1:1)*(w*0.08+Math.random()*w*0.04);}
-    const z=Math.pow(obs.z,1.4),py=vpy+z*(h-vpy),scale=z;const obsSS=obs.z>0.65?-swerve*(obs.z-0.65)*3:0;
-    const ox=svpx+(obs.lane-0.5)*2*vpx*scale+obsSS,ow=obs.width*w*scale,oh=obs.height*h*scale,oy=py-oh;
-    const oA=(0.3+scale*0.7)*(1+beat*0.3);x0.strokeStyle=rgba(pc(obs.ci),oA);x0.lineWidth=1.5+scale*3;x0.shadowBlur=10+scale*15+beat*8;x0.shadowColor=pc(obs.ci);
-    if(obs.type===0){x0.fillStyle=rgba(pc(obs.ci),oA*0.2);x0.fillRect(ox-ow/2,oy,ow,oh);x0.strokeRect(ox-ow/2,oy,ow,oh);}
-    else if(obs.type===1){x0.beginPath();x0.moveTo(ox-ow/2,py-oh*0.5);x0.lineTo(ox+ow/2,py-oh*0.5);x0.stroke();x0.lineWidth=1;x0.beginPath();x0.moveTo(ox-ow/2,py);x0.lineTo(ox-ow/2,py-oh*0.5);x0.stroke();x0.beginPath();x0.moveTo(ox+ow/2,py);x0.lineTo(ox+ow/2,py-oh*0.5);x0.stroke();}
-    else{x0.fillStyle=rgba(pc(obs.ci),oA*0.15);x0.fillRect(ox-ow/4,oy,ow/2,oh);x0.strokeRect(ox-ow/4,oy,ow/2,oh);const ptG=x0.createRadialGradient(ox,oy,0,ox,oy,ow*0.6);ptG.addColorStop(0,rgba(pc(obs.ci),oA*0.8));ptG.addColorStop(1,'transparent');x0.fillStyle=ptG;x0.fillRect(ox-ow/2,oy-ow/2,ow,ow);}
-    x0.shadowBlur=0;
+
+  // ── Grid — vanishing point FIXED at top-center, bottom shifts with player ──
+  const GRID=16,COLS=22;const spiralOff=CG.spiral?CG.spiralAngle:0;CG.gridZ+=effectiveSpeed*0.004;
+
+  // Horizontal grid lines: endpoints lerp from fixed VP to shifted baseX
+  for(let row=0;row<GRID;row++){
+    const z=((row/GRID+CG.gridZ)%1);
+    const py=vpy+Math.pow(z,1.4)*(h-vpy);
+    const wf=Math.pow(z,0.8);
+    // Lerp center from vpx (at horizon) to baseX (at bottom)
+    const rowCx=vpx+(baseX-vpx)*Math.pow(z,1.2);
+    const spiralW=1+spiralOff*z*0.3;
+    const px1=rowCx-wf*vpx*spiralW,px2=rowCx+wf*(w-vpx)*spiralW;
+    const alpha=(0.06+z*0.55)*THEME.sceneIntensity*(1+beat*0.4);
+    const ci=Math.floor(row/3+corruption*8)%4;
+    x0.strokeStyle=rgba(pc(ci),alpha);x0.lineWidth=1.5+z*3;
+    x0.shadowBlur=z>0.65?12+corruption*20+beat*8:0;x0.shadowColor=pc(ci);
+    x0.beginPath();x0.moveTo(px1,py);x0.lineTo(px2,py);x0.stroke();
   }
-  // Centerpiece
-  if(THEME.centerpiece){cpRot+=0.012*(1+energy*0.2);cpPh+=0.013;const gs=Math.min(w,h)*(0.18+beat*0.05)*(1+corruption*0.3);const cpX=svpx+(CG.spiral?Math.sin(CG.spiralAngle)*w*0.12:0),cpY=vpy-h*0.14;x0.globalAlpha=0.85+beat*0.15;x0.shadowBlur=20+beat*20;x0.shadowColor=pc(0);drawCPMini(x0,THEME.centerpiece,cpX,cpY,gs,cpRot);x0.globalAlpha=1;x0.shadowBlur=0;}
-  // Data streams
+  x0.shadowBlur=0;
+
+  // Vertical grid lines: converge from baseX spread at bottom to vpx at top
+  for(let col=0;col<=COLS;col++){
+    const nx=(col/COLS-0.5)*2;
+    const sm=CG.spiral?Math.sin(CG.spiralAngle+col*0.3)*0.15:0;
+    const botX=baseX+(nx+sm)*w*0.5;
+    const topX=vpx+nx*vpx*0.02;
+    x0.beginPath();x0.moveTo(topX,vpy);x0.lineTo(botX,h);
+    x0.strokeStyle=rgba(pc(1),(Math.abs(nx)<0.15?0.5:0.18)*THEME.sceneIntensity*(1+beat*0.2));
+    x0.lineWidth=1;x0.shadowBlur=3;x0.shadowColor=pc(1);x0.stroke();
+  }
+  x0.shadowBlur=0;
+
+  // ── Obstacles — larger, more vibrant, solid walls + energy barriers ──
+  CG.obstacles.sort((a,b)=>a.z-b.z);
+  for(const obs of CG.obstacles){
+    obs.z+=effectiveSpeed*0.005;
+    if(obs.z>1.05){
+      obs.z=0.02+Math.random()*0.06;obs.lane=0.15+Math.random()*0.7;
+      obs.type=Math.floor(Math.random()*3);obs.ci=Math.floor(Math.random()*4);
+      obs.height=0.25+Math.random()*0.3;obs.width=0.14+Math.random()*0.1;obs.dodged=false;
+    }
+    // Trigger swerve at z=0.78-0.85 (closer near-miss)
+    if(!obs.dodged&&obs.z>0.78&&obs.z<0.86){
+      obs.dodged=true;
+      CG.swerveTarget=(obs.lane>0.5?-1:1)*(w*0.1+Math.random()*w*0.06);
+      // Spawn dodge sparks
+      for(let sp=0;sp<8;sp++){CG.sparks.push({x:baseX,y:h*0.85,vx:(Math.random()-0.5)*6,vy:-(2+Math.random()*4),life:1,ci:obs.ci});}
+    }
+
+    const z=Math.pow(obs.z,1.4),py=vpy+z*(h-vpy),scale=z;
+    // Obstacle center lerps from vpx (far) to baseX (near) — stays on its lane in world space
+    const obsCx=vpx+(baseX-vpx)*Math.pow(obs.z,1.2);
+    const ox=obsCx+(obs.lane-0.5)*2*vpx*scale;
+    const ow=obs.width*w*scale*1.3,oh=obs.height*h*scale*1.2,oy=py-oh;
+    const oA=Math.min(1,(0.35+scale*0.65)*(1+beat*0.4));
+
+    // ── Type 0: Solid glowing wall (Tron-style) ──
+    if(obs.type===0){
+      // Solid fill with strong color
+      const wallG=x0.createLinearGradient(ox-ow/2,oy,ox-ow/2,py);
+      wallG.addColorStop(0,rgba(pc(obs.ci),oA*0.6));wallG.addColorStop(0.5,rgba(pc(obs.ci),oA*0.35));wallG.addColorStop(1,rgba(pc(obs.ci),oA*0.15));
+      x0.fillStyle=wallG;x0.fillRect(ox-ow/2,oy,ow,oh);
+      // Bright edge lines
+      x0.strokeStyle=rgba(pc(obs.ci),oA*0.95);x0.lineWidth=2+scale*3;
+      x0.shadowBlur=15+scale*25+beat*12;x0.shadowColor=pc(obs.ci);
+      x0.strokeRect(ox-ow/2,oy,ow,oh);
+      // Horizontal scan lines across the wall
+      x0.lineWidth=1;x0.strokeStyle=rgba(pc(obs.ci),oA*0.3);
+      const scanCount=Math.floor(oh/8);
+      for(let sc2=0;sc2<scanCount;sc2++){const sy=oy+sc2*(oh/scanCount);x0.beginPath();x0.moveTo(ox-ow/2,sy);x0.lineTo(ox+ow/2,sy);x0.stroke();}
+      // Top edge glow
+      const topG=x0.createLinearGradient(ox,oy-ow*0.15,ox,oy+ow*0.1);
+      topG.addColorStop(0,'transparent');topG.addColorStop(0.5,rgba(pc(obs.ci),oA*0.5));topG.addColorStop(1,'transparent');
+      x0.fillStyle=topG;x0.fillRect(ox-ow/2,oy-ow*0.15,ow,ow*0.25);
+      x0.shadowBlur=0;
+    }
+    // ── Type 1: Energy barrier (horizontal beam between posts) ──
+    else if(obs.type===1){
+      const postW=ow*0.08,barrierY=py-oh*0.55;
+      // Posts
+      x0.fillStyle=rgba(pc(obs.ci),oA*0.5);
+      x0.shadowBlur=10+scale*15+beat*8;x0.shadowColor=pc(obs.ci);
+      x0.fillRect(ox-ow/2,py-oh*0.7,postW,oh*0.7);
+      x0.fillRect(ox+ow/2-postW,py-oh*0.7,postW,oh*0.7);
+      // Energy barrier beam — pulsing
+      const beamPulse=0.6+Math.sin(t*0.008+obs.lane*10)*0.3+beat*0.4;
+      const beamH=oh*0.18*(1+beat*0.3);
+      for(let bl=0;bl<3;bl++){
+        const bAlpha=oA*(0.7-bl*0.15)*beamPulse;
+        const bOff=bl*beamH*0.4;
+        x0.fillStyle=rgba(pc((obs.ci+bl)%4),bAlpha);
+        x0.shadowBlur=20+beat*15;x0.shadowColor=pc((obs.ci+bl)%4);
+        x0.fillRect(ox-ow/2+postW,barrierY+bOff,ow-postW*2,beamH);
+      }
+      // Bright edge lines on posts
+      x0.strokeStyle=rgba(pc(obs.ci),oA*0.8);x0.lineWidth=1.5+scale*2;
+      x0.strokeRect(ox-ow/2,py-oh*0.7,postW,oh*0.7);
+      x0.strokeRect(ox+ow/2-postW,py-oh*0.7,postW,oh*0.7);
+      x0.shadowBlur=0;
+    }
+    // ── Type 2: Monolith pillar (tall, pulsing glow core) ──
+    else{
+      const pillarW=ow*0.45,pillarH=oh*1.1;
+      // Outer glow aura
+      const auraG=x0.createRadialGradient(ox,py-pillarH*0.5,0,ox,py-pillarH*0.5,pillarW*1.5);
+      auraG.addColorStop(0,rgba(pc(obs.ci),oA*0.25+beat*0.15));auraG.addColorStop(1,'transparent');
+      x0.fillStyle=auraG;x0.fillRect(ox-pillarW*1.5,py-pillarH-pillarW,pillarW*3,pillarH+pillarW*2);
+      // Solid pillar
+      const pilG=x0.createLinearGradient(ox-pillarW/2,py-pillarH,ox+pillarW/2,py-pillarH);
+      pilG.addColorStop(0,rgba(pc(obs.ci),oA*0.15));pilG.addColorStop(0.3,rgba(pc(obs.ci),oA*0.5));
+      pilG.addColorStop(0.7,rgba(pc(obs.ci),oA*0.5));pilG.addColorStop(1,rgba(pc(obs.ci),oA*0.15));
+      x0.fillStyle=pilG;x0.fillRect(ox-pillarW/2,py-pillarH,pillarW,pillarH);
+      // Core glow strip
+      const coreW=pillarW*0.2,corePulse=0.5+Math.sin(t*0.01+obs.lane*7)*0.4+beat*0.5;
+      x0.fillStyle=rgba(pc((obs.ci+1)%4),oA*corePulse*0.9);
+      x0.shadowBlur=18+scale*20+beat*12;x0.shadowColor=pc((obs.ci+1)%4);
+      x0.fillRect(ox-coreW/2,py-pillarH*0.9,coreW,pillarH*0.8);
+      // Bright edges
+      x0.strokeStyle=rgba(pc(obs.ci),oA*0.85);x0.lineWidth=1.5+scale*2;
+      x0.strokeRect(ox-pillarW/2,py-pillarH,pillarW,pillarH);
+      x0.shadowBlur=0;
+    }
+  }
+
+  // ── Dodge sparks ──
+  for(let si=CG.sparks.length-1;si>=0;si--){
+    const sp=CG.sparks[si];
+    sp.x+=sp.vx;sp.y+=sp.vy;sp.vy+=0.15;sp.life-=0.03;
+    if(sp.life<=0){CG.sparks.splice(si,1);continue;}
+    x0.fillStyle=rgba(pc(sp.ci),sp.life*0.8);x0.shadowBlur=6;x0.shadowColor=pc(sp.ci);
+    x0.beginPath();x0.arc(sp.x,sp.y,2+sp.life*3,0,Math.PI*2);x0.fill();x0.shadowBlur=0;
+  }
+
+  // ── Centerpiece — fixed at VP (horizon center) ──
+  if(THEME.centerpiece){
+    cpRot+=0.012*(1+energy*0.2);cpPh+=0.013;
+    const gs=Math.min(w,h)*(0.18+beat*0.05)*(1+corruption*0.3);
+    const cpX=vpx+(CG.spiral?Math.sin(CG.spiralAngle)*w*0.12:0),cpY=vpy-h*0.14;
+    x0.globalAlpha=0.85+beat*0.15;x0.shadowBlur=20+beat*20;x0.shadowColor=pc(0);
+    drawCPMini(x0,THEME.centerpiece,cpX,cpY,gs,cpRot);x0.globalAlpha=1;x0.shadowBlur=0;
+  }
+
+  // ── Data streams ──
   x0.font='11px monospace';for(const ds of CG.dataStreams){ds.y=(ds.y+ds.speed*(1+energy*0.3+corruption*0.5))%h;ds.char=(ds.char+1)%96;x0.fillStyle=rgba(pc(ds.ci),0.4+corruption*0.3);x0.shadowBlur=4;x0.shadowColor=pc(ds.ci);x0.fillText(String.fromCharCode(0x30A0+ds.char),ds.x,ds.y);x0.shadowBlur=0;}
 }
 
