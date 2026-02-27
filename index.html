@@ -642,7 +642,7 @@ function drawCyberGrid(t){
     SD.cyberGrid={gridZ:0,glitching:false,glitchTimer:0,speedBoost:1,speedTimer:0,spiral:false,spiralTimer:0,spiralAngle:0,
       swerveOffset:0,swerveTarget:0,
       tronStreaks:Array.from({length:9},(_,i)=>({x:Math.random()*w,y:Math.random()*vpy,dirX:Math.random()<0.5?1:-1,dirY:0,speed:2+Math.random()*3,ci:i%4,alpha:0.5+Math.random()*0.4,width:4+Math.random()*5,trail:[],maxTrail:30+Math.floor(Math.random()*30),turnTimer:80+Math.floor(Math.random()*120)})),
-      obstacles:Array.from({length:4},(_,i)=>({lane:0.1+Math.random()*0.8,z:0.05+i*0.24,type:Math.floor(Math.random()*3),ci:i%4,height:0.25+Math.random()*0.3,width:0.14+Math.random()*0.1,dodged:false})),
+      obstacles:Array.from({length:3},(_,i)=>({lane:0.2+Math.random()*0.6,z:0.05+i*0.33,type:Math.floor(Math.random()*3),ci:i%4,height:0.25+Math.random()*0.3,width:0.14+Math.random()*0.1,dodged:false})),
     };
   }
   const CG=SD.cyberGrid;
@@ -653,22 +653,21 @@ function drawCyberGrid(t){
   const effectiveSpeed=CG.speedBoost*(1+energy*0.25)*progMult*THEME.sceneSpeed;
 
   // ── Swerve: YOU dodge left/right, VP stays fixed ──
-  // swerveOffset = how far YOU have moved from center
   const swerveEase=0.08+energy*0.14;
   CG.swerveOffset+=(CG.swerveTarget-CG.swerveOffset)*swerveEase;
-  if(Math.abs(CG.swerveTarget)>1)CG.swerveTarget*=0.93;
-  if(Math.abs(CG.swerveTarget)<2)CG.swerveTarget*=0.88;
+  // Slow decay so swerve holds long enough for obstacle to exit the side
+  if(Math.abs(CG.swerveTarget)>1)CG.swerveTarget*=0.965;
+  if(Math.abs(CG.swerveTarget)<3)CG.swerveTarget*=0.93;
   const swerve=CG.swerveOffset;
-  // baseX = your camera position at the bottom of the screen
   const baseX=vpx+swerve;
-  // Track half-width at the bottom
-  const trackHW=w*0.6;
+  // Very wide track so obstacles have room to slide off screen edges
+  const trackHW=w*0.9;
 
   // ── BG ──
   x0.fillStyle='rgba(0,2,12,1)';x0.fillRect(0,0,w,h);
   const skyG=x0.createLinearGradient(0,0,0,vpy);skyG.addColorStop(0,'rgba(0,0,20,1)');skyG.addColorStop(1,'rgba(0,10,40,0.8)');x0.fillStyle=skyG;x0.fillRect(0,0,w,vpy);
 
-  // ── Tron streaks — sky only (above horizon), thick, 90° turns ──
+  // ── Tron streaks — sky only (above horizon) ──
   for(const ts of CG.tronStreaks){
     ts.turnTimer--;if(ts.turnTimer<=0){if(ts.dirX!==0){ts.dirY=Math.random()<0.5?1:-1;ts.dirX=0;}else{ts.dirX=Math.random()<0.5?1:-1;ts.dirY=0;}ts.turnTimer=40+Math.floor(Math.random()*100);}
     const spd=ts.speed*(CG.speedBoost*0.5)*(1+beat*0.2);ts.x+=ts.dirX*spd;ts.y+=ts.dirY*spd;
@@ -685,14 +684,14 @@ function drawCyberGrid(t){
   if(CG.glitching){const gA=0.3+Math.random()*0.2;x0.fillStyle=rgba(pc(0),gA);for(let i=0;i<20;i++)x0.fillRect(0,Math.random()*h,w,Math.random()*35+2);for(let i=0;i<6;i++){x0.fillStyle=rgba(pc(i%4),0.08);x0.fillRect(Math.random()*w,0,Math.random()*80+10,h);}}
 
   // ── Grid — VP fixed at top-center, bottom shifts with your camera ──
-  const GRID=16,COLS=22;const spiralOff=CG.spiral?CG.spiralAngle:0;
-  CG.gridZ+=effectiveSpeed*0.007; // faster grid scroll
+  const GRID=16,COLS=24;const spiralOff=CG.spiral?CG.spiralAngle:0;
+  CG.gridZ+=effectiveSpeed*0.009;
 
-  // Helper: project a world-space X position at depth z to screen X
-  // At z=0 (horizon) everything converges to vpx; at z=1 (bottom) it spreads from baseX
+  // Helper: project world-space lane+depth to screen X
+  // At z=0 (horizon) everything converges to vpx; at z=1 (bottom) spreads from baseX
   function projX(worldLane,z){
     const zP=Math.pow(z,1.2);
-    const cx=vpx+(baseX-vpx)*zP; // center shifts from vpx to baseX with depth
+    const cx=vpx+(baseX-vpx)*zP;
     return cx+(worldLane-0.5)*2*trackHW*Math.pow(z,0.8);
   }
   function projY(z){return vpy+Math.pow(z,1.4)*(h-vpy);}
@@ -725,35 +724,38 @@ function drawCyberGrid(t){
   }
   x0.shadowBlur=0;
 
-  // ── Obstacles — positioned in WORLD SPACE, your camera swerves away from them ──
-  // Obstacles use projX with their fixed lane, so when swerve shifts baseX,
-  // the obstacle slides to the side on screen (you dodged it)
+  // ── Obstacles — world-space, you swerve so they exit off screen SIDES ──
   CG.obstacles.sort((a,b)=>a.z-b.z);
   for(const obs of CG.obstacles){
-    obs.z+=effectiveSpeed*0.007;
-    if(obs.z>1.15){
-      obs.z=0.02+Math.random()*0.06;obs.lane=0.15+Math.random()*0.7;
+    obs.z+=effectiveSpeed*0.009;
+
+    // Project screen position to check for side-exit
+    const ox=projX(obs.lane,obs.z);
+    const scale=Math.pow(obs.z,1.4);
+    const ow=obs.width*w*scale*1.3;
+    const offSide=(ox+ow<-20)||(ox-ow>w+20);
+
+    // Reset when obstacle exits off a SIDE (successful dodge) or z>1.3 fallback
+    if(offSide||obs.z>1.3){
+      obs.z=0.01+Math.random()*0.04;obs.lane=0.2+Math.random()*0.6;
       obs.type=Math.floor(Math.random()*3);obs.ci=Math.floor(Math.random()*4);
       obs.height=0.25+Math.random()*0.3;obs.width=0.14+Math.random()*0.1;obs.dodged=false;
-    }
-    // Trigger swerve — big dodge so obstacle flies off to one side
-    if(!obs.dodged&&obs.z>0.72&&obs.z<0.80){
-      obs.dodged=true;
-      // Swerve AWAY from the obstacle's lane — if it's on the right, dodge left (and vice versa)
-      CG.swerveTarget=(obs.lane>0.5?-1:1)*(w*0.35+Math.random()*w*0.15);
+      continue;
     }
 
-    const py=projY(obs.z);const scale=Math.pow(obs.z,1.4);
-    // Project obstacle in world space — this is the key fix:
-    // projX naturally shifts obstacles on screen as baseX (your camera) moves
-    const ox=projX(obs.lane,obs.z);
-    const ow=obs.width*w*scale*1.3,oh=obs.height*h*scale*1.2,oy=py-oh;
+    // Trigger swerve at z=0.55-0.62 — early enough for obstacle to grow big
+    // then slide off the left or right edge of screen
+    if(!obs.dodged&&obs.z>0.55&&obs.z<0.63){
+      obs.dodged=true;
+      // Massive swerve AWAY from obstacle lane
+      CG.swerveTarget=(obs.lane>0.5?-1:1)*(w*0.55+Math.random()*w*0.2);
+    }
+
+    const py=projY(obs.z);
+    const oh=obs.height*h*scale*1.2,oy=py-oh;
     const oA=Math.min(1,(0.35+scale*0.65)*(1+beat*0.4));
 
-    // Skip drawing if fully off-screen (already dodged past)
-    if(ox+ow<-w*0.1||ox-ow>w*1.1)continue;
-
-    // ── Type 0: Solid glowing wall (Tron-style) ──
+    // ── Type 0: Solid glowing wall ──
     if(obs.type===0){
       const wallG=x0.createLinearGradient(ox-ow/2,oy,ox-ow/2,py);
       wallG.addColorStop(0,rgba(pc(obs.ci),oA*0.6));wallG.addColorStop(0.5,rgba(pc(obs.ci),oA*0.35));wallG.addColorStop(1,rgba(pc(obs.ci),oA*0.15));
@@ -769,7 +771,7 @@ function drawCyberGrid(t){
       x0.fillStyle=topG;x0.fillRect(ox-ow/2,oy-ow*0.15,ow,ow*0.25);
       x0.shadowBlur=0;
     }
-    // ── Type 1: Energy barrier (horizontal beam between posts) ──
+    // ── Type 1: Energy barrier ──
     else if(obs.type===1){
       const postW=ow*0.08,barrierY=py-oh*0.55;
       x0.fillStyle=rgba(pc(obs.ci),oA*0.5);
@@ -790,7 +792,7 @@ function drawCyberGrid(t){
       x0.strokeRect(ox+ow/2-postW,py-oh*0.7,postW,oh*0.7);
       x0.shadowBlur=0;
     }
-    // ── Type 2: Monolith pillar (tall, pulsing glow core) ──
+    // ── Type 2: Monolith pillar ──
     else{
       const pillarW=ow*0.45,pillarH=oh*1.1;
       const auraG=x0.createRadialGradient(ox,py-pillarH*0.5,0,ox,py-pillarH*0.5,pillarW*1.5);
