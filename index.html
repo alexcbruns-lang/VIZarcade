@@ -636,13 +636,17 @@ function drawLavaWorld(t){
 // ═══ SCENE: cyberGrid ═══
 
 function drawCyberGrid(t){
-  const w=W(),h=H(),vpy=h*0.42,vpx=w/2;
-  const beat=SM.beatPulse,energy=SM.energy;
+  const w=W(),h=H(),beat=SM.beatPulse,energy=SM.energy;
+  // Horizon line — where the road vanishes
+  const horizon=h*0.38;
+  // Road height (horizon to bottom)
+  const roadH=h-horizon;
+
   if(!SD.cyberGrid){
     SD.cyberGrid={gridZ:0,glitching:false,glitchTimer:0,speedBoost:1,speedTimer:0,spiral:false,spiralTimer:0,spiralAngle:0,
-      swerveOffset:0,swerveTarget:0,
-      tronStreaks:Array.from({length:9},(_,i)=>({x:Math.random()*w,y:Math.random()*vpy,dirX:Math.random()<0.5?1:-1,dirY:0,speed:2+Math.random()*3,ci:i%4,alpha:0.5+Math.random()*0.4,width:4+Math.random()*5,trail:[],maxTrail:30+Math.floor(Math.random()*30),turnTimer:80+Math.floor(Math.random()*120)})),
-      obstacles:Array.from({length:2},(_,i)=>({lane:0.25+Math.random()*0.5,z:0.02+i*0.5,type:Math.floor(Math.random()*3),ci:i%4,height:0.35+Math.random()*0.3,width:0.18+Math.random()*0.12,dodged:false})),
+      worldX:0,worldXTarget:0,
+      tronStreaks:Array.from({length:9},(_,i)=>({x:Math.random()*w,y:Math.random()*horizon,dirX:Math.random()<0.5?1:-1,dirY:0,speed:2+Math.random()*3,ci:i%4,alpha:0.5+Math.random()*0.4,width:4+Math.random()*5,trail:[],maxTrail:30+Math.floor(Math.random()*30),turnTimer:80+Math.floor(Math.random()*120)})),
+      obstacles:Array.from({length:2},(_,i)=>({lane:0.3+Math.random()*0.4,z:i*0.5,type:Math.floor(Math.random()*3),ci:i%4,baseH:0.4+Math.random()*0.3,baseW:0.2+Math.random()*0.15,dodged:false})),
     };
   }
   const CG=SD.cyberGrid;
@@ -652,25 +656,44 @@ function drawCyberGrid(t){
   const corruption=songProg*0.3;
   const effectiveSpeed=CG.speedBoost*(1+energy*0.25)*progMult*THEME.sceneSpeed;
 
-  // ── Swerve: YOU dodge left/right ──
-  const swerveEase=0.07+energy*0.13;
-  CG.swerveOffset+=(CG.swerveTarget-CG.swerveOffset)*swerveEase;
-  // Hold the swerve — slow decay so obstacle has time to slide off screen
-  CG.swerveTarget*=0.975;
-  const swerve=CG.swerveOffset;
-  // baseX = your camera position at the bottom; grid follows this
-  const baseX=vpx+swerve;
-  const trackHW=w*0.8;
+  // ── World X offset: the whole world shifts when you steer ──
+  // Adaptive easing: smooth at low energy, snappy at high
+  const steerEase=0.06+energy*0.10;
+  CG.worldX+=(CG.worldXTarget-CG.worldX)*steerEase;
+  // Slow decay back to center after dodge
+  CG.worldXTarget*=0.98;
+
+  // ── Perspective projection helpers ──
+  // z goes 0 (at you, bottom of screen) to 1 (horizon)
+  // We use a more linear mapping so speed feels consistent top to bottom
+  function zToScreenY(z){
+    // Mix of linear and power curve — stays fast near the bottom
+    const curved=1-Math.pow(1-z,1.6);
+    return horizon+curved*roadH;
+  }
+  function zToSpread(z){
+    // How wide the road is at this depth — narrower near horizon
+    return (1-z*0.92)*w*0.7;
+  }
+  function worldToScreenX(lane,z){
+    // lane 0=left edge, 0.5=center, 1=right edge
+    // worldX shifts the ENTIRE scene left/right
+    const center=w/2+CG.worldX*(1-z*0.8); // shift diminishes toward horizon
+    const spread=zToSpread(z);
+    return center+(lane-0.5)*spread*2;
+  }
 
   // ── BG ──
   x0.fillStyle='rgba(0,2,12,1)';x0.fillRect(0,0,w,h);
-  const skyG=x0.createLinearGradient(0,0,0,vpy);skyG.addColorStop(0,'rgba(0,0,20,1)');skyG.addColorStop(1,'rgba(0,10,40,0.8)');x0.fillStyle=skyG;x0.fillRect(0,0,w,vpy);
+  const skyG=x0.createLinearGradient(0,0,0,horizon);
+  skyG.addColorStop(0,'rgba(0,0,20,1)');skyG.addColorStop(1,'rgba(0,10,40,0.8)');
+  x0.fillStyle=skyG;x0.fillRect(0,0,w,horizon);
 
-  // ── Tron streaks — sky only (above horizon) ──
+  // ── Tron streaks — sky only ──
   for(const ts of CG.tronStreaks){
     ts.turnTimer--;if(ts.turnTimer<=0){if(ts.dirX!==0){ts.dirY=Math.random()<0.5?1:-1;ts.dirX=0;}else{ts.dirX=Math.random()<0.5?1:-1;ts.dirY=0;}ts.turnTimer=40+Math.floor(Math.random()*100);}
     const spd=ts.speed*(CG.speedBoost*0.5)*(1+beat*0.2);ts.x+=ts.dirX*spd;ts.y+=ts.dirY*spd;
-    if(ts.x<-20)ts.x=w+20;if(ts.x>w+20)ts.x=-20;if(ts.y<-20)ts.y=vpy;if(ts.y>vpy)ts.y=-20;
+    if(ts.x<-20)ts.x=w+20;if(ts.x>w+20)ts.x=-20;if(ts.y<-20)ts.y=horizon;if(ts.y>horizon)ts.y=-20;
     ts.trail.push({x:ts.x,y:ts.y});if(ts.trail.length>ts.maxTrail)ts.trail.shift();if(ts.trail.length<2)continue;
     x0.shadowBlur=12+beat*8;x0.shadowColor=pc(ts.ci);x0.strokeStyle=rgba(pc(ts.ci),(ts.alpha+beat*0.25)*(CG.glitching?1.5:1));
     x0.lineWidth=ts.width*(1+beat*0.4);x0.lineCap='square';x0.lineJoin='miter';
@@ -679,143 +702,144 @@ function drawCyberGrid(t){
   }
   x0.lineCap='butt';x0.lineJoin='miter';x0.shadowBlur=0;
 
-  // ── Glitch surprise overlay ──
+  // ── Glitch surprise ──
   if(CG.glitching){const gA=0.3+Math.random()*0.2;x0.fillStyle=rgba(pc(0),gA);for(let i=0;i<20;i++)x0.fillRect(0,Math.random()*h,w,Math.random()*35+2);for(let i=0;i<6;i++){x0.fillStyle=rgba(pc(i%4),0.08);x0.fillRect(Math.random()*w,0,Math.random()*80+10,h);}}
 
-  // ── Grid — VP fixed at top-center, bottom follows your camera (baseX) ──
-  const GRID=16,COLS=24;const spiralOff=CG.spiral?CG.spiralAngle:0;
-  CG.gridZ+=effectiveSpeed*0.012; // fast grid
+  // ── Grid — moves with world, consistent speed ──
+  const ROWS=18,COLS=20;
+  const spiralOff=CG.spiral?CG.spiralAngle:0;
+  CG.gridZ=(CG.gridZ+effectiveSpeed*0.012)%1; // grid scroll phase
 
-  function projY(z){return vpy+Math.pow(z,1.4)*(h-vpy);}
-
-  // Horizontal grid lines — shift with camera
-  for(let row=0;row<GRID;row++){
-    const z=((row/GRID+CG.gridZ)%1);
-    const py=projY(z);const wf=Math.pow(z,0.8);
-    const rowCx=vpx+(baseX-vpx)*Math.pow(z,1.2);
-    const spiralW=1+spiralOff*z*0.3;
-    const halfW=wf*trackHW*spiralW;
-    x0.strokeStyle=rgba(pc(Math.floor(row/3+corruption*8)%4),(0.06+z*0.55)*THEME.sceneIntensity*(1+beat*0.4));
-    x0.lineWidth=1.5+z*3;x0.shadowBlur=z>0.65?12+corruption*20+beat*8:0;x0.shadowColor=pc(Math.floor(row/3)%4);
-    x0.beginPath();x0.moveTo(rowCx-halfW,py);x0.lineTo(rowCx+halfW,py);x0.stroke();
+  // Horizontal rows — rushing toward you
+  for(let r=0;r<ROWS;r++){
+    const rawZ=1-(r/ROWS+CG.gridZ)%1; // z=0 near you, z=1 at horizon
+    const sy=zToScreenY(rawZ);
+    if(sy<horizon-2||sy>h+2)continue;
+    const spread=zToSpread(rawZ);
+    const cx=w/2+CG.worldX*(1-rawZ*0.8);
+    const alpha=(0.08+(1-rawZ)*0.5)*THEME.sceneIntensity*(1+beat*0.4);
+    const ci=Math.floor(r/3+corruption*8)%4;
+    x0.strokeStyle=rgba(pc(ci),alpha);
+    x0.lineWidth=1+(1-rawZ)*3.5;
+    x0.shadowBlur=(1-rawZ)>0.5?10+corruption*15+beat*8:0;x0.shadowColor=pc(ci);
+    x0.beginPath();x0.moveTo(cx-spread,sy);x0.lineTo(cx+spread,sy);x0.stroke();
   }
   x0.shadowBlur=0;
 
-  // Vertical grid lines — shift with camera
-  for(let col=0;col<=COLS;col++){
-    const nx=(col/COLS-0.5)*2;
-    const sm=CG.spiral?Math.sin(CG.spiralAngle+col*0.3)*0.15:0;
-    x0.beginPath();x0.moveTo(vpx+nx*vpx*0.02,vpy);x0.lineTo(baseX+(nx+sm)*trackHW,h);
-    x0.strokeStyle=rgba(pc(1),(Math.abs(nx)<0.15?0.5:0.18)*THEME.sceneIntensity*(1+beat*0.2));
+  // Vertical columns — converge to horizon
+  for(let c=0;c<=COLS;c++){
+    const lane=c/COLS;
+    const sm=CG.spiral?Math.sin(CG.spiralAngle+c*0.3)*0.04:0;
+    const topX=worldToScreenX(lane+sm,0.99); // near horizon
+    const botX=worldToScreenX(lane+sm,0.0);  // near you
+    x0.beginPath();x0.moveTo(topX,horizon);x0.lineTo(botX,h);
+    const nx=Math.abs(lane-0.5)*2;
+    x0.strokeStyle=rgba(pc(1),(nx<0.1?0.5:0.2)*THEME.sceneIntensity*(1+beat*0.2));
     x0.lineWidth=1;x0.shadowBlur=3;x0.shadowColor=pc(1);x0.stroke();
   }
   x0.shadowBlur=0;
 
-  // ── Obstacles — FIXED in world space (project from vpx, NOT baseX) ──
-  // The key insight: obstacles project from the FIXED vanishing point (vpx),
-  // while the grid projects from your camera (baseX). When you swerve,
-  // the grid moves under you but obstacles stay put in world space,
-  // so they appear to slide sideways relative to you — off the screen edge.
-  CG.obstacles.sort((a,b)=>a.z-b.z);
+  // ── Obstacles — planted ON the grid, move with it ──
+  // They share the same z-scroll as grid lines, same worldX shift
   for(const obs of CG.obstacles){
-    obs.z+=effectiveSpeed*0.012;
+    obs.z-=effectiveSpeed*0.012; // rushing toward you (z decreases)
 
-    // Project obstacle from FIXED vpx (world space, not camera space)
-    const z=obs.z;const scale=Math.pow(z,1.4);
-    const py=projY(z);
-    // Obstacle screen X = fixed VP center + lane offset, then SUBTRACT swerve
-    // Subtracting swerve is what makes them slide sideways when you dodge
-    const fixedCx=vpx+(obs.lane-0.5)*2*trackHW*Math.pow(z,0.8);
-    const ox=fixedCx-swerve*Math.pow(z,1.2);
-    const ow=obs.width*w*scale*1.8; // bigger obstacles
-    const oh=obs.height*h*scale*1.6; // taller obstacles
-    const oy=py-oh;
-
-    // Side-exit check: obstacle has slid off left or right edge
-    const offSide=(ox+ow/2<-50)||(ox-ow/2>w+50);
-
-    // Reset when exited off a side OR past z=1.2 fallback
-    if(offSide||obs.z>1.2){
-      obs.z=0.01+Math.random()*0.03;obs.lane=0.3+Math.random()*0.4;
+    // Respawn at horizon when they reach you (or pass off-screen to side)
+    if(obs.z<-0.15){
+      obs.z=0.95+Math.random()*0.05;
+      obs.lane=0.25+Math.random()*0.5;
       obs.type=Math.floor(Math.random()*3);obs.ci=Math.floor(Math.random()*4);
-      obs.height=0.35+Math.random()*0.3;obs.width=0.18+Math.random()*0.12;obs.dodged=false;
+      obs.baseH=0.4+Math.random()*0.3;obs.baseW=0.2+Math.random()*0.15;
+      obs.dodged=false;
       continue;
     }
 
-    // Trigger swerve at z=0.45-0.52 — obstacle is mid-size, gives time to slide off
-    if(!obs.dodged&&obs.z>0.45&&obs.z<0.53){
+    // Trigger steer when obstacle is getting close
+    if(!obs.dodged&&obs.z<0.4&&obs.z>0.3){
       obs.dodged=true;
-      CG.swerveTarget=(obs.lane>0.5?-1:1)*(w*0.6+Math.random()*w*0.3);
+      // Steer AWAY — if obstacle is right of center, steer left (shift world right)
+      // Magnitude is huge so object ends up way off to one side
+      const dir=(obs.lane>0.5)?1:-1; // positive = shift world right = you go left
+      CG.worldXTarget=dir*(w*0.5+Math.random()*w*0.25);
     }
 
-    const oA=Math.min(1,(0.35+scale*0.65)*(1+beat*0.4));
+    // Project obstacle onto screen using same coordinate system as grid
+    const screenY=zToScreenY(obs.z);
+    const screenX=worldToScreenX(obs.lane,obs.z);
+    const depthScale=(1-obs.z); // bigger when closer (z=0)
+    const ow=obs.baseW*w*depthScale*1.2;
+    const oh=obs.baseH*h*depthScale*1.0;
+    const oy=screenY-oh; // sits on the ground
+
+    // Skip if off-screen (successfully dodged past the side!)
+    if(screenX+ow/2<-30||screenX-ow/2>w+30)continue;
+    // Skip if above horizon (hasn't appeared yet)
+    if(screenY<horizon)continue;
+
+    const oA=Math.min(1,(0.3+depthScale*0.7)*(1+beat*0.4));
 
     // ── Type 0: Solid glowing wall ──
     if(obs.type===0){
-      const wallG=x0.createLinearGradient(ox-ow/2,oy,ox-ow/2,py);
-      wallG.addColorStop(0,rgba(pc(obs.ci),oA*0.6));wallG.addColorStop(0.5,rgba(pc(obs.ci),oA*0.35));wallG.addColorStop(1,rgba(pc(obs.ci),oA*0.15));
-      x0.fillStyle=wallG;x0.fillRect(ox-ow/2,oy,ow,oh);
-      x0.strokeStyle=rgba(pc(obs.ci),oA*0.95);x0.lineWidth=2+scale*4;
-      x0.shadowBlur=18+scale*30+beat*15;x0.shadowColor=pc(obs.ci);
-      x0.strokeRect(ox-ow/2,oy,ow,oh);
+      const wallG=x0.createLinearGradient(screenX-ow/2,oy,screenX-ow/2,screenY);
+      wallG.addColorStop(0,rgba(pc(obs.ci),oA*0.65));wallG.addColorStop(0.5,rgba(pc(obs.ci),oA*0.4));wallG.addColorStop(1,rgba(pc(obs.ci),oA*0.15));
+      x0.fillStyle=wallG;x0.fillRect(screenX-ow/2,oy,ow,oh);
+      x0.strokeStyle=rgba(pc(obs.ci),oA*0.95);x0.lineWidth=2+depthScale*4;
+      x0.shadowBlur=18+depthScale*30+beat*15;x0.shadowColor=pc(obs.ci);
+      x0.strokeRect(screenX-ow/2,oy,ow,oh);
       x0.lineWidth=1;x0.strokeStyle=rgba(pc(obs.ci),oA*0.3);
-      const scanCount=Math.max(1,Math.floor(oh/10));
-      for(let sc2=0;sc2<scanCount;sc2++){const sy=oy+sc2*(oh/scanCount);x0.beginPath();x0.moveTo(ox-ow/2,sy);x0.lineTo(ox+ow/2,sy);x0.stroke();}
-      const topG=x0.createLinearGradient(ox,oy-ow*0.15,ox,oy+ow*0.1);
-      topG.addColorStop(0,'transparent');topG.addColorStop(0.5,rgba(pc(obs.ci),oA*0.5));topG.addColorStop(1,'transparent');
-      x0.fillStyle=topG;x0.fillRect(ox-ow/2,oy-ow*0.15,ow,ow*0.25);
+      const scanN=Math.max(1,Math.floor(oh/10));
+      for(let s2=0;s2<scanN;s2++){const sy2=oy+s2*(oh/scanN);x0.beginPath();x0.moveTo(screenX-ow/2,sy2);x0.lineTo(screenX+ow/2,sy2);x0.stroke();}
       x0.shadowBlur=0;
     }
     // ── Type 1: Energy barrier ──
     else if(obs.type===1){
-      const postW=ow*0.08,barrierY=py-oh*0.55;
+      const postW=ow*0.08;
       x0.fillStyle=rgba(pc(obs.ci),oA*0.5);
-      x0.shadowBlur=12+scale*18+beat*10;x0.shadowColor=pc(obs.ci);
-      x0.fillRect(ox-ow/2,py-oh*0.7,postW,oh*0.7);
-      x0.fillRect(ox+ow/2-postW,py-oh*0.7,postW,oh*0.7);
+      x0.shadowBlur=12+depthScale*18+beat*10;x0.shadowColor=pc(obs.ci);
+      x0.fillRect(screenX-ow/2,screenY-oh*0.75,postW,oh*0.75);
+      x0.fillRect(screenX+ow/2-postW,screenY-oh*0.75,postW,oh*0.75);
       const beamPulse=0.6+Math.sin(t*0.008+obs.lane*10)*0.3+beat*0.4;
       const beamH=oh*0.18*(1+beat*0.3);
       for(let bl=0;bl<3;bl++){
-        const bAlpha=oA*(0.7-bl*0.15)*beamPulse;
-        x0.fillStyle=rgba(pc((obs.ci+bl)%4),bAlpha);
+        x0.fillStyle=rgba(pc((obs.ci+bl)%4),oA*(0.7-bl*0.15)*beamPulse);
         x0.shadowBlur=22+beat*18;x0.shadowColor=pc((obs.ci+bl)%4);
-        x0.fillRect(ox-ow/2+postW,barrierY+bl*beamH*0.4,ow-postW*2,beamH);
+        x0.fillRect(screenX-ow/2+postW,screenY-oh*0.6+bl*beamH*0.4,ow-postW*2,beamH);
       }
-      x0.strokeStyle=rgba(pc(obs.ci),oA*0.8);x0.lineWidth=1.5+scale*2;
-      x0.strokeRect(ox-ow/2,py-oh*0.7,postW,oh*0.7);
-      x0.strokeRect(ox+ow/2-postW,py-oh*0.7,postW,oh*0.7);
+      x0.strokeStyle=rgba(pc(obs.ci),oA*0.8);x0.lineWidth=1.5+depthScale*2;
+      x0.strokeRect(screenX-ow/2,screenY-oh*0.75,postW,oh*0.75);
+      x0.strokeRect(screenX+ow/2-postW,screenY-oh*0.75,postW,oh*0.75);
       x0.shadowBlur=0;
     }
     // ── Type 2: Monolith pillar ──
     else{
-      const pillarW=ow*0.5,pillarH=oh*1.2;
-      const auraG=x0.createRadialGradient(ox,py-pillarH*0.5,0,ox,py-pillarH*0.5,pillarW*1.8);
+      const pw=ow*0.5,ph=oh*1.2;
+      const auraG=x0.createRadialGradient(screenX,screenY-ph*0.5,0,screenX,screenY-ph*0.5,pw*1.8);
       auraG.addColorStop(0,rgba(pc(obs.ci),oA*0.3+beat*0.15));auraG.addColorStop(1,'transparent');
-      x0.fillStyle=auraG;x0.fillRect(ox-pillarW*1.8,py-pillarH-pillarW,pillarW*3.6,pillarH+pillarW*2);
-      const pilG=x0.createLinearGradient(ox-pillarW/2,py-pillarH,ox+pillarW/2,py-pillarH);
+      x0.fillStyle=auraG;x0.fillRect(screenX-pw*1.8,screenY-ph-pw,pw*3.6,ph+pw*2);
+      const pilG=x0.createLinearGradient(screenX-pw/2,screenY-ph,screenX+pw/2,screenY-ph);
       pilG.addColorStop(0,rgba(pc(obs.ci),oA*0.15));pilG.addColorStop(0.3,rgba(pc(obs.ci),oA*0.55));
       pilG.addColorStop(0.7,rgba(pc(obs.ci),oA*0.55));pilG.addColorStop(1,rgba(pc(obs.ci),oA*0.15));
-      x0.fillStyle=pilG;x0.fillRect(ox-pillarW/2,py-pillarH,pillarW,pillarH);
-      const coreW=pillarW*0.2,corePulse=0.5+Math.sin(t*0.01+obs.lane*7)*0.4+beat*0.5;
+      x0.fillStyle=pilG;x0.fillRect(screenX-pw/2,screenY-ph,pw,ph);
+      const coreW2=pw*0.2,corePulse=0.5+Math.sin(t*0.01+obs.lane*7)*0.4+beat*0.5;
       x0.fillStyle=rgba(pc((obs.ci+1)%4),oA*corePulse*0.9);
-      x0.shadowBlur=20+scale*25+beat*15;x0.shadowColor=pc((obs.ci+1)%4);
-      x0.fillRect(ox-coreW/2,py-pillarH*0.9,coreW,pillarH*0.8);
-      x0.strokeStyle=rgba(pc(obs.ci),oA*0.85);x0.lineWidth=1.5+scale*2;
-      x0.strokeRect(ox-pillarW/2,py-pillarH,pillarW,pillarH);
+      x0.shadowBlur=20+depthScale*25+beat*15;x0.shadowColor=pc((obs.ci+1)%4);
+      x0.fillRect(screenX-coreW2/2,screenY-ph*0.9,coreW2,ph*0.8);
+      x0.strokeStyle=rgba(pc(obs.ci),oA*0.85);x0.lineWidth=1.5+depthScale*2;
+      x0.strokeRect(screenX-pw/2,screenY-ph,pw,ph);
       x0.shadowBlur=0;
     }
   }
 
-  // ── Centerpiece — higher up and smaller (feels far away, driving toward it) ──
+  // ── Centerpiece — small and high up on the horizon ──
   if(THEME.centerpiece){
     cpRot+=0.012*(1+energy*0.2);cpPh+=0.013;
-    const gs=Math.min(w,h)*(0.1+beat*0.03)*(1+corruption*0.2);
-    const cpX=vpx+(CG.spiral?Math.sin(CG.spiralAngle)*w*0.08:0),cpY=vpy-h*0.22;
-    x0.globalAlpha=0.8+beat*0.15;x0.shadowBlur=15+beat*15;x0.shadowColor=pc(0);
+    const gs=Math.min(w,h)*(0.09+beat*0.02)*(1+corruption*0.15);
+    const cpX=w/2+CG.worldX*0.15+(CG.spiral?Math.sin(CG.spiralAngle)*w*0.06:0);
+    const cpY=horizon-h*0.12;
+    x0.globalAlpha=0.75+beat*0.15;x0.shadowBlur=12+beat*12;x0.shadowColor=pc(0);
     drawCPMini(x0,THEME.centerpiece,cpX,cpY,gs,cpRot);x0.globalAlpha=1;x0.shadowBlur=0;
   }
 }
-
 
 // ═══ SCENE: deepSea ═══
 
