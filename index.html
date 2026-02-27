@@ -645,20 +645,21 @@ function drawCyberGrid(t){
       glitching:false,glitchTimer:0,
       speedBoost:1,speedTimer:0,
       spiral:false,spiralTimer:0,spiralAngle:0,
-      steerX:0,steerTarget:0,
-      // Center obstacles — these get dodged
+      // Camera lane: 0.5 = centered. Shifts when you steer.
+      camLane:0.5, camTarget:0.5,
+      // Center obstacles (dodged)
       obstacles:[
-        {lane:(Math.random()<0.5?0.3:0.6)+Math.random()*0.1, z:-0.05, type:Math.floor(Math.random()*3), ci:0, dodged:false},
-        {lane:(Math.random()<0.5?0.3:0.6)+Math.random()*0.1, z:0.45, type:Math.floor(Math.random()*3), ci:2, dodged:false}
+        {lane:0.35, z:-0.1, type:Math.floor(Math.random()*3), ci:0, dodged:false},
+        {lane:0.65, z:0.4,  type:Math.floor(Math.random()*3), ci:2, dodged:false}
       ],
-      // Scenery obstacles — edges, never dodged, just atmosphere
+      // Scenery (edges, never dodged)
       scenery:Array.from({length:6},(_,i)=>({
-        lane: i<3 ? 0.02+Math.random()*0.08 : 0.90+Math.random()*0.08,
-        z: Math.random()*0.9,
+        lane: i<3 ? -0.15+Math.random()*0.12 : 1.03+Math.random()*0.12,
+        z: i*0.17,
         type: Math.floor(Math.random()*3),
         ci: Math.floor(Math.random()*4)
       })),
-      tronStreaks:Array.from({length:9},(_,i)=>({x:Math.random()*w,y:Math.random()*horizon,dirX:Math.random()<0.5?1:-1,dirY:0,speed:2+Math.random()*3,ci:i%4,alpha:0.5+Math.random()*0.4,width:4+Math.random()*5,trail:[],maxTrail:30+Math.floor(Math.random()*30),turnTimer:80+Math.floor(Math.random()*120)})),
+      tronStreaks:Array.from({length:9},(_,i)=>({x:Math.random()*w,y:Math.random()*(h*0.38),dirX:Math.random()<0.5?1:-1,dirY:0,speed:2+Math.random()*3,ci:i%4,alpha:0.5+Math.random()*0.4,width:4+Math.random()*5,trail:[],maxTrail:30+Math.floor(Math.random()*30),turnTimer:80+Math.floor(Math.random()*120)})),
     };
   }
   const CG=SD.cyberGrid;
@@ -666,32 +667,45 @@ function drawCyberGrid(t){
   if(CG.speedTimer>0){CG.speedTimer-=16;if(CG.speedTimer<=0)CG.speedBoost=1;}
   if(CG.spiralTimer>0){CG.spiralTimer-=16;CG.spiralAngle+=0.04+energy*0.02;if(CG.spiralTimer<=0)CG.spiral=false;}
   const corruption=songProg*0.3;
-  const speed=CG.speedBoost*(1+energy*0.25)*progMult*THEME.sceneSpeed;
+  const spd=CG.speedBoost*(1+energy*0.3)*progMult*THEME.sceneSpeed;
 
-  // ── Steering — gentle lane change ──
-  const steerEase=0.05+energy*0.08;
-  CG.steerX+=(CG.steerTarget-CG.steerX)*steerEase;
-  CG.steerTarget*=0.97;
+  // ── Camera steering — smooth, gentle ──
+  CG.camLane += (CG.camTarget - CG.camLane) * (0.04 + energy*0.06);
+  // Slowly drift back toward center
+  CG.camTarget += (0.5 - CG.camTarget) * 0.008;
 
-  // ════════════════════════════════════════════════════════
-  // PERSPECTIVE — d=0 horizon, d=1 nearest to you
-  // ════════════════════════════════════════════════════════
-  function dToY(d){ return horizon + Math.pow(d, 0.7) * (h - horizon); }
-  function laneToX(lane, d){
-    var cx = w/2 + CG.steerX * d;
-    return cx + (lane - 0.5) * w * 1.0;
+  // ════════════════════════════════════════
+  // SIMPLE PERSPECTIVE
+  //
+  // Everything is in "lane" space: 0=left edge, 0.5=center, 1=right edge
+  //
+  // Camera is at camLane. To project a world lane to screen X:
+  //   screenX = w/2 + (worldLane - camLane) * screenWidth_at_depth
+  //
+  // d = depth: 0=horizon, 1=bottom of screen
+  // screenWidth grows with d (wider near you)
+  // ════════════════════════════════════════
+  function dToY(d){ return horizon + Math.pow(Math.max(0,d), 0.65) * (h - horizon); }
+
+  // screenWidth at depth d — how many pixels per "lane unit"
+  // At d=1 (near you), 1 lane unit = full screen width
+  // At d=0 (horizon), it's narrow
+  function dToScale(d){ return (0.1 + d * 0.9) * w; }
+
+  function toScreenX(worldLane, d){
+    return w/2 + (worldLane - CG.camLane) * dToScale(d);
   }
 
   // ── Background ──
-  x0.fillStyle='rgba(0,2,12,1)';x0.fillRect(0,0,w,h);
+  x0.fillStyle='rgba(0,2,12,1)'; x0.fillRect(0,0,w,h);
   var skyG=x0.createLinearGradient(0,0,0,horizon);
-  skyG.addColorStop(0,'rgba(0,0,20,1)');skyG.addColorStop(1,'rgba(0,10,40,0.8)');
-  x0.fillStyle=skyG;x0.fillRect(0,0,w,horizon);
+  skyG.addColorStop(0,'rgba(0,0,20,1)'); skyG.addColorStop(1,'rgba(0,10,40,0.8)');
+  x0.fillStyle=skyG; x0.fillRect(0,0,w,horizon);
 
-  // ── Tron streaks (sky only) ──
+  // ── Tron streaks (sky) ──
   for(var ts of CG.tronStreaks){
     ts.turnTimer--;if(ts.turnTimer<=0){if(ts.dirX!==0){ts.dirY=Math.random()<0.5?1:-1;ts.dirX=0;}else{ts.dirX=Math.random()<0.5?1:-1;ts.dirY=0;}ts.turnTimer=40+Math.floor(Math.random()*100);}
-    var spd2=ts.speed*(CG.speedBoost*0.5)*(1+beat*0.2);ts.x+=ts.dirX*spd2;ts.y+=ts.dirY*spd2;
+    var sp2=ts.speed*(CG.speedBoost*0.5)*(1+beat*0.2);ts.x+=ts.dirX*sp2;ts.y+=ts.dirY*sp2;
     if(ts.x<-20)ts.x=w+20;if(ts.x>w+20)ts.x=-20;if(ts.y<-20)ts.y=horizon;if(ts.y>horizon)ts.y=-20;
     ts.trail.push({x:ts.x,y:ts.y});if(ts.trail.length>ts.maxTrail)ts.trail.shift();if(ts.trail.length<2)continue;
     x0.shadowBlur=12+beat*8;x0.shadowColor=pc(ts.ci);x0.strokeStyle=rgba(pc(ts.ci),(ts.alpha+beat*0.25)*(CG.glitching?1.5:1));
@@ -704,13 +718,13 @@ function drawCyberGrid(t){
   // ── Glitch surprise ──
   if(CG.glitching){var gA2=0.3+Math.random()*0.2;x0.fillStyle=rgba(pc(0),gA2);for(var gi=0;gi<20;gi++)x0.fillRect(0,Math.random()*h,w,Math.random()*35+2);for(var gi2=0;gi2<6;gi2++){x0.fillStyle=rgba(pc(gi2%4),0.08);x0.fillRect(Math.random()*w,0,Math.random()*80+10,h);}}
 
-  // ════════════════════════════════════════════════════════
-  // GRID — fewer lines = larger cells, full screen width
-  // ════════════════════════════════════════════════════════
+  // ════════════════════════════════════════
+  // GRID — large cells, full width, fast
+  // ════════════════════════════════════════
   var ROWS=10, COLS=14;
-  CG.gridPhase = (CG.gridPhase + speed * 0.014) % 1;
+  CG.gridPhase = (CG.gridPhase + spd * 0.018) % 1;
 
-  // Horizontal lines — full screen edge to edge
+  // Horizontal lines — full screen width edge to edge
   for(var r=0; r<ROWS; r++){
     var d = ((r / ROWS) + CG.gridPhase) % 1;
     var sy = dToY(d);
@@ -719,141 +733,149 @@ function drawCyberGrid(t){
     var ci2 = Math.floor(r/2 + corruption*8) % 4;
     x0.strokeStyle = rgba(pc(ci2), alpha2);
     x0.lineWidth = 1.5 + d * 4;
-    x0.shadowBlur = 6 + d * 18 + corruption*12 + beat*10;
+    x0.shadowBlur = 6 + d*18 + corruption*12 + beat*10;
     x0.shadowColor = pc(ci2);
     x0.beginPath(); x0.moveTo(0, sy); x0.lineTo(w, sy); x0.stroke();
   }
   x0.shadowBlur=0;
 
-  // Vertical lines — full width, subtle convergence at horizon
-  for(var c=0; c<=COLS; c++){
-    var lane = c / COLS;
-    var sm2 = CG.spiral ? Math.sin(CG.spiralAngle + c*0.3) * 0.04 : 0;
-    var topX2 = laneToX(lane + sm2, 0.0);
-    var botX2 = laneToX(lane + sm2, 1.0);
-    x0.beginPath(); x0.moveTo(topX2, horizon); x0.lineTo(botX2, h);
-    var nx2 = Math.abs(lane - 0.5) * 2;
+  // Vertical lines — camera-relative so they shift when you steer
+  for(var c=-2; c<=COLS+2; c++){
+    var worldLane = c / COLS;
+    var sm2 = CG.spiral ? Math.sin(CG.spiralAngle + c*0.3) * 0.03 : 0;
+    var topX = toScreenX(worldLane + sm2, 0.0);
+    var botX = toScreenX(worldLane + sm2, 1.0);
+    // Skip if fully off screen
+    if(topX < -50 && botX < -50) continue;
+    if(topX > w+50 && botX > w+50) continue;
+    x0.beginPath(); x0.moveTo(topX, horizon); x0.lineTo(botX, h);
+    var nx2 = Math.abs(worldLane - 0.5) * 2;
     x0.strokeStyle = rgba(pc(1), (nx2 < 0.15 ? 0.6 : 0.3) * THEME.sceneIntensity * (1+beat*0.3));
-    x0.lineWidth = 1; x0.shadowBlur = 5 + beat*4; x0.shadowColor = pc(1); x0.stroke();
+    x0.lineWidth = 1; x0.shadowBlur = 5+beat*4; x0.shadowColor = pc(1); x0.stroke();
   }
   x0.shadowBlur=0;
 
-  // ════════════════════════════════════════════════════════
-  // OBSTACLE DRAWING HELPER — reused for center + scenery
-  // ════════════════════════════════════════════════════════
-  function drawObs(sx, sy2, sz, ow, oh, obsType, obsCi){
-    var oA2 = Math.min(1, (0.3 + sz * 0.7) * (1 + beat * 0.4));
-    var oy2 = sy2 - oh;
-    if(obsType===0){
-      var wG=x0.createLinearGradient(sx-ow/2,oy2,sx-ow/2,sy2);
-      wG.addColorStop(0,rgba(pc(obsCi),oA2*0.65));wG.addColorStop(0.5,rgba(pc(obsCi),oA2*0.4));wG.addColorStop(1,rgba(pc(obsCi),oA2*0.15));
-      x0.fillStyle=wG;x0.fillRect(sx-ow/2,oy2,ow,oh);
-      x0.strokeStyle=rgba(pc(obsCi),oA2*0.95);x0.lineWidth=2+sz*4;
-      x0.shadowBlur=18+sz*30+beat*15;x0.shadowColor=pc(obsCi);
-      x0.strokeRect(sx-ow/2,oy2,ow,oh);
-      x0.lineWidth=1;x0.strokeStyle=rgba(pc(obsCi),oA2*0.3);
+  // ════════════════════════════════════════
+  // OBSTACLE DRAWING HELPER
+  // ════════════════════════════════════════
+  function drawObs(sx, sy2, sz, ow, oh, oType, oCi){
+    var oA = Math.min(1, (0.3 + sz*0.7) * (1+beat*0.4));
+    var oy = sy2 - oh;
+    if(oType===0){
+      var wG=x0.createLinearGradient(sx-ow/2,oy,sx-ow/2,sy2);
+      wG.addColorStop(0,rgba(pc(oCi),oA*0.65));wG.addColorStop(0.5,rgba(pc(oCi),oA*0.4));wG.addColorStop(1,rgba(pc(oCi),oA*0.15));
+      x0.fillStyle=wG;x0.fillRect(sx-ow/2,oy,ow,oh);
+      x0.strokeStyle=rgba(pc(oCi),oA*0.95);x0.lineWidth=2+sz*4;
+      x0.shadowBlur=18+sz*30+beat*15;x0.shadowColor=pc(oCi);
+      x0.strokeRect(sx-ow/2,oy,ow,oh);
+      x0.lineWidth=1;x0.strokeStyle=rgba(pc(oCi),oA*0.3);
       var scN=Math.max(1,Math.floor(oh/12));
-      for(var s3=0;s3<scN;s3++){var sy3=oy2+s3*(oh/scN);x0.beginPath();x0.moveTo(sx-ow/2,sy3);x0.lineTo(sx+ow/2,sy3);x0.stroke();}
+      for(var s3=0;s3<scN;s3++){var sy3=oy+s3*(oh/scN);x0.beginPath();x0.moveTo(sx-ow/2,sy3);x0.lineTo(sx+ow/2,sy3);x0.stroke();}
       x0.shadowBlur=0;
-    }else if(obsType===1){
-      var pW=ow*0.08;
-      x0.fillStyle=rgba(pc(obsCi),oA2*0.5);
-      x0.shadowBlur=12+sz*18+beat*10;x0.shadowColor=pc(obsCi);
-      x0.fillRect(sx-ow/2,sy2-oh*0.75,pW,oh*0.75);
-      x0.fillRect(sx+ow/2-pW,sy2-oh*0.75,pW,oh*0.75);
-      var bPulse=0.6+Math.sin(t*0.008)*0.3+beat*0.4;
-      var bH=oh*0.18*(1+beat*0.3);
+    }else if(oType===1){
+      var pW2=ow*0.08;
+      x0.fillStyle=rgba(pc(oCi),oA*0.5);
+      x0.shadowBlur=12+sz*18+beat*10;x0.shadowColor=pc(oCi);
+      x0.fillRect(sx-ow/2,sy2-oh*0.75,pW2,oh*0.75);
+      x0.fillRect(sx+ow/2-pW2,sy2-oh*0.75,pW2,oh*0.75);
+      var bPulse2=0.6+Math.sin(t*0.008)*0.3+beat*0.4;
+      var bH2=oh*0.18*(1+beat*0.3);
       for(var bl2=0;bl2<3;bl2++){
-        x0.fillStyle=rgba(pc((obsCi+bl2)%4),oA2*(0.7-bl2*0.15)*bPulse);
-        x0.shadowBlur=22+beat*18;x0.shadowColor=pc((obsCi+bl2)%4);
-        x0.fillRect(sx-ow/2+pW,sy2-oh*0.6+bl2*bH*0.4,ow-pW*2,bH);
+        x0.fillStyle=rgba(pc((oCi+bl2)%4),oA*(0.7-bl2*0.15)*bPulse2);
+        x0.shadowBlur=22+beat*18;x0.shadowColor=pc((oCi+bl2)%4);
+        x0.fillRect(sx-ow/2+pW2,sy2-oh*0.6+bl2*bH2*0.4,ow-pW2*2,bH2);
       }
-      x0.strokeStyle=rgba(pc(obsCi),oA2*0.8);x0.lineWidth=1.5+sz*2;
-      x0.strokeRect(sx-ow/2,sy2-oh*0.75,pW,oh*0.75);
-      x0.strokeRect(sx+ow/2-pW,sy2-oh*0.75,pW,oh*0.75);
+      x0.strokeStyle=rgba(pc(oCi),oA*0.8);x0.lineWidth=1.5+sz*2;
+      x0.strokeRect(sx-ow/2,sy2-oh*0.75,pW2,oh*0.75);
+      x0.strokeRect(sx+ow/2-pW2,sy2-oh*0.75,pW2,oh*0.75);
       x0.shadowBlur=0;
     }else{
-      var plW=ow*0.5,plH=oh*1.2;
-      var auG=x0.createRadialGradient(sx,sy2-plH*0.5,0,sx,sy2-plH*0.5,plW*1.8);
-      auG.addColorStop(0,rgba(pc(obsCi),oA2*0.3+beat*0.15));auG.addColorStop(1,'transparent');
-      x0.fillStyle=auG;x0.fillRect(sx-plW*1.8,sy2-plH-plW,plW*3.6,plH+plW*2);
-      var piG=x0.createLinearGradient(sx-plW/2,sy2-plH,sx+plW/2,sy2-plH);
-      piG.addColorStop(0,rgba(pc(obsCi),oA2*0.15));piG.addColorStop(0.3,rgba(pc(obsCi),oA2*0.55));
-      piG.addColorStop(0.7,rgba(pc(obsCi),oA2*0.55));piG.addColorStop(1,rgba(pc(obsCi),oA2*0.15));
-      x0.fillStyle=piG;x0.fillRect(sx-plW/2,sy2-plH,plW,plH);
-      var cww=plW*0.2,cPulse=0.5+Math.sin(t*0.01)*0.4+beat*0.5;
-      x0.fillStyle=rgba(pc((obsCi+1)%4),oA2*cPulse*0.9);
-      x0.shadowBlur=20+sz*25+beat*15;x0.shadowColor=pc((obsCi+1)%4);
-      x0.fillRect(sx-cww/2,sy2-plH*0.9,cww,plH*0.8);
-      x0.strokeStyle=rgba(pc(obsCi),oA2*0.85);x0.lineWidth=1.5+sz*2;
-      x0.strokeRect(sx-plW/2,sy2-plH,plW,plH);
+      var plW2=ow*0.5,plH2=oh*1.2;
+      var auG2=x0.createRadialGradient(sx,sy2-plH2*0.5,0,sx,sy2-plH2*0.5,plW2*1.8);
+      auG2.addColorStop(0,rgba(pc(oCi),oA*0.3+beat*0.15));auG2.addColorStop(1,'transparent');
+      x0.fillStyle=auG2;x0.fillRect(sx-plW2*1.8,sy2-plH2-plW2,plW2*3.6,plH2+plW2*2);
+      var piG2=x0.createLinearGradient(sx-plW2/2,sy2-plH2,sx+plW2/2,sy2-plH2);
+      piG2.addColorStop(0,rgba(pc(oCi),oA*0.15));piG2.addColorStop(0.3,rgba(pc(oCi),oA*0.55));
+      piG2.addColorStop(0.7,rgba(pc(oCi),oA*0.55));piG2.addColorStop(1,rgba(pc(oCi),oA*0.15));
+      x0.fillStyle=piG2;x0.fillRect(sx-plW2/2,sy2-plH2,plW2,plH2);
+      var cww2=plW2*0.2,cP2=0.5+Math.sin(t*0.01)*0.4+beat*0.5;
+      x0.fillStyle=rgba(pc((oCi+1)%4),oA*cP2*0.9);
+      x0.shadowBlur=20+sz*25+beat*15;x0.shadowColor=pc((oCi+1)%4);
+      x0.fillRect(sx-cww2/2,sy2-plH2*0.9,cww2,plH2*0.8);
+      x0.strokeStyle=rgba(pc(oCi),oA*0.85);x0.lineWidth=1.5+sz*2;
+      x0.strokeRect(sx-plW2/2,sy2-plH2,plW2,plH2);
       x0.shadowBlur=0;
     }
   }
 
-  // ════════════════════════════════════════════════════════
-  // SCENERY OBSTACLES — edges of the grid, just for atmosphere
-  // Same obstacle types, placed at far left/right. Never dodged.
-  // ════════════════════════════════════════════════════════
+  // ════════════════════════════════════════
+  // SCENERY — edge obstacles, atmosphere only
+  // ════════════════════════════════════════
   for(var si=0; si<CG.scenery.length; si++){
     var sc = CG.scenery[si];
-    sc.z += speed * 0.014;
-    if(sc.z > 1.15){
+    sc.z += spd * 0.018;
+    if(sc.z > 1.1){
       sc.z = -0.05 - Math.random()*0.1;
-      sc.lane = si<3 ? 0.02+Math.random()*0.08 : 0.90+Math.random()*0.08;
+      sc.lane = si<3 ? -0.15+Math.random()*0.12 : 1.03+Math.random()*0.12;
       sc.type = Math.floor(Math.random()*3);
       sc.ci = Math.floor(Math.random()*4);
       continue;
     }
     var ssy = dToY(sc.z);
     if(ssy < horizon) continue;
-    var ssx = laneToX(sc.lane, sc.z);
     var ssz = Math.max(0.05, sc.z);
-    var sow = 0.18 * w * ssz * 1.0;
-    var soh = 0.4 * h * ssz * 1.0;
-    drawObs(ssx, ssy, ssz, sow, soh, sc.type, sc.ci);
+    var ssx = toScreenX(sc.lane, sc.z);
+    drawObs(ssx, ssy, ssz, 0.15*w*ssz, 0.35*h*ssz, sc.type, sc.ci);
   }
 
-  // ════════════════════════════════════════════════════════
-  // CENTER OBSTACLES — 2, appear from horizon, gentle dodge
-  // ════════════════════════════════════════════════════════
+  // ════════════════════════════════════════
+  // CENTER OBSTACLES — appear from horizon, dodge by shifting camLane
+  //
+  // KEY DIFFERENCE: we don't shift the projection math.
+  // We shift camLane directly. Since screenX = w/2 + (lane-camLane)*scale,
+  // moving camLane by 0.15 moves a center obstacle by 0.15*scale pixels.
+  // At d=0.6 that's 0.15 * (0.1+0.6*0.9)*w = 0.15*0.64*w ≈ 0.1*w = clear miss.
+  // ════════════════════════════════════════
   for(var oi=0; oi<CG.obstacles.length; oi++){
     var obs = CG.obstacles[oi];
-    obs.z += speed * 0.014;
+    obs.z += spd * 0.018;
 
-    var sx = laneToX(obs.lane, obs.z);
-    var sy2 = dToY(obs.z);
-    var sz = obs.z;
-
-    // Respawn at horizon
-    if(obs.z > 1.15){
-      obs.z = -0.05 - Math.random() * 0.1;
-      obs.lane = Math.random() < 0.5 ? 0.3 + Math.random() * 0.1 : 0.6 + Math.random() * 0.1;
-      obs.type = Math.floor(Math.random() * 3);
-      obs.ci = Math.floor(Math.random() * 4);
+    // Respawn behind horizon
+    if(obs.z > 1.1){
+      obs.z = -0.1 - Math.random()*0.15;
+      obs.lane = Math.random() < 0.5 ? 0.35+Math.random()*0.05 : 0.60+Math.random()*0.05;
+      obs.type = Math.floor(Math.random()*3);
+      obs.ci = Math.floor(Math.random()*4);
       obs.dodged = false;
       continue;
     }
 
-    if(sy2 < horizon) continue;
+    var osy = dToY(obs.z);
+    if(osy < horizon) continue;
 
-    // Gentle lane change — just enough to clearly miss
-    if(!obs.dodged && obs.z > 0.5 && obs.z < 0.6){
+    // Steer when obstacle at d=0.45-0.55 — shift camLane to dodge
+    if(!obs.dodged && obs.z > 0.45 && obs.z < 0.55){
       obs.dodged = true;
-      var dir2 = (obs.lane > 0.5) ? 1 : -1;
-      CG.steerTarget = dir2 * (w * 0.22 + Math.random() * w * 0.08);
+      // Move camera lane TOWARD the obstacle's side, which pushes obstacle to opposite screen side
+      // If obstacle is at lane 0.35, set camera to 0.2 (left) — obstacle appears to slide right
+      // If obstacle is at lane 0.65, set camera to 0.8 (right) — obstacle appears to slide left
+      if(obs.lane < 0.5){
+        CG.camTarget = obs.lane - 0.2 - Math.random()*0.05;
+      } else {
+        CG.camTarget = obs.lane + 0.2 + Math.random()*0.05;
+      }
     }
 
-    var ow = 0.22 * w * sz * 1.4;
-    var oh = 0.5 * h * sz * 1.2;
-    drawObs(sx, sy2, sz, ow, oh, obs.type, obs.ci);
+    var osz = Math.max(0.05, obs.z);
+    var osx = toScreenX(obs.lane, obs.z);
+    drawObs(osx, osy, osz, 0.2*w*osz*1.4, 0.45*h*osz*1.2, obs.type, obs.ci);
   }
 
-  // ── Centerpiece — small, high, on the horizon ──
+  // ── Centerpiece ──
   if(THEME.centerpiece){
     cpRot+=0.012*(1+energy*0.2);cpPh+=0.013;
     var gs2=Math.min(w,h)*(0.09+beat*0.02)*(1+corruption*0.15);
-    var cpX2=w/2+CG.steerX*0.05+(CG.spiral?Math.sin(CG.spiralAngle)*w*0.06:0);
+    var cpX2=toScreenX(0.5, 0.01);
     var cpY2=horizon-h*0.12;
     x0.globalAlpha=0.75+beat*0.15;x0.shadowBlur=12+beat*12;x0.shadowColor=pc(0);
     drawCPMini(x0,THEME.centerpiece,cpX2,cpY2,gs2,cpRot);x0.globalAlpha=1;x0.shadowBlur=0;
