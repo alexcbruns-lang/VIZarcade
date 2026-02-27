@@ -675,7 +675,7 @@ function drawCyberGrid(t){
   //   Road spans full screen width at bottom (d=1), converges at horizon (d=0)
   // ════════════════════════════════════════════════════════
   function dToY(d){ return horizon + Math.pow(d, 0.7) * (h - horizon); }
-  function dToHalfWidth(d){ return d * w * 0.52; }
+  function dToHalfWidth(d){ return w * 0.15 + d * w * 0.35; }
   function laneToX(lane, d){
     var cx = w/2 + CG.steerX * d;
     return cx + (lane - 0.5) * dToHalfWidth(d) * 2;
@@ -734,7 +734,7 @@ function drawCyberGrid(t){
   for(var c=0; c<=COLS; c++){
     var lane = c / COLS;
     var sm2 = CG.spiral ? Math.sin(CG.spiralAngle + c*0.3) * 0.04 : 0;
-    var topX2 = laneToX(lane + sm2, 0.01);
+    var topX2 = laneToX(lane + sm2, 0.0);
     var botX2 = laneToX(lane + sm2, 1.0);
     x0.beginPath(); x0.moveTo(topX2, horizon); x0.lineTo(botX2, h);
     var nx2 = Math.abs(lane - 0.5) * 2;
