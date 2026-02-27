@@ -646,8 +646,18 @@ function drawCyberGrid(t){
       speedBoost:1,speedTimer:0,
       spiral:false,spiralTimer:0,spiralAngle:0,
       steerX:0,steerTarget:0,
-      obstacles:[{lane:0.35+Math.random()*0.3,z:0.15,type:Math.floor(Math.random()*3),ci:0,dodged:false},
-                 {lane:0.35+Math.random()*0.3,z:0.65,type:Math.floor(Math.random()*3),ci:2,dodged:false}],
+      // Center obstacles — these get dodged
+      obstacles:[
+        {lane:0.4+Math.random()*0.2, z:-0.05, type:Math.floor(Math.random()*3), ci:0, dodged:false},
+        {lane:0.4+Math.random()*0.2, z:0.45, type:Math.floor(Math.random()*3), ci:2, dodged:false}
+      ],
+      // Scenery obstacles — edges, never dodged, just atmosphere
+      scenery:Array.from({length:6},(_,i)=>({
+        lane: i<3 ? 0.02+Math.random()*0.08 : 0.90+Math.random()*0.08,
+        z: Math.random()*0.9,
+        type: Math.floor(Math.random()*3),
+        ci: Math.floor(Math.random()*4)
+      })),
       tronStreaks:Array.from({length:9},(_,i)=>({x:Math.random()*w,y:Math.random()*horizon,dirX:Math.random()<0.5?1:-1,dirY:0,speed:2+Math.random()*3,ci:i%4,alpha:0.5+Math.random()*0.4,width:4+Math.random()*5,trail:[],maxTrail:30+Math.floor(Math.random()*30),turnTimer:80+Math.floor(Math.random()*120)})),
     };
   }
@@ -658,27 +668,18 @@ function drawCyberGrid(t){
   const corruption=songProg*0.3;
   const speed=CG.speedBoost*(1+energy*0.25)*progMult*THEME.sceneSpeed;
 
-  // ── Steering ──
-  const steerEase=0.06+energy*0.10;
+  // ── Steering — gentle lane change ──
+  const steerEase=0.05+energy*0.08;
   CG.steerX+=(CG.steerTarget-CG.steerX)*steerEase;
-  CG.steerTarget*=0.98;
+  CG.steerTarget*=0.97;
 
   // ════════════════════════════════════════════════════════
-  // PERSPECTIVE SYSTEM
-  //
-  // d = depth, 0 at horizon → 1 at bottom of screen (nearest to you)
-  //
-  // Screen Y: We use pow(d, 0.7) so lines ACCELERATE toward you
-  //   (the exponent < 1 makes near-lines spaced further apart = faster)
-  //
-  // Screen X: Everything shifts by steerX * d (more shift at bottom)
-  //   Road spans full screen width at bottom (d=1), converges at horizon (d=0)
+  // PERSPECTIVE — d=0 horizon, d=1 nearest to you
   // ════════════════════════════════════════════════════════
   function dToY(d){ return horizon + Math.pow(d, 0.7) * (h - horizon); }
-  function dToHalfWidth(d){ return w * 0.5; }
   function laneToX(lane, d){
     var cx = w/2 + CG.steerX * d;
-    return cx + (lane - 0.5) * dToHalfWidth(d) * 2;
+    return cx + (lane - 0.5) * w * 1.0;
   }
 
   // ── Background ──
@@ -704,29 +705,27 @@ function drawCyberGrid(t){
   if(CG.glitching){var gA2=0.3+Math.random()*0.2;x0.fillStyle=rgba(pc(0),gA2);for(var gi=0;gi<20;gi++)x0.fillRect(0,Math.random()*h,w,Math.random()*35+2);for(var gi2=0;gi2<6;gi2++){x0.fillStyle=rgba(pc(gi2%4),0.08);x0.fillRect(Math.random()*w,0,Math.random()*80+10,h);}}
 
   // ════════════════════════════════════════════════════════
-  // GRID — horizontal lines scroll from horizon toward you
+  // GRID — fewer lines = larger cells, full screen width
   // ════════════════════════════════════════════════════════
-  var ROWS=20, COLS=32;
+  var ROWS=10, COLS=14;
   CG.gridPhase = (CG.gridPhase + speed * 0.014) % 1;
 
+  // Horizontal lines — full screen edge to edge
   for(var r=0; r<ROWS; r++){
     var d = ((r / ROWS) + CG.gridPhase) % 1;
     var sy = dToY(d);
     if(sy < horizon - 2) continue;
-    var alpha2 = (0.15 + d * 0.65) * THEME.sceneIntensity * (1 + beat * 0.5);
-    var ci2 = Math.floor(r/3 + corruption*8) % 4;
+    var alpha2 = (0.2 + d * 0.6) * THEME.sceneIntensity * (1 + beat * 0.5);
+    var ci2 = Math.floor(r/2 + corruption*8) % 4;
     x0.strokeStyle = rgba(pc(ci2), alpha2);
     x0.lineWidth = 1.5 + d * 4;
     x0.shadowBlur = 6 + d * 18 + corruption*12 + beat*10;
     x0.shadowColor = pc(ci2);
-    x0.beginPath();
-    x0.moveTo(0, sy);
-    x0.lineTo(w, sy);
-    x0.stroke();
+    x0.beginPath(); x0.moveTo(0, sy); x0.lineTo(w, sy); x0.stroke();
   }
   x0.shadowBlur=0;
 
-  // Vertical lines — full width grid, slight perspective convergence
+  // Vertical lines — full width, subtle convergence at horizon
   for(var c=0; c<=COLS; c++){
     var lane = c / COLS;
     var sm2 = CG.spiral ? Math.sin(CG.spiralAngle + c*0.3) * 0.04 : 0;
@@ -740,100 +739,114 @@ function drawCyberGrid(t){
   x0.shadowBlur=0;
 
   // ════════════════════════════════════════════════════════
-  // OBSTACLES — 2 only, planted on the grid
-  //
-  // They use the SAME laneToX / dToY as the grid.
-  // d increases each frame (same rate as grid scroll).
-  // When you steer, the whole world (grid + obstacles) shifts together.
-  // The obstacle passes by you on one side and exits off the screen edge.
+  // OBSTACLE DRAWING HELPER — reused for center + scenery
+  // ════════════════════════════════════════════════════════
+  function drawObs(sx, sy2, sz, ow, oh, obsType, obsCi){
+    var oA2 = Math.min(1, (0.3 + sz * 0.7) * (1 + beat * 0.4));
+    var oy2 = sy2 - oh;
+    if(obsType===0){
+      var wG=x0.createLinearGradient(sx-ow/2,oy2,sx-ow/2,sy2);
+      wG.addColorStop(0,rgba(pc(obsCi),oA2*0.65));wG.addColorStop(0.5,rgba(pc(obsCi),oA2*0.4));wG.addColorStop(1,rgba(pc(obsCi),oA2*0.15));
+      x0.fillStyle=wG;x0.fillRect(sx-ow/2,oy2,ow,oh);
+      x0.strokeStyle=rgba(pc(obsCi),oA2*0.95);x0.lineWidth=2+sz*4;
+      x0.shadowBlur=18+sz*30+beat*15;x0.shadowColor=pc(obsCi);
+      x0.strokeRect(sx-ow/2,oy2,ow,oh);
+      x0.lineWidth=1;x0.strokeStyle=rgba(pc(obsCi),oA2*0.3);
+      var scN=Math.max(1,Math.floor(oh/12));
+      for(var s3=0;s3<scN;s3++){var sy3=oy2+s3*(oh/scN);x0.beginPath();x0.moveTo(sx-ow/2,sy3);x0.lineTo(sx+ow/2,sy3);x0.stroke();}
+      x0.shadowBlur=0;
+    }else if(obsType===1){
+      var pW=ow*0.08;
+      x0.fillStyle=rgba(pc(obsCi),oA2*0.5);
+      x0.shadowBlur=12+sz*18+beat*10;x0.shadowColor=pc(obsCi);
+      x0.fillRect(sx-ow/2,sy2-oh*0.75,pW,oh*0.75);
+      x0.fillRect(sx+ow/2-pW,sy2-oh*0.75,pW,oh*0.75);
+      var bPulse=0.6+Math.sin(t*0.008)*0.3+beat*0.4;
+      var bH=oh*0.18*(1+beat*0.3);
+      for(var bl2=0;bl2<3;bl2++){
+        x0.fillStyle=rgba(pc((obsCi+bl2)%4),oA2*(0.7-bl2*0.15)*bPulse);
+        x0.shadowBlur=22+beat*18;x0.shadowColor=pc((obsCi+bl2)%4);
+        x0.fillRect(sx-ow/2+pW,sy2-oh*0.6+bl2*bH*0.4,ow-pW*2,bH);
+      }
+      x0.strokeStyle=rgba(pc(obsCi),oA2*0.8);x0.lineWidth=1.5+sz*2;
+      x0.strokeRect(sx-ow/2,sy2-oh*0.75,pW,oh*0.75);
+      x0.strokeRect(sx+ow/2-pW,sy2-oh*0.75,pW,oh*0.75);
+      x0.shadowBlur=0;
+    }else{
+      var plW=ow*0.5,plH=oh*1.2;
+      var auG=x0.createRadialGradient(sx,sy2-plH*0.5,0,sx,sy2-plH*0.5,plW*1.8);
+      auG.addColorStop(0,rgba(pc(obsCi),oA2*0.3+beat*0.15));auG.addColorStop(1,'transparent');
+      x0.fillStyle=auG;x0.fillRect(sx-plW*1.8,sy2-plH-plW,plW*3.6,plH+plW*2);
+      var piG=x0.createLinearGradient(sx-plW/2,sy2-plH,sx+plW/2,sy2-plH);
+      piG.addColorStop(0,rgba(pc(obsCi),oA2*0.15));piG.addColorStop(0.3,rgba(pc(obsCi),oA2*0.55));
+      piG.addColorStop(0.7,rgba(pc(obsCi),oA2*0.55));piG.addColorStop(1,rgba(pc(obsCi),oA2*0.15));
+      x0.fillStyle=piG;x0.fillRect(sx-plW/2,sy2-plH,plW,plH);
+      var cww=plW*0.2,cPulse=0.5+Math.sin(t*0.01)*0.4+beat*0.5;
+      x0.fillStyle=rgba(pc((obsCi+1)%4),oA2*cPulse*0.9);
+      x0.shadowBlur=20+sz*25+beat*15;x0.shadowColor=pc((obsCi+1)%4);
+      x0.fillRect(sx-cww/2,sy2-plH*0.9,cww,plH*0.8);
+      x0.strokeStyle=rgba(pc(obsCi),oA2*0.85);x0.lineWidth=1.5+sz*2;
+      x0.strokeRect(sx-plW/2,sy2-plH,plW,plH);
+      x0.shadowBlur=0;
+    }
+  }
+
+  // ════════════════════════════════════════════════════════
+  // SCENERY OBSTACLES — edges of the grid, just for atmosphere
+  // Same obstacle types, placed at far left/right. Never dodged.
+  // ════════════════════════════════════════════════════════
+  for(var si=0; si<CG.scenery.length; si++){
+    var sc = CG.scenery[si];
+    sc.z += speed * 0.014;
+    if(sc.z > 1.15){
+      sc.z = -0.05 - Math.random()*0.1;
+      sc.lane = si<3 ? 0.02+Math.random()*0.08 : 0.90+Math.random()*0.08;
+      sc.type = Math.floor(Math.random()*3);
+      sc.ci = Math.floor(Math.random()*4);
+      continue;
+    }
+    var ssy = dToY(sc.z);
+    if(ssy < horizon) continue;
+    var ssx = laneToX(sc.lane, sc.z);
+    var ssz = Math.max(0.05, sc.z);
+    var sow = 0.18 * w * ssz * 1.0;
+    var soh = 0.4 * h * ssz * 1.0;
+    drawObs(ssx, ssy, ssz, sow, soh, sc.type, sc.ci);
+  }
+
+  // ════════════════════════════════════════════════════════
+  // CENTER OBSTACLES — 2, appear from horizon, gentle dodge
   // ════════════════════════════════════════════════════════
   for(var oi=0; oi<CG.obstacles.length; oi++){
     var obs = CG.obstacles[oi];
     obs.z += speed * 0.014;
 
-    // Screen position via the unified projection
     var sx = laneToX(obs.lane, obs.z);
     var sy2 = dToY(obs.z);
-    var sz = obs.z; // 0=horizon, 1=right at you
-    var ow = 0.22 * w * sz * 1.4;
-    var oh = 0.5 * h * sz * 1.2;
+    var sz = obs.z;
 
-    // ── Check if obstacle exited off the LEFT or RIGHT side of screen ──
-    var exitedSide = (sx + ow/2 < -40) || (sx - ow/2 > w + 40);
-
-    // ── Respawn at horizon when: exited a side, or passed you (z>1.15 fallback) ──
-    if(exitedSide || obs.z > 1.15){
-      obs.z = -0.05 - Math.random() * 0.1; // start just behind horizon
-      obs.lane = 0.3 + Math.random() * 0.4;
+    // Respawn at horizon
+    if(obs.z > 1.15){
+      obs.z = -0.05 - Math.random() * 0.1;
+      obs.lane = 0.35 + Math.random() * 0.3;
       obs.type = Math.floor(Math.random() * 3);
       obs.ci = Math.floor(Math.random() * 4);
       obs.dodged = false;
       continue;
     }
 
-    // Skip drawing if still behind horizon
     if(sy2 < horizon) continue;
 
-    // ── Trigger steer at d=0.5 — object is big and scary, then slides off to the side ──
+    // Gentle lane change — just enough to clearly miss
     if(!obs.dodged && obs.z > 0.5 && obs.z < 0.6){
       obs.dodged = true;
       var dir2 = (obs.lane > 0.5) ? 1 : -1;
-      CG.steerTarget = dir2 * (w * 0.6 + Math.random() * w * 0.3);
+      CG.steerTarget = dir2 * (w * 0.08 + Math.random() * w * 0.04);
     }
 
-    var oA2 = Math.min(1, (0.3 + sz * 0.7) * (1 + beat * 0.4));
-    var oy2 = sy2 - oh;
-
-    // ── Type 0: Solid glowing wall ──
-    if(obs.type===0){
-      var wG=x0.createLinearGradient(sx-ow/2,oy2,sx-ow/2,sy2);
-      wG.addColorStop(0,rgba(pc(obs.ci),oA2*0.65));wG.addColorStop(0.5,rgba(pc(obs.ci),oA2*0.4));wG.addColorStop(1,rgba(pc(obs.ci),oA2*0.15));
-      x0.fillStyle=wG;x0.fillRect(sx-ow/2,oy2,ow,oh);
-      x0.strokeStyle=rgba(pc(obs.ci),oA2*0.95);x0.lineWidth=2+sz*4;
-      x0.shadowBlur=18+sz*30+beat*15;x0.shadowColor=pc(obs.ci);
-      x0.strokeRect(sx-ow/2,oy2,ow,oh);
-      x0.lineWidth=1;x0.strokeStyle=rgba(pc(obs.ci),oA2*0.3);
-      var scN=Math.max(1,Math.floor(oh/10));
-      for(var s3=0;s3<scN;s3++){var sy3=oy2+s3*(oh/scN);x0.beginPath();x0.moveTo(sx-ow/2,sy3);x0.lineTo(sx+ow/2,sy3);x0.stroke();}
-      x0.shadowBlur=0;
-    }
-    // ── Type 1: Energy barrier ──
-    else if(obs.type===1){
-      var pW=ow*0.08;
-      x0.fillStyle=rgba(pc(obs.ci),oA2*0.5);
-      x0.shadowBlur=12+sz*18+beat*10;x0.shadowColor=pc(obs.ci);
-      x0.fillRect(sx-ow/2,sy2-oh*0.75,pW,oh*0.75);
-      x0.fillRect(sx+ow/2-pW,sy2-oh*0.75,pW,oh*0.75);
-      var bPulse=0.6+Math.sin(t*0.008+obs.lane*10)*0.3+beat*0.4;
-      var bH=oh*0.18*(1+beat*0.3);
-      for(var bl2=0;bl2<3;bl2++){
-        x0.fillStyle=rgba(pc((obs.ci+bl2)%4),oA2*(0.7-bl2*0.15)*bPulse);
-        x0.shadowBlur=22+beat*18;x0.shadowColor=pc((obs.ci+bl2)%4);
-        x0.fillRect(sx-ow/2+pW,sy2-oh*0.6+bl2*bH*0.4,ow-pW*2,bH);
-      }
-      x0.strokeStyle=rgba(pc(obs.ci),oA2*0.8);x0.lineWidth=1.5+sz*2;
-      x0.strokeRect(sx-ow/2,sy2-oh*0.75,pW,oh*0.75);
-      x0.strokeRect(sx+ow/2-pW,sy2-oh*0.75,pW,oh*0.75);
-      x0.shadowBlur=0;
-    }
-    // ── Type 2: Monolith pillar ──
-    else{
-      var plW=ow*0.5,plH=oh*1.2;
-      var auG=x0.createRadialGradient(sx,sy2-plH*0.5,0,sx,sy2-plH*0.5,plW*1.8);
-      auG.addColorStop(0,rgba(pc(obs.ci),oA2*0.3+beat*0.15));auG.addColorStop(1,'transparent');
-      x0.fillStyle=auG;x0.fillRect(sx-plW*1.8,sy2-plH-plW,plW*3.6,plH+plW*2);
-      var piG=x0.createLinearGradient(sx-plW/2,sy2-plH,sx+plW/2,sy2-plH);
-      piG.addColorStop(0,rgba(pc(obs.ci),oA2*0.15));piG.addColorStop(0.3,rgba(pc(obs.ci),oA2*0.55));
-      piG.addColorStop(0.7,rgba(pc(obs.ci),oA2*0.55));piG.addColorStop(1,rgba(pc(obs.ci),oA2*0.15));
-      x0.fillStyle=piG;x0.fillRect(sx-plW/2,sy2-plH,plW,plH);
-      var cww=plW*0.2,cPulse=0.5+Math.sin(t*0.01+obs.lane*7)*0.4+beat*0.5;
-      x0.fillStyle=rgba(pc((obs.ci+1)%4),oA2*cPulse*0.9);
-      x0.shadowBlur=20+sz*25+beat*15;x0.shadowColor=pc((obs.ci+1)%4);
-      x0.fillRect(sx-cww/2,sy2-plH*0.9,cww,plH*0.8);
-      x0.strokeStyle=rgba(pc(obs.ci),oA2*0.85);x0.lineWidth=1.5+sz*2;
-      x0.strokeRect(sx-plW/2,sy2-plH,plW,plH);
-      x0.shadowBlur=0;
-    }
+    var ow = 0.22 * w * sz * 1.4;
+    var oh = 0.5 * h * sz * 1.2;
+    drawObs(sx, sy2, sz, ow, oh, obs.type, obs.ci);
   }
 
   // ── Centerpiece — small, high, on the horizon ──
