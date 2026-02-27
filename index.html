@@ -730,8 +730,8 @@ function drawCyberGrid(t){
   for(let c=0;c<=COLS;c++){
     const lane=c/COLS;
     const sm=CG.spiral?Math.sin(CG.spiralAngle+c*0.3)*0.04:0;
-    const topX=worldToScreenX(lane+sm,0.99); // near horizon
-    const botX=worldToScreenX(lane+sm,0.0);  // near you
+    const topX=worldToScreenX(lane+sm,0.01); // at horizon (z=0)
+    const botX=worldToScreenX(lane+sm,0.99); // near you (z=1)
     x0.beginPath();x0.moveTo(topX,horizon);x0.lineTo(botX,h);
     const nx=Math.abs(lane-0.5)*2;
     x0.strokeStyle=rgba(pc(1),(nx<0.1?0.5:0.2)*THEME.sceneIntensity*(1+beat*0.2));
