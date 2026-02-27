@@ -642,7 +642,7 @@ function drawCyberGrid(t){
     SD.cyberGrid={gridZ:0,glitching:false,glitchTimer:0,speedBoost:1,speedTimer:0,spiral:false,spiralTimer:0,spiralAngle:0,
       swerveOffset:0,swerveTarget:0,
       tronStreaks:Array.from({length:9},(_,i)=>({x:Math.random()*w,y:Math.random()*vpy,dirX:Math.random()<0.5?1:-1,dirY:0,speed:2+Math.random()*3,ci:i%4,alpha:0.5+Math.random()*0.4,width:4+Math.random()*5,trail:[],maxTrail:30+Math.floor(Math.random()*30),turnTimer:80+Math.floor(Math.random()*120)})),
-      obstacles:Array.from({length:3},(_,i)=>({lane:0.2+Math.random()*0.6,z:0.05+i*0.33,type:Math.floor(Math.random()*3),ci:i%4,height:0.25+Math.random()*0.3,width:0.14+Math.random()*0.1,dodged:false})),
+      obstacles:Array.from({length:2},(_,i)=>({lane:0.25+Math.random()*0.5,z:0.02+i*0.5,type:Math.floor(Math.random()*3),ci:i%4,height:0.35+Math.random()*0.3,width:0.18+Math.random()*0.12,dodged:false})),
     };
   }
   const CG=SD.cyberGrid;
@@ -652,16 +652,15 @@ function drawCyberGrid(t){
   const corruption=songProg*0.3;
   const effectiveSpeed=CG.speedBoost*(1+energy*0.25)*progMult*THEME.sceneSpeed;
 
-  // ── Swerve: YOU dodge left/right, VP stays fixed ──
-  const swerveEase=0.08+energy*0.14;
+  // ── Swerve: YOU dodge left/right ──
+  const swerveEase=0.07+energy*0.13;
   CG.swerveOffset+=(CG.swerveTarget-CG.swerveOffset)*swerveEase;
-  // Slow decay so swerve holds long enough for obstacle to exit the side
-  if(Math.abs(CG.swerveTarget)>1)CG.swerveTarget*=0.965;
-  if(Math.abs(CG.swerveTarget)<3)CG.swerveTarget*=0.93;
+  // Hold the swerve — slow decay so obstacle has time to slide off screen
+  CG.swerveTarget*=0.975;
   const swerve=CG.swerveOffset;
+  // baseX = your camera position at the bottom; grid follows this
   const baseX=vpx+swerve;
-  // Very wide track so obstacles have room to slide off screen edges
-  const trackHW=w*0.9;
+  const trackHW=w*0.8;
 
   // ── BG ──
   x0.fillStyle='rgba(0,2,12,1)';x0.fillRect(0,0,w,h);
@@ -683,76 +682,72 @@ function drawCyberGrid(t){
   // ── Glitch surprise overlay ──
   if(CG.glitching){const gA=0.3+Math.random()*0.2;x0.fillStyle=rgba(pc(0),gA);for(let i=0;i<20;i++)x0.fillRect(0,Math.random()*h,w,Math.random()*35+2);for(let i=0;i<6;i++){x0.fillStyle=rgba(pc(i%4),0.08);x0.fillRect(Math.random()*w,0,Math.random()*80+10,h);}}
 
-  // ── Grid — VP fixed at top-center, bottom shifts with your camera ──
+  // ── Grid — VP fixed at top-center, bottom follows your camera (baseX) ──
   const GRID=16,COLS=24;const spiralOff=CG.spiral?CG.spiralAngle:0;
-  CG.gridZ+=effectiveSpeed*0.009;
+  CG.gridZ+=effectiveSpeed*0.012; // fast grid
 
-  // Helper: project world-space lane+depth to screen X
-  // At z=0 (horizon) everything converges to vpx; at z=1 (bottom) spreads from baseX
-  function projX(worldLane,z){
-    const zP=Math.pow(z,1.2);
-    const cx=vpx+(baseX-vpx)*zP;
-    return cx+(worldLane-0.5)*2*trackHW*Math.pow(z,0.8);
-  }
   function projY(z){return vpy+Math.pow(z,1.4)*(h-vpy);}
 
-  // Horizontal grid lines
+  // Horizontal grid lines — shift with camera
   for(let row=0;row<GRID;row++){
     const z=((row/GRID+CG.gridZ)%1);
     const py=projY(z);const wf=Math.pow(z,0.8);
     const rowCx=vpx+(baseX-vpx)*Math.pow(z,1.2);
     const spiralW=1+spiralOff*z*0.3;
     const halfW=wf*trackHW*spiralW;
-    const px1=rowCx-halfW,px2=rowCx+halfW;
-    const alpha=(0.06+z*0.55)*THEME.sceneIntensity*(1+beat*0.4);
-    const ci=Math.floor(row/3+corruption*8)%4;
-    x0.strokeStyle=rgba(pc(ci),alpha);x0.lineWidth=1.5+z*3;
-    x0.shadowBlur=z>0.65?12+corruption*20+beat*8:0;x0.shadowColor=pc(ci);
-    x0.beginPath();x0.moveTo(px1,py);x0.lineTo(px2,py);x0.stroke();
+    x0.strokeStyle=rgba(pc(Math.floor(row/3+corruption*8)%4),(0.06+z*0.55)*THEME.sceneIntensity*(1+beat*0.4));
+    x0.lineWidth=1.5+z*3;x0.shadowBlur=z>0.65?12+corruption*20+beat*8:0;x0.shadowColor=pc(Math.floor(row/3)%4);
+    x0.beginPath();x0.moveTo(rowCx-halfW,py);x0.lineTo(rowCx+halfW,py);x0.stroke();
   }
   x0.shadowBlur=0;
 
-  // Vertical grid lines
+  // Vertical grid lines — shift with camera
   for(let col=0;col<=COLS;col++){
     const nx=(col/COLS-0.5)*2;
     const sm=CG.spiral?Math.sin(CG.spiralAngle+col*0.3)*0.15:0;
-    const botX=baseX+(nx+sm)*trackHW;
-    const topX=vpx+nx*vpx*0.02;
-    x0.beginPath();x0.moveTo(topX,vpy);x0.lineTo(botX,h);
+    x0.beginPath();x0.moveTo(vpx+nx*vpx*0.02,vpy);x0.lineTo(baseX+(nx+sm)*trackHW,h);
     x0.strokeStyle=rgba(pc(1),(Math.abs(nx)<0.15?0.5:0.18)*THEME.sceneIntensity*(1+beat*0.2));
     x0.lineWidth=1;x0.shadowBlur=3;x0.shadowColor=pc(1);x0.stroke();
   }
   x0.shadowBlur=0;
 
-  // ── Obstacles — world-space, you swerve so they exit off screen SIDES ──
+  // ── Obstacles — FIXED in world space (project from vpx, NOT baseX) ──
+  // The key insight: obstacles project from the FIXED vanishing point (vpx),
+  // while the grid projects from your camera (baseX). When you swerve,
+  // the grid moves under you but obstacles stay put in world space,
+  // so they appear to slide sideways relative to you — off the screen edge.
   CG.obstacles.sort((a,b)=>a.z-b.z);
   for(const obs of CG.obstacles){
-    obs.z+=effectiveSpeed*0.009;
+    obs.z+=effectiveSpeed*0.012;
 
-    // Project screen position to check for side-exit
-    const ox=projX(obs.lane,obs.z);
-    const scale=Math.pow(obs.z,1.4);
-    const ow=obs.width*w*scale*1.3;
-    const offSide=(ox+ow<-20)||(ox-ow>w+20);
+    // Project obstacle from FIXED vpx (world space, not camera space)
+    const z=obs.z;const scale=Math.pow(z,1.4);
+    const py=projY(z);
+    // Obstacle screen X = fixed VP center + lane offset, then SUBTRACT swerve
+    // Subtracting swerve is what makes them slide sideways when you dodge
+    const fixedCx=vpx+(obs.lane-0.5)*2*trackHW*Math.pow(z,0.8);
+    const ox=fixedCx-swerve*Math.pow(z,1.2);
+    const ow=obs.width*w*scale*1.8; // bigger obstacles
+    const oh=obs.height*h*scale*1.6; // taller obstacles
+    const oy=py-oh;
 
-    // Reset when obstacle exits off a SIDE (successful dodge) or z>1.3 fallback
-    if(offSide||obs.z>1.3){
-      obs.z=0.01+Math.random()*0.04;obs.lane=0.2+Math.random()*0.6;
+    // Side-exit check: obstacle has slid off left or right edge
+    const offSide=(ox+ow/2<-50)||(ox-ow/2>w+50);
+
+    // Reset when exited off a side OR past z=1.2 fallback
+    if(offSide||obs.z>1.2){
+      obs.z=0.01+Math.random()*0.03;obs.lane=0.3+Math.random()*0.4;
       obs.type=Math.floor(Math.random()*3);obs.ci=Math.floor(Math.random()*4);
-      obs.height=0.25+Math.random()*0.3;obs.width=0.14+Math.random()*0.1;obs.dodged=false;
+      obs.height=0.35+Math.random()*0.3;obs.width=0.18+Math.random()*0.12;obs.dodged=false;
       continue;
     }
 
-    // Trigger swerve at z=0.55-0.62 — early enough for obstacle to grow big
-    // then slide off the left or right edge of screen
-    if(!obs.dodged&&obs.z>0.55&&obs.z<0.63){
+    // Trigger swerve at z=0.45-0.52 — obstacle is mid-size, gives time to slide off
+    if(!obs.dodged&&obs.z>0.45&&obs.z<0.53){
       obs.dodged=true;
-      // Massive swerve AWAY from obstacle lane
-      CG.swerveTarget=(obs.lane>0.5?-1:1)*(w*0.55+Math.random()*w*0.2);
+      CG.swerveTarget=(obs.lane>0.5?-1:1)*(w*0.6+Math.random()*w*0.3);
     }
 
-    const py=projY(obs.z);
-    const oh=obs.height*h*scale*1.2,oy=py-oh;
     const oA=Math.min(1,(0.35+scale*0.65)*(1+beat*0.4));
 
     // ── Type 0: Solid glowing wall ──
@@ -760,11 +755,11 @@ function drawCyberGrid(t){
       const wallG=x0.createLinearGradient(ox-ow/2,oy,ox-ow/2,py);
       wallG.addColorStop(0,rgba(pc(obs.ci),oA*0.6));wallG.addColorStop(0.5,rgba(pc(obs.ci),oA*0.35));wallG.addColorStop(1,rgba(pc(obs.ci),oA*0.15));
       x0.fillStyle=wallG;x0.fillRect(ox-ow/2,oy,ow,oh);
-      x0.strokeStyle=rgba(pc(obs.ci),oA*0.95);x0.lineWidth=2+scale*3;
-      x0.shadowBlur=15+scale*25+beat*12;x0.shadowColor=pc(obs.ci);
+      x0.strokeStyle=rgba(pc(obs.ci),oA*0.95);x0.lineWidth=2+scale*4;
+      x0.shadowBlur=18+scale*30+beat*15;x0.shadowColor=pc(obs.ci);
       x0.strokeRect(ox-ow/2,oy,ow,oh);
       x0.lineWidth=1;x0.strokeStyle=rgba(pc(obs.ci),oA*0.3);
-      const scanCount=Math.floor(oh/8);
+      const scanCount=Math.max(1,Math.floor(oh/10));
       for(let sc2=0;sc2<scanCount;sc2++){const sy=oy+sc2*(oh/scanCount);x0.beginPath();x0.moveTo(ox-ow/2,sy);x0.lineTo(ox+ow/2,sy);x0.stroke();}
       const topG=x0.createLinearGradient(ox,oy-ow*0.15,ox,oy+ow*0.1);
       topG.addColorStop(0,'transparent');topG.addColorStop(0.5,rgba(pc(obs.ci),oA*0.5));topG.addColorStop(1,'transparent');
@@ -775,17 +770,16 @@ function drawCyberGrid(t){
     else if(obs.type===1){
       const postW=ow*0.08,barrierY=py-oh*0.55;
       x0.fillStyle=rgba(pc(obs.ci),oA*0.5);
-      x0.shadowBlur=10+scale*15+beat*8;x0.shadowColor=pc(obs.ci);
+      x0.shadowBlur=12+scale*18+beat*10;x0.shadowColor=pc(obs.ci);
       x0.fillRect(ox-ow/2,py-oh*0.7,postW,oh*0.7);
       x0.fillRect(ox+ow/2-postW,py-oh*0.7,postW,oh*0.7);
       const beamPulse=0.6+Math.sin(t*0.008+obs.lane*10)*0.3+beat*0.4;
       const beamH=oh*0.18*(1+beat*0.3);
       for(let bl=0;bl<3;bl++){
         const bAlpha=oA*(0.7-bl*0.15)*beamPulse;
-        const bOff=bl*beamH*0.4;
         x0.fillStyle=rgba(pc((obs.ci+bl)%4),bAlpha);
-        x0.shadowBlur=20+beat*15;x0.shadowColor=pc((obs.ci+bl)%4);
-        x0.fillRect(ox-ow/2+postW,barrierY+bOff,ow-postW*2,beamH);
+        x0.shadowBlur=22+beat*18;x0.shadowColor=pc((obs.ci+bl)%4);
+        x0.fillRect(ox-ow/2+postW,barrierY+bl*beamH*0.4,ow-postW*2,beamH);
       }
       x0.strokeStyle=rgba(pc(obs.ci),oA*0.8);x0.lineWidth=1.5+scale*2;
       x0.strokeRect(ox-ow/2,py-oh*0.7,postW,oh*0.7);
@@ -794,17 +788,17 @@ function drawCyberGrid(t){
     }
     // ── Type 2: Monolith pillar ──
     else{
-      const pillarW=ow*0.45,pillarH=oh*1.1;
-      const auraG=x0.createRadialGradient(ox,py-pillarH*0.5,0,ox,py-pillarH*0.5,pillarW*1.5);
-      auraG.addColorStop(0,rgba(pc(obs.ci),oA*0.25+beat*0.15));auraG.addColorStop(1,'transparent');
-      x0.fillStyle=auraG;x0.fillRect(ox-pillarW*1.5,py-pillarH-pillarW,pillarW*3,pillarH+pillarW*2);
+      const pillarW=ow*0.5,pillarH=oh*1.2;
+      const auraG=x0.createRadialGradient(ox,py-pillarH*0.5,0,ox,py-pillarH*0.5,pillarW*1.8);
+      auraG.addColorStop(0,rgba(pc(obs.ci),oA*0.3+beat*0.15));auraG.addColorStop(1,'transparent');
+      x0.fillStyle=auraG;x0.fillRect(ox-pillarW*1.8,py-pillarH-pillarW,pillarW*3.6,pillarH+pillarW*2);
       const pilG=x0.createLinearGradient(ox-pillarW/2,py-pillarH,ox+pillarW/2,py-pillarH);
-      pilG.addColorStop(0,rgba(pc(obs.ci),oA*0.15));pilG.addColorStop(0.3,rgba(pc(obs.ci),oA*0.5));
-      pilG.addColorStop(0.7,rgba(pc(obs.ci),oA*0.5));pilG.addColorStop(1,rgba(pc(obs.ci),oA*0.15));
+      pilG.addColorStop(0,rgba(pc(obs.ci),oA*0.15));pilG.addColorStop(0.3,rgba(pc(obs.ci),oA*0.55));
+      pilG.addColorStop(0.7,rgba(pc(obs.ci),oA*0.55));pilG.addColorStop(1,rgba(pc(obs.ci),oA*0.15));
       x0.fillStyle=pilG;x0.fillRect(ox-pillarW/2,py-pillarH,pillarW,pillarH);
       const coreW=pillarW*0.2,corePulse=0.5+Math.sin(t*0.01+obs.lane*7)*0.4+beat*0.5;
       x0.fillStyle=rgba(pc((obs.ci+1)%4),oA*corePulse*0.9);
-      x0.shadowBlur=18+scale*20+beat*12;x0.shadowColor=pc((obs.ci+1)%4);
+      x0.shadowBlur=20+scale*25+beat*15;x0.shadowColor=pc((obs.ci+1)%4);
       x0.fillRect(ox-coreW/2,py-pillarH*0.9,coreW,pillarH*0.8);
       x0.strokeStyle=rgba(pc(obs.ci),oA*0.85);x0.lineWidth=1.5+scale*2;
       x0.strokeRect(ox-pillarW/2,py-pillarH,pillarW,pillarH);
@@ -812,12 +806,12 @@ function drawCyberGrid(t){
     }
   }
 
-  // ── Centerpiece — fixed at VP (horizon center) ──
+  // ── Centerpiece — higher up and smaller (feels far away, driving toward it) ──
   if(THEME.centerpiece){
     cpRot+=0.012*(1+energy*0.2);cpPh+=0.013;
-    const gs=Math.min(w,h)*(0.18+beat*0.05)*(1+corruption*0.3);
-    const cpX=vpx+(CG.spiral?Math.sin(CG.spiralAngle)*w*0.12:0),cpY=vpy-h*0.14;
-    x0.globalAlpha=0.85+beat*0.15;x0.shadowBlur=20+beat*20;x0.shadowColor=pc(0);
+    const gs=Math.min(w,h)*(0.1+beat*0.03)*(1+corruption*0.2);
+    const cpX=vpx+(CG.spiral?Math.sin(CG.spiralAngle)*w*0.08:0),cpY=vpy-h*0.22;
+    x0.globalAlpha=0.8+beat*0.15;x0.shadowBlur=15+beat*15;x0.shadowColor=pc(0);
     drawCPMini(x0,THEME.centerpiece,cpX,cpY,gs,cpRot);x0.globalAlpha=1;x0.shadowBlur=0;
   }
 }
