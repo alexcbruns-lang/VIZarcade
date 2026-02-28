@@ -303,6 +303,7 @@ const SONG_RECOGNITION = {
   pendingTransition: false,
   pendingTransitionTime: 0,
   confirmedNewTrack: false,
+  _currentAcrid: '',  // ACR ID of the currently playing song (for same-song detection)
 };
 
 // ── ID3 Tag Parser (lightweight, no dependencies) ──
@@ -8955,6 +8956,8 @@ MusicProviders.local = {
           document.getElementById('trackName').style.display = '';
           document.getElementById('artistName').style.display = '';
           console.log('[acr] initial recognition:', result.title, '—', result.artist);
+          // Store ACR ID for same-song detection on future transitions
+          SONG_RECOGNITION._currentAcrid = result.acrid || '';
           // Also trigger AI theme for the initial song
           const tid = 'acr_' + (result.acrid || Date.now());
           lastTid = tid;
@@ -8966,7 +8969,8 @@ MusicProviders.local = {
 
   // Transition to a new scene, with song recognition determining the theme.
   // The current scene continues playing while recognition happens in the background.
-  // Once recognition completes (or fails), a single clean transition occurs.
+  // Once recognition completes: new song → AI-themed transition. Same song → do nothing.
+  // Recognition failure → do nothing (stay on current scene, don't disrupt).
   _transitionWithRecognition() {
     if (!SONG_RECOGNITION.acrEnabled || !this._analyser || !this._audioCtx) {
       // No recognition available — immediate random scene swap
@@ -8975,35 +8979,58 @@ MusicProviders.local = {
     }
 
     // Current scene keeps playing — recognition happens in background
-    console.log('[local] transition triggered — recognizing new song (current scene continues)...');
+    console.log('[local] transition triggered — recognizing song (current scene continues)...');
     const self = this;
 
     // Wait 5s for new song to be clearly playing (past any crossfade overlap)
     setTimeout(() => {
-      if (!self._analyser || !self._audioCtx) {
-        skipToNextScene();
-        return;
+      if (!self._analyser || !self._audioCtx) return;
+
+      // Pre-filter: check spectral divergence before spending an API call
+      // If the audio sounds the same as before, skip the ACRCloud call entirely
+      const divergence = getSpectralDivergence();
+      console.log('[local] spectral divergence:', divergence.toFixed(3));
+      if (divergence < 0.06 && SONG_RECOGNITION.spectralWindow.length >= 20) {
+        console.log('[local] low spectral divergence — likely same song, skipping API call');
+        return; // Stay on current scene, no API call wasted
       }
+
       // Clear ACR cooldown to ensure a fresh API call
       SONG_RECOGNITION.acrLastCall = 0;
       recognizeSong(self._analyser, self._audioCtx).then(result => {
         if (result && result.title) {
-          console.log('[local] new song identified:', result.title, '—', result.artist);
+          // Check if this is actually a different song than what's currently displayed
+          const currentTitle = document.getElementById('trackName').textContent || '';
+          const currentAcrid = SONG_RECOGNITION._currentAcrid || '';
+          const newAcrid = result.acrid || '';
+
+          // Compare by ACR ID first (most reliable), fall back to title comparison
+          const isSameSong = (newAcrid && newAcrid === currentAcrid) ||
+            (!newAcrid && result.title === currentTitle);
+
+          if (isSameSong) {
+            console.log('[local] same song still playing:', result.title, '— no transition');
+            return; // Do nothing — current scene continues
+          }
+
+          console.log('[local] NEW song confirmed:', result.title, '—', result.artist);
+          // Store the new song's ACR ID for future comparisons
+          SONG_RECOGNITION._currentAcrid = newAcrid;
           // Update the persistent bottom-left track display
           setTrackInfo(result.title, result.artist, true);
           document.getElementById('trackName').style.display = '';
           document.getElementById('artistName').style.display = '';
           // Full AI theme transition — single clean transition with song info
-          const tid = 'acr_' + (result.acrid || Date.now());
+          const tid = 'acr_' + (newAcrid || Date.now());
           lastTid = tid;
           loadTheme(tid, result.title, result.artist, [], false, 180000);
         } else {
-          console.log('[local] could not identify song — random scene');
-          skipToNextScene();
+          // Could not identify — stay on current scene, don't disrupt
+          console.log('[local] could not identify song — staying on current scene');
         }
       }).catch(e => {
         console.warn('[local] recognition error:', e);
-        skipToNextScene();
+        // Don't disrupt — stay on current scene
       });
     }, 5000);
   },
@@ -9329,6 +9356,7 @@ MusicProviders.local = {
     SONG_RECOGNITION.spectralWindow = [];
     SONG_RECOGNITION.prevSpectrum = null;
     SONG_RECOGNITION.acrLastResult = null;
+    SONG_RECOGNITION._currentAcrid = '';
     // Restore track info visibility for next provider
     document.getElementById('trackName').style.display = '';
     document.getElementById('artistName').style.display = '';
