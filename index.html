@@ -493,36 +493,40 @@ function getSpectralDivergence() {
 
 async function recognizeSong(analyserNode, audioCtx) {
   const SR = SONG_RECOGNITION;
-  if (!SR.acrEnabled || !SR.acrProxyUrl) return null;
-  if (Date.now() - SR.acrLastCall < SR.acrCooldown) return SR.acrLastResult;
+  if (!SR.acrEnabled || !SR.acrProxyUrl) {
+    console.log('[acr] skipped — not enabled or no proxy URL');
+    return null;
+  }
+  if (Date.now() - SR.acrLastCall < SR.acrCooldown) {
+    console.log('[acr] skipped — cooldown active, returning cached result');
+    return SR.acrLastResult;
+  }
 
   try {
-    // Capture ~3 seconds of audio via ScriptProcessor/OfflineContext
-    const sampleRate = audioCtx.sampleRate;
-    const duration = 3; // seconds
-    const bufferSize = sampleRate * duration;
-
-    // Create an offline context to capture audio
-    // Note: This requires a connected source node that we can tap
-    // For mic/system, we'll use the MediaRecorder approach instead
-
-    const recorder = await captureAudioSnippet(audioCtx, analyserNode, duration);
-    if (!recorder) return null;
+    console.log('[acr] capturing 3s audio snippet...');
+    const snippet = await captureAudioSnippet(audioCtx, analyserNode, 3);
+    if (!snippet) {
+      console.warn('[acr] audio capture returned empty — cannot identify');
+      return null;
+    }
 
     SR.acrLastCall = Date.now();
+    console.log('[acr] sending to proxy:', SR.acrProxyUrl);
 
     const response = await fetch(SR.acrProxyUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ audio: recorder })
+      body: JSON.stringify({ audio: snippet })
     });
 
     if (!response.ok) {
-      console.warn('[acr] proxy returned', response.status);
+      console.warn('[acr] proxy returned HTTP', response.status);
+      try { const errBody = await response.text(); console.warn('[acr] response:', errBody.slice(0, 200)); } catch (e2) {}
       return null;
     }
 
     const data = await response.json();
+    console.log('[acr] response status:', data.status ? data.status.msg : 'unknown');
 
     if (data.status && data.status.code === 0 && data.metadata && data.metadata.music && data.metadata.music.length > 0) {
       const match = data.metadata.music[0];
@@ -533,38 +537,67 @@ async function recognizeSong(analyserNode, audioCtx) {
         acrid: match.acrid || '',
         timestamp: Date.now()
       };
-      console.log('[acr] recognized:', SR.acrLastResult.title, '—', SR.acrLastResult.artist);
+      console.log('[acr] ✓ recognized:', SR.acrLastResult.title, '—', SR.acrLastResult.artist);
       return SR.acrLastResult;
     } else {
-      console.log('[acr] no match found');
+      console.log('[acr] ✗ no match found (code:', data.status ? data.status.code : '?', ')');
       return null;
     }
   } catch (e) {
-    console.warn('[acr] recognition failed:', e);
+    console.warn('[acr] recognition failed:', e.message || e);
     return null;
   }
 }
 
-// Capture a short audio snippet as base64 WAV using MediaRecorder
+// Capture a short audio snippet as base64 using MediaRecorder
+// Uses the provider's raw stream when available (mic/system), falls back to Web Audio tap
 async function captureAudioSnippet(audioCtx, analyserNode, durationSec) {
   try {
-    // Create a MediaStreamDestination to tap the audio pipeline
-    const dest = audioCtx.createMediaStreamDestination();
-    analyserNode.connect(dest);
+    // Prefer the original MediaStream if available (more reliable for mic/system)
+    const provider = MusicProviders.local;
+    const rawStream = provider && provider._stream;
 
-    const recorder = new MediaRecorder(dest.stream, {
-      mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus' : 'audio/webm'
-    });
+    let stream;
+    let destNode = null;
+    if (rawStream && rawStream.active && rawStream.getAudioTracks().length > 0) {
+      stream = rawStream;
+    } else {
+      // Fallback: tap the Web Audio graph via MediaStreamDestination
+      destNode = audioCtx.createMediaStreamDestination();
+      analyserNode.connect(destNode);
+      stream = destNode.stream;
+    }
 
+    // Check for MediaRecorder support
+    if (typeof MediaRecorder === 'undefined') {
+      console.warn('[acr] MediaRecorder not available');
+      if (destNode) analyserNode.disconnect(destNode);
+      return null;
+    }
+
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm'
+      : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
+
+    if (!mimeType) {
+      console.warn('[acr] no supported audio MIME type for MediaRecorder');
+      if (destNode) analyserNode.disconnect(destNode);
+      return null;
+    }
+
+    const recorder = new MediaRecorder(stream, { mimeType });
     const chunks = [];
     recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
 
     const done = new Promise(resolve => {
       recorder.onstop = async () => {
-        analyserNode.disconnect(dest);
-        const blob = new Blob(chunks, { type: recorder.mimeType });
-        // Convert to base64
+        if (destNode) {
+          try { analyserNode.disconnect(destNode); } catch (e) { /* ok */ }
+        }
+        if (chunks.length === 0) { resolve(null); return; }
+        const blob = new Blob(chunks, { type: mimeType });
+        if (blob.size < 100) { resolve(null); return; } // Too small to be useful
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result.split(',')[1]);
         reader.onerror = () => resolve(null);
@@ -574,9 +607,11 @@ async function captureAudioSnippet(audioCtx, analyserNode, durationSec) {
 
     recorder.start();
     await delay(durationSec * 1000);
-    recorder.stop();
+    if (recorder.state === 'recording') recorder.stop();
 
-    return await done;
+    const result = await done;
+    console.log('[acr] captured audio snippet:', result ? (result.length / 1024).toFixed(1) + 'KB' : 'failed');
+    return result;
   } catch (e) {
     console.warn('[acr] audio capture failed:', e);
     return null;
@@ -590,15 +625,23 @@ async function confirmTransition(provider) {
   const SR = SONG_RECOGNITION;
   const divergence = getSpectralDivergence();
 
-  console.log('[transition] checking — spectral divergence:', divergence.toFixed(3));
+  console.log('[transition] checking — spectral divergence:', divergence.toFixed(3),
+    'window:', SR.spectralWindow.length);
 
-  // Gate 1: Spectral divergence must be meaningful
+  // If not enough spectral data yet, allow the transition
+  // (better to allow than to silently block all transitions)
+  if (SR.spectralWindow.length < 20) {
+    console.log('[transition] insufficient spectral data — allowing transition');
+    return true;
+  }
+
+  // Gate 1: Spectral divergence very low — likely same song section, suppress
   if (divergence < 0.08) {
     console.log('[transition] spectral divergence too low — probably same song, suppressing');
     return false;
   }
 
-  // Gate 2: If divergence is very high, confirm immediately (clear song change)
+  // Gate 2: If divergence is high, confirm immediately (clear song change)
   if (divergence > 0.25) {
     console.log('[transition] high spectral divergence — confirming transition');
     return true;
@@ -609,7 +652,6 @@ async function confirmTransition(provider) {
     console.log('[transition] moderate divergence — checking ACRCloud...');
     const result = await recognizeSong(provider._analyser, provider._audioCtx);
     if (result && result.title) {
-      // Compare with previous result to determine if it's a new song
       const prevTitle = document.getElementById('trackName').textContent || '';
       const isNew = result.title !== prevTitle;
       if (isNew) {
@@ -620,12 +662,11 @@ async function confirmTransition(provider) {
         return false;
       }
     }
-    // ACRCloud couldn't identify — fall through to divergence-based decision
+    // ACRCloud couldn't identify — fall through
   }
 
-  // Fallback: moderate divergence without ACRCloud — allow transition
-  // (better to change scenes occasionally on false positives than miss real transitions)
-  console.log('[transition] moderate divergence, no ACRCloud — allowing transition');
+  // Fallback: moderate divergence — allow transition
+  console.log('[transition] moderate divergence — allowing transition');
   return true;
 }
 
