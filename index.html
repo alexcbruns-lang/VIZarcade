@@ -8989,6 +8989,10 @@ MusicProviders.local = {
       recognizeSong(self._analyser, self._audioCtx).then(result => {
         if (result && result.title) {
           console.log('[local] new song identified:', result.title, '—', result.artist);
+          // Update the persistent bottom-left track display
+          setTrackInfo(result.title, result.artist, true);
+          document.getElementById('trackName').style.display = '';
+          document.getElementById('artistName').style.display = '';
           // Full AI theme transition — single clean transition with song info
           const tid = 'acr_' + (result.acrid || Date.now());
           lastTid = tid;
@@ -9260,7 +9264,7 @@ MusicProviders.local = {
           console.log('[local] DJ crossfade detected — dip:', this._preDipEnergy.toFixed(2),
             '→', this._dipEnergy.toFixed(2), '→ rise:', recentAvg.toFixed(2));
           this._dipDetected = false;
-          this._transitionCooldown = 120000; // 120s cooldown
+          this._transitionCooldown = 45000; // 45s cooldown
           surpriseFired = false;
           this._rollingPeak = recentAvg;
           SONG_RECOGNITION.spectralWindow = [];
@@ -9285,7 +9289,7 @@ MusicProviders.local = {
           if (veryRecentAvg > TH.hardCutRecovery) {
             console.log('[local] hard cut detected — silence then new audio');
             this._hardCutState = 0;
-            this._transitionCooldown = 120000;
+            this._transitionCooldown = 45000;
             this._dipDetected = false;
             surpriseFired = false;
             this._rollingPeak = veryRecentAvg;
