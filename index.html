@@ -601,16 +601,6 @@ async function confirmTransition(provider) {
   // Gate 2: If divergence is very high, confirm immediately (clear song change)
   if (divergence > 0.25) {
     console.log('[transition] high spectral divergence — confirming transition');
-    // If ACRCloud is enabled, fire a recognition in the background (non-blocking)
-    if (SR.acrEnabled && provider && provider._analyser && provider._audioCtx) {
-      recognizeSong(provider._analyser, provider._audioCtx).then(result => {
-        if (result && result.title) {
-          setTrackInfo(result.title, result.artist, true);
-          document.getElementById('trackName').style.display = '';
-          document.getElementById('artistName').style.display = '';
-        }
-      });
-    }
     return true;
   }
 
@@ -619,15 +609,11 @@ async function confirmTransition(provider) {
     console.log('[transition] moderate divergence — checking ACRCloud...');
     const result = await recognizeSong(provider._analyser, provider._audioCtx);
     if (result && result.title) {
-      // Compare with previous result
-      const isNew = !SR.acrLastResult ||
-        result.acrid !== SR.acrLastResult.acrid ||
-        result.title !== SR.acrLastResult.title;
+      // Compare with previous result to determine if it's a new song
+      const prevTitle = document.getElementById('trackName').textContent || '';
+      const isNew = result.title !== prevTitle;
       if (isNew) {
         console.log('[transition] ACRCloud confirms new song:', result.title);
-        setTrackInfo(result.title, result.artist, true);
-        document.getElementById('trackName').style.display = '';
-        document.getElementById('artistName').style.display = '';
         return true;
       } else {
         console.log('[transition] ACRCloud says same song — suppressing transition');
@@ -8896,39 +8882,43 @@ MusicProviders.local = {
     }
   },
 
-  // ── Periodic song recognition (ACRCloud) for mic/system modes ──
+  // ── Song recognition (ACRCloud) for mic/system modes ──
+  // Hybrid approach: recognize once on session start, then only after confirmed transitions.
+  // This minimizes API calls while still showing "now playing" when it matters.
   _acrInterval: null,
   _startPeriodicRecognition() {
     const self = this;
     // Initial recognition after 5s (give audio time to stabilize)
     setTimeout(() => {
-      if (self._analyser && self._audioCtx) {
-        recognizeSong(self._analyser, self._audioCtx).then(result => {
-          if (result && result.title) {
-            setTrackInfo(result.title, result.artist, true);
-            document.getElementById('trackName').style.display = '';
-            document.getElementById('artistName').style.display = '';
-          }
-        });
-      }
+      self._recognizeAndDisplay(false);
     }, 5000);
-    // Then check every 20s
-    this._acrInterval = setInterval(() => {
-      if (!self._analyser || !self._audioCtx) return;
-      recognizeSong(self._analyser, self._audioCtx).then(result => {
-        if (result && result.title) {
-          const SR = SONG_RECOGNITION;
-          const prevTitle = document.getElementById('trackName').textContent;
-          // Only update display if it's a different song
-          if (result.title !== prevTitle) {
-            setTrackInfo(result.title, result.artist, true);
-            document.getElementById('trackName').style.display = '';
-            document.getElementById('artistName').style.display = '';
-            console.log('[acr] now playing:', result.title, '—', result.artist);
-          }
+  },
+
+  // Single recognition attempt — called on session start and after transitions
+  // If isTransition=true, triggers the full AI theme flow (loadTheme) instead of just updating display
+  _recognizeAndDisplay(isTransition) {
+    if (!this._analyser || !this._audioCtx) return;
+    if (!SONG_RECOGNITION.acrEnabled) return;
+    recognizeSong(this._analyser, this._audioCtx).then(result => {
+      if (result && result.title) {
+        console.log('[acr] recognized:', result.title, '—', result.artist);
+        if (isTransition) {
+          // Full AI theme flow — same as Spotify: AI picks scene, palette, centerpiece
+          const tid = 'acr_' + (result.acrid || Date.now());
+          lastTid = tid; // Prevent re-triggering for same song
+          loadTheme(tid, result.title, result.artist, [], false, 180000);
+        } else {
+          // Just update the display (session start, no scene change needed)
+          setTrackInfo(result.title, result.artist, true);
+          document.getElementById('trackName').style.display = '';
+          document.getElementById('artistName').style.display = '';
         }
-      });
-    }, 20000);
+      } else if (isTransition) {
+        // ACRCloud couldn't identify — fall back to random scene swap
+        console.log('[acr] no match — falling back to random scene');
+        skipToNextScene();
+      }
+    });
   },
 
   _showModeSelector() {
@@ -9154,7 +9144,13 @@ MusicProviders.local = {
               self._rollingPeak = recentAvg;
               // Reset spectral window for fresh comparison
               SONG_RECOGNITION.spectralWindow = [];
-              skipToNextScene();
+              // If ACRCloud is enabled, recognize first then do full AI theme transition
+              // Otherwise fall back to random scene swap
+              if (SONG_RECOGNITION.acrEnabled && self._analyser && self._audioCtx) {
+                setTimeout(() => self._recognizeAndDisplay(true), 3000);
+              } else {
+                skipToNextScene();
+              }
             } else {
               console.log('[local] crossfade SUPPRESSED by spectral analysis');
               self._transitionCooldown = 15000; // Short cooldown on false positive
@@ -9194,7 +9190,12 @@ MusicProviders.local = {
                 surpriseFired = false;
                 self._rollingPeak = veryRecentAvg;
                 SONG_RECOGNITION.spectralWindow = [];
-                skipToNextScene();
+                // If ACRCloud is enabled, recognize first then do full AI theme transition
+                if (SONG_RECOGNITION.acrEnabled && self._analyser && self._audioCtx) {
+                  setTimeout(() => self._recognizeAndDisplay(true), 3000);
+                } else {
+                  skipToNextScene();
+                }
               } else {
                 console.log('[local] hard cut SUPPRESSED — likely same song (pause/break)');
                 self._transitionCooldown = 10000;
