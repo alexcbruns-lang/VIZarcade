@@ -8861,10 +8861,19 @@ MusicProviders.local = {
         this._source = this._audioCtx.createMediaStreamSource(stream);
         this._source.connect(this._analyser);
         this._startTime = Date.now();
-        // Hide track/artist for mic — no meaningful info to show
-        setTrackInfo('', '', false);
+        // If ACRCloud is enabled, hide track info initially — recognition will populate it
+        // If not, show generic label
+        if (SONG_RECOGNITION.acrEnabled) {
+          setTrackInfo('Listening...', '', true);
+          document.getElementById('trackName').style.display = '';
+        } else {
+          setTrackInfo('', '', false);
+        }
         document.getElementById('albumArt').style.display = 'none';
-        loadTheme('mic_' + Date.now(), 'Microphone', 'Live Audio', [], false, 300000);
+        // Only call loadTheme if ACR is NOT enabled (ACR will handle it after recognition)
+        if (!SONG_RECOGNITION.acrEnabled) {
+          loadTheme('mic_' + Date.now(), 'Microphone', 'Live Audio', [], false, 300000);
+        }
       } else if (mode === 'system') {
         // System audio via getDisplayMedia
         const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -8884,10 +8893,17 @@ MusicProviders.local = {
         this._source = this._audioCtx.createMediaStreamSource(stream);
         this._source.connect(this._analyser);
         this._startTime = Date.now();
-        // Hide track/artist for system audio
-        setTrackInfo('', '', false);
+        // If ACRCloud is enabled, hide track info initially — recognition will populate it
+        if (SONG_RECOGNITION.acrEnabled) {
+          setTrackInfo('Listening...', '', true);
+          document.getElementById('trackName').style.display = '';
+        } else {
+          setTrackInfo('', '', false);
+        }
         document.getElementById('albumArt').style.display = 'none';
-        loadTheme('sys_' + Date.now(), 'System Audio', 'System', [], false, 300000);
+        if (!SONG_RECOGNITION.acrEnabled) {
+          loadTheme('sys_' + Date.now(), 'System Audio', 'System', [], false, 300000);
+        }
         // If the user stops sharing, clean up
         audioTracks[0].onended = () => {
           console.log('[local] system audio sharing stopped');
@@ -8984,8 +9000,10 @@ MusicProviders.local = {
       const overlay = document.createElement('div');
       overlay.id = 'localAudioSelector';
       overlay.style.cssText = 'position:fixed;inset:0;z-index:250;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.95);gap:16px;';
-      // Check if getDisplayMedia is available for system audio (not available on mobile)
-      const hasSystemAudio = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) && !isMobile;
+      // Check if getDisplayMedia is available for system audio
+      // Don't use isMobile — touchscreen laptops support getDisplayMedia but get misdetected
+      // Instead, just check API availability directly
+      const hasSystemAudio = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
       overlay.innerHTML =
         '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.8rem;letter-spacing:0.3em;color:#06ffd8;text-shadow:0 0 20px #06ffd8">LOCAL AUDIO SOURCE</div>' +
         '<button id="localMicBtn" class="btn" style="min-width:280px">\uD83C\uDFA4 \u00a0MICROPHONE</button>' +
@@ -9152,6 +9170,18 @@ MusicProviders.local = {
     if (this._energyWindow.length > 80) this._energyWindow.shift(); // ~8 sec window at 100ms
     this._surpriseCooldown = Math.max(0, this._surpriseCooldown - 100);
     this._transitionCooldown = Math.max(0, this._transitionCooldown - 100);
+
+    // Diagnostic logging every 10s
+    if (!this._diagTimer) this._diagTimer = 0;
+    this._diagTimer += 100;
+    if (this._diagTimer >= 10000) {
+      this._diagTimer = 0;
+      const recent6 = this._energyWindow.slice(-6);
+      const older20 = this._energyWindow.slice(-30, -10);
+      const rAvg = recent6.length ? (recent6.reduce((a,b)=>a+b,0)/recent6.length).toFixed(3) : '?';
+      const oAvg = older20.length ? (older20.reduce((a,b)=>a+b,0)/older20.length).toFixed(3) : '?';
+      console.log(`[local-diag] energy=${energy.toFixed(3)} recent=${rAvg} older=${oAvg} tCooldown=${Math.round(this._transitionCooldown/1000)}s dipDetected=${this._dipDetected} hardCut=${this._hardCutState} window=${this._energyWindow.length}`);
+    }
 
     // Update rolling peak (decays slowly)
     if (energy > this._rollingPeak) this._rollingPeak = energy;
