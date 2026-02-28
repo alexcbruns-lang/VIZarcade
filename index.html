@@ -8931,35 +8931,52 @@ MusicProviders.local = {
     const self = this;
     // Initial recognition after 5s (give audio time to stabilize)
     setTimeout(() => {
-      self._recognizeAndDisplay(false);
-    }, 5000);
-  },
-
-  // Single recognition attempt — called on session start and after transitions
-  // If isTransition=true, triggers the full AI theme flow (loadTheme) instead of just updating display
-  _recognizeAndDisplay(isTransition) {
-    if (!this._analyser || !this._audioCtx) return;
-    if (!SONG_RECOGNITION.acrEnabled) return;
-    recognizeSong(this._analyser, this._audioCtx).then(result => {
-      if (result && result.title) {
-        console.log('[acr] recognized:', result.title, '—', result.artist);
-        if (isTransition) {
-          // Full AI theme flow — same as Spotify: AI picks scene, palette, centerpiece
-          const tid = 'acr_' + (result.acrid || Date.now());
-          lastTid = tid; // Prevent re-triggering for same song
-          loadTheme(tid, result.title, result.artist, [], false, 180000);
-        } else {
-          // Just update the display (session start, no scene change needed)
+      if (!self._analyser || !self._audioCtx) return;
+      if (!SONG_RECOGNITION.acrEnabled) return;
+      recognizeSong(self._analyser, self._audioCtx).then(result => {
+        if (result && result.title) {
           setTrackInfo(result.title, result.artist, true);
           document.getElementById('trackName').style.display = '';
           document.getElementById('artistName').style.display = '';
+          console.log('[acr] initial recognition:', result.title, '—', result.artist);
+          // Also trigger AI theme for the initial song
+          const tid = 'acr_' + (result.acrid || Date.now());
+          lastTid = tid;
+          loadTheme(tid, result.title, result.artist, [], false, 180000);
         }
-      } else if (isTransition) {
-        // ACRCloud couldn't identify — fall back to random scene swap
-        console.log('[acr] no match — falling back to random scene');
+      });
+    }, 5000);
+  },
+
+  // Transition to a new scene, with optional song recognition.
+  // ALWAYS transitions — recognition is additive, never blocks the scene change.
+  // If ACRCloud identifies the song, uses the full AI theme flow (like Spotify).
+  // If not, falls back to skipToNextScene() (random scene swap).
+  _transitionWithRecognition() {
+    if (!SONG_RECOGNITION.acrEnabled || !this._analyser || !this._audioCtx) {
+      // No recognition available — just do immediate random scene swap
+      skipToNextScene();
+      return;
+    }
+    // Wait 3s for new song audio to stabilize, then try to recognize
+    const self = this;
+    setTimeout(() => {
+      if (!self._analyser || !self._audioCtx) { skipToNextScene(); return; }
+      recognizeSong(self._analyser, self._audioCtx).then(result => {
+        if (result && result.title) {
+          console.log('[local] song recognized after transition:', result.title, '—', result.artist);
+          // Full AI theme flow — same as Spotify
+          const tid = 'acr_' + (result.acrid || Date.now());
+          lastTid = tid;
+          loadTheme(tid, result.title, result.artist, [], false, 180000);
+        } else {
+          console.log('[local] recognition failed — using random scene');
+          skipToNextScene();
+        }
+      }).catch(() => {
         skipToNextScene();
-      }
-    });
+      });
+    }, 3000);
   },
 
   _showModeSelector() {
@@ -9173,31 +9190,15 @@ MusicProviders.local = {
         const riseAmount = recentAvg - this._dipEnergy;
         // Require a clear rise (0.15+) after at least 1.75s
         if (riseAmount > 0.15 && recentAvg > this._dipEnergy + 0.12 && timeSinceDip > 1750) {
-          console.log('[local] DJ crossfade candidate — dip:', this._preDipEnergy.toFixed(2),
+          console.log('[local] DJ crossfade detected — dip:', this._preDipEnergy.toFixed(2),
             '→', this._dipEnergy.toFixed(2), '→ rise:', recentAvg.toFixed(2));
-          // Use spectral confirmation before committing to scene change
-          const self = this;
-          confirmTransition(self).then(confirmed => {
-            if (confirmed) {
-              console.log('[local] crossfade CONFIRMED');
-              self._transitionCooldown = 120000;
-              surpriseFired = false;
-              self._rollingPeak = recentAvg;
-              // Reset spectral window for fresh comparison
-              SONG_RECOGNITION.spectralWindow = [];
-              // If ACRCloud is enabled, recognize first then do full AI theme transition
-              // Otherwise fall back to random scene swap
-              if (SONG_RECOGNITION.acrEnabled && self._analyser && self._audioCtx) {
-                setTimeout(() => self._recognizeAndDisplay(true), 3000);
-              } else {
-                skipToNextScene();
-              }
-            } else {
-              console.log('[local] crossfade SUPPRESSED by spectral analysis');
-              self._transitionCooldown = 15000; // Short cooldown on false positive
-            }
-          });
           this._dipDetected = false;
+          this._transitionCooldown = 120000; // 120s cooldown
+          surpriseFired = false;
+          this._rollingPeak = recentAvg;
+          SONG_RECOGNITION.spectralWindow = [];
+          // Transition immediately, then try to recognize the new song
+          this._transitionWithRecognition();
         }
         if (timeSinceDip > 15000) {
           this._dipDetected = false;
@@ -9213,35 +9214,20 @@ MusicProviders.local = {
           if (veryRecentAvg < 0.04 && olderAvg > 0.28) {
             this._hardCutState = 1;
             this._hardCutTime = Date.now();
-            // Snapshot spectral state before silence for comparison after
-            SONG_RECOGNITION.spectralCentroidPrev = SONG_RECOGNITION.spectralCentroidSmooth;
           }
         } else if (this._hardCutState === 1) {
           const timeSinceCut = Date.now() - (this._hardCutTime || 0);
           // Audio came back — new song started
           if (veryRecentAvg > 0.18) {
-            console.log('[local] hard cut candidate — silence then new audio');
-            const self = this;
+            console.log('[local] hard cut detected — silence then new audio');
             this._hardCutState = 0;
-            confirmTransition(self).then(confirmed => {
-              if (confirmed) {
-                console.log('[local] hard cut CONFIRMED');
-                self._transitionCooldown = 120000;
-                self._dipDetected = false;
-                surpriseFired = false;
-                self._rollingPeak = veryRecentAvg;
-                SONG_RECOGNITION.spectralWindow = [];
-                // If ACRCloud is enabled, recognize first then do full AI theme transition
-                if (SONG_RECOGNITION.acrEnabled && self._analyser && self._audioCtx) {
-                  setTimeout(() => self._recognizeAndDisplay(true), 3000);
-                } else {
-                  skipToNextScene();
-                }
-              } else {
-                console.log('[local] hard cut SUPPRESSED — likely same song (pause/break)');
-                self._transitionCooldown = 10000;
-              }
-            });
+            this._transitionCooldown = 120000; // shared 120s cooldown
+            this._dipDetected = false;
+            surpriseFired = false;
+            this._rollingPeak = veryRecentAvg;
+            SONG_RECOGNITION.spectralWindow = [];
+            // Transition immediately, then try to recognize the new song
+            this._transitionWithRecognition();
           }
           // Timeout: if silence lasts more than 8s, reset (just a pause, not a cut)
           if (timeSinceCut > 8000) {
