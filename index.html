@@ -269,11 +269,11 @@ let beatFX = {
 };
 
 // ── Scene & centerpiece lists ──
-const ALL_SCENES = ['WARP_SPEED', 'LAVA_WORLD', 'CYBER_GRID', 'DEEP_SEA', 'STORM_CHASER', 'JUNGLE_RAVE', 'DISCO_DIMENSION', 'ACID_TRIP', 'SPACE_STATION', 'NEON_CATHEDRAL', 'CLASSIC_ARCADE', 'ELECTRIC_FOREST', 'OMNIA_NIGHTCLUB', 'PIRATE_SHIP', 'JUNKYARD', 'GOTHAM', 'DAY_OF_DEAD', 'CHINESE_DRAGON', 'MOUNT_OLYMPUS', 'SUPER_MARIO', 'ATLANTIS', 'CARNIVAL', 'EGYPTIAN_TOMB'];
+const ALL_SCENES = ['WARP_SPEED', 'LAVA_WORLD', 'CYBER_GRID', 'DEEP_SEA', 'STORM_CHASER', 'JUNGLE_RAVE', 'DISCO_DIMENSION', 'ACID_TRIP', 'SPACE_STATION', 'NEON_CATHEDRAL', 'CLASSIC_ARCADE', 'ELECTRIC_FOREST', 'OMNIA_NIGHTCLUB', 'JUNKYARD', 'GOTHAM', 'DAY_OF_DEAD', 'MOUNT_OLYMPUS', 'ATLANTIS', 'CARNIVAL', 'EGYPTIAN_TOMB'];
 
 const ALL_CPS = ['skull', 'flaming_skull', 'skull_crossbones', 'smiley', 'demon_face', 'alien_head', 'robot_head', 'dragon', 'wolf_head', 'eagle', 'peace_sign', 'lightning_bolt', 'yin_yang', 'star', 'ankh', 'trident', 'flame', 'diamond', 'coffin', 'astronaut', 'rocket', 'ufo', 'vinyl_record', 'disco_ball', 'turntable', 'hourglass', 'crown', 'clock_face', 'chandelier', 'sun', 'moon', 'planet', 'comet', 'black_hole', 'wormhole', 'mandala', 'dna_helix', 'tesseract', 'eye', 'lotus'];
 
-const CP_INTEGRATED_SCENES = new Set(['WARP_SPEED', 'DEEP_SEA', 'STORM_CHASER', 'CARNIVAL', 'JUNKYARD', 'EGYPTIAN_TOMB', 'ELECTRIC_FOREST', 'PIRATE_SHIP', 'ACID_TRIP', 'NEON_CATHEDRAL', 'SPACE_STATION', 'LAVA_WORLD', 'DISCO_DIMENSION', 'CLASSIC_ARCADE', 'GOTHAM', 'DAY_OF_DEAD', 'CHINESE_DRAGON', 'MOUNT_OLYMPUS', 'SUPER_MARIO', 'ATLANTIS', 'JUNGLE_RAVE', 'CYBER_GRID', 'OMNIA_NIGHTCLUB']);
+const CP_INTEGRATED_SCENES = new Set(['WARP_SPEED', 'DEEP_SEA', 'STORM_CHASER', 'CARNIVAL', 'JUNKYARD', 'EGYPTIAN_TOMB', 'ELECTRIC_FOREST', 'ACID_TRIP', 'NEON_CATHEDRAL', 'SPACE_STATION', 'LAVA_WORLD', 'DISCO_DIMENSION', 'CLASSIC_ARCADE', 'GOTHAM', 'DAY_OF_DEAD', 'MOUNT_OLYMPUS', 'ATLANTIS', 'JUNGLE_RAVE', 'CYBER_GRID', 'OMNIA_NIGHTCLUB']);
 
 
 
@@ -383,7 +383,7 @@ function mkEruption() { return { x: Math.random() * W(), particles: Array.from({
 function mkDeepCreature(w, h) { return { x: -200, y: Math.random() * (h || H()) * 0.8 + ((h || H()) * 0.05), vx: Math.random() * 0.8 + 0.2, sz: Math.random() * 180 + 60, type: Math.floor(Math.random() * 4), ci: Math.floor(Math.random() * 4), ph: Math.random() * Math.PI * 2, tentacles: Array.from({ length: 8 }, () => ({ ph: Math.random() * Math.PI * 2, len: Math.random() * 0.8 + 0.4 })) }; }
 function mkJungleCreature(w, h) { return { x: (w || W()) + 100, y: ((h || H()) * 0.3) + Math.random() * (h || H()) * 0.4, vx: -(Math.random() * 1 + 0.3), sz: Math.random() * 120 + 60, type: Math.floor(Math.random() * 3), ci: Math.floor(Math.random() * 4), ph: Math.random() * Math.PI * 2 }; }
 function mkSpark(init) { return { x: Math.random() * W(), y: init ? Math.random() * H() : (H() * 0.4 + Math.random() * H() * 0.3), vx: (Math.random() - 0.5) * 6, vy: -(Math.random() * 8 + 2), life: Math.random() * 0.6 + 0.2, ci: Math.floor(Math.random() * 2) }; }
-function mkCannonball() { return { x: W() * 0.15 + Math.random() * W() * 0.1, y: H() * 0.55, vx: Math.random() * 8 + 4, vy: -(Math.random() * 4 + 2), r: 8, life: 1 }; }
+
 function mkLightning() { const w = W(), h = H(); let x2 = Math.random() * w, y2 = 0; const segs = []; while (y2 < h) { const dy = Math.random() * 50 + 20, dx = (Math.random() - 0.5) * 80; segs.push({ x1: x2, y1: y2, x2: x2 + dx, y2: y2 + dy }); x2 += dx; y2 += dy; } return { segs, life: 1, ci: Math.floor(Math.random() * 4) }; }
 function mkBolt() { const w = W(), h = H(), cx = w / 2 + (Math.random() - 0.5) * w * 0.4; return { x: cx, y: -50, vx: (Math.random() - 0.5) * 3, vy: Math.random() * 8 + 5, size: Math.random() * 30 + 15, ci: Math.floor(Math.random() * 4), life: 1 }; }
 function mkDebris() { const a = Math.random() * Math.PI * 2, spd = Math.random() * 5 + 2; return { x: Math.random() * W(), y: Math.random() * H(), vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, rot: Math.random() * Math.PI * 2, rotS: (Math.random() - 0.5) * 0.2, sz: Math.random() * 30 + 5, ci: Math.floor(Math.random() * 4), type: Math.floor(Math.random() * 3) }; }
@@ -496,20 +496,29 @@ function initScene(){
   if(sc==='SPACE_STATION'){SD.debris=Array.from({length:12},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.5,vy:(Math.random()-0.5)*0.3,rot:Math.random()*Math.PI*2,rotS:(Math.random()-0.5)*0.01,sz:Math.random()*40+10,ci:Math.floor(Math.random()*4)}));}
   // NEON_CATHEDRAL self-initializes via SD.cath in drawNeonCathedral
   if(sc==='CLASSIC_ARCADE'){SD.pixels=Array.from({length:200},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*2,vy:(Math.random()-0.5)*2,size:Math.floor(Math.random()*3+1)*8,ci:Math.floor(Math.random()*4),type:Math.floor(Math.random()*4)}));SD.scanLine=0;SD.mazeLines=Array.from({length:20},()=>{const mx=Math.random()*w,my=Math.random()*h;return{x1:mx,y1:my,x2:mx+(Math.random()-0.5)*200,y2:my+(Math.random()-0.5)*200,ci:Math.floor(Math.random()*4)};});}
-  if(sc==='ELECTRIC_FOREST'){SD.ef={trees:[],lasers:[],fairies:Array.from({length:30},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.8,vy:(Math.random()-0.5)*0.5,r:Math.random()*3+1.5,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)})),laserOverload:false,laserOverloadTimer:0,monkeySwarm:false,monkeySwarmTimer:0,monkeys:[],windstorm:false,windstormTimer:0};
-  // Build solid trees flanking each side (4-6 per side)
-  const treeSide=(side,count)=>{for(let i=0;i<count;i++){const spread=0.05+i*0.08;SD.ef.trees.push({x:side<0?w*spread:w*(1-spread),side,trunkW:18+Math.random()*12,trunkH:h*(0.55+Math.random()*0.15),ci:Math.floor(Math.random()*4),ph:Math.random()*Math.PI*2,glowMult:1,swayOffset:0});}};
-  treeSide(-1,5);treeSide(1,5);
-  // Lasers from above centerpiece
-  for(let i=0;i<14;i++)SD.ef.lasers.push({angle:Math.random()*Math.PI*2,speed:0.008+Math.random()*0.015,ci:i%4,width:1+Math.random()*1.5});}
+  if(sc==='ELECTRIC_FOREST'){
+  const cx2=w/2;
+  SD.ef={trees:[],lasers:[],fairies:Array.from({length:45},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.6,vy:(Math.random()-0.5)*0.4,r:Math.random()*3+1.5,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)})),
+  fog:Array.from({length:25},()=>({x:Math.random()*w,y:h*(0.5+Math.random()*0.5),w:w*(0.15+Math.random()*0.25),h2:h*(0.04+Math.random()*0.06),vx:(Math.random()-0.5)*0.3,alpha:0.03+Math.random()*0.04,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)})),
+  vines:Array.from({length:18},()=>({x:Math.random()*w,len:h*(0.08+Math.random()*0.15),sway:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4),width:1+Math.random()*2})),
+  mushrooms:Array.from({length:12},()=>({x:w*(0.05+Math.random()*0.9),y:h*(0.74+Math.random()*0.2),sz:6+Math.random()*10,ci:Math.floor(Math.random()*4),ph:Math.random()*Math.PI*2})),
+  laserOverload:false,laserOverloadTimer:0,mushroomBloom:false,mushroomBloomTimer:0,windstorm:false,windstormTimer:0};
+  // Layer 0: FAR background trees
+  for(let i=0;i<8;i++){const side=i<4?-1:1;const idx=i%4;const spread=0.18+idx*0.06;
+    SD.ef.trees.push({x:side<0?cx2-w*spread:cx2+w*spread,side,layer:0,trunkW:10+Math.random()*6,trunkH:h*(0.45+Math.random()*0.1),ci:Math.floor(Math.random()*4),ph:Math.random()*Math.PI*2,glowMult:1,swayOffset:0,branchSeed:Math.random()*100});}
+  // Layer 1: MID trees
+  for(let i=0;i<8;i++){const side=i<4?-1:1;const idx=i%4;const spread=0.3+idx*0.08;
+    SD.ef.trees.push({x:side<0?cx2-w*spread:cx2+w*spread,side,layer:1,trunkW:16+Math.random()*10,trunkH:h*(0.6+Math.random()*0.15),ci:Math.floor(Math.random()*4),ph:Math.random()*Math.PI*2,glowMult:1,swayOffset:0,branchSeed:Math.random()*100});}
+  // Layer 2: CLOSE foreground trees
+  for(let i=0;i<6;i++){const side=i<3?-1:1;const idx=i%3;const spread=0.42+idx*0.1;
+    SD.ef.trees.push({x:side<0?cx2-w*spread:cx2+w*spread,side,layer:2,trunkW:28+Math.random()*18,trunkH:h*(0.85+Math.random()*0.2),ci:Math.floor(Math.random()*4),ph:Math.random()*Math.PI*2,glowMult:1,swayOffset:0,branchSeed:Math.random()*100});}
+  // Lasers
+  for(let i=0;i<20;i++)SD.ef.lasers.push({angle:Math.random()*Math.PI*2,speed:0.006+Math.random()*0.018,ci:i%4,width:1+Math.random()*2,baseY:0.3+Math.random()*0.2});}
   if(sc==='OMNIA_NIGHTCLUB'){SD.crowdPeople=Array.from({length:60},()=>({x:Math.random()*w,y:h*0.55+Math.random()*h*0.35,ph:Math.random()*Math.PI*2,sz:Math.random()*25+15,ci:Math.floor(Math.random()*4)}));SD.chandelierY=h*0.05;SD.chandelierRot=0;SD.beams=Array.from({length:24},(_,i)=>({angle:i/24*Math.PI*2,ci:i%4,ph:Math.random()*Math.PI*2,len:Math.random()*h*0.5+h*0.3}));}
-  if(sc==='PIRATE_SHIP'){SD.waves=Array.from({length:5},(_,i)=>({ph:Math.random()*Math.PI*2,speed:0.002+i*0.001,amp:30+i*15}));SD.cannonballs=[];SD.stars=Array.from({length:80},()=>({x:Math.random()*w,y:Math.random()*h*0.45,br:Math.random()}));SD.seagulls=Array.from({length:6},()=>({x:Math.random()*w,y:Math.random()*h*0.3,vx:Math.random()*1.5+0.5,ph:0}));}
   if(sc==='JUNKYARD'){SD.sparks=Array.from({length:60},()=>mkSpark(true));SD.arms=Array.from({length:4},(_,i)=>({x:w*(0.15+i*0.23),baseY:h*0.6,angle:-Math.PI*0.6,targetAngle:-Math.PI*0.4,speed:0.02+i*0.005,sz:Math.random()*80+60,ci:i%4}));SD.carStacks=Array.from({length:8},(_,i)=>({x:i/7,cars:Math.floor(Math.random()*3+2),ci:i%4}));}
   if(sc==='GOTHAM'){SD.cityBuildings=Array.from({length:20},(_,i)=>({x:i*w/19,h:Math.random()*h*0.55+h*0.1,w:Math.random()*60+25,ci:i%4,windows:[]}));SD.cityBuildings.forEach(b=>{for(let wy=5;wy<b.h;wy+=18)for(let wx=4;wx<b.w-4;wx+=14)if(Math.random()<0.6)b.windows.push({x:wx,y:wy,on:Math.random()<0.8});});SD.spotlightA=0;}
   if(sc==='DAY_OF_DEAD'){SD.petals=Array.from({length:120},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*1.5,vy:Math.random()*1.5+0.3,rot:Math.random()*Math.PI*2,rotS:(Math.random()-0.5)*0.05,sz:Math.random()*10+4,ci:Math.floor(Math.random()*4)}));SD.candles=Array.from({length:12},(_,i)=>({x:w*(i/11),flicker:Math.random()*Math.PI*2,sz:Math.random()*15+10}));SD.skulls=Array.from({length:6},(_,i)=>({x:w*(0.1+i*0.16),y:h*0.4+Math.random()*h*0.2,ph:Math.random()*Math.PI*2,sz:Math.random()*40+25,ci:i%4}));}
-  if(sc==='CHINESE_DRAGON'){SD.dragonEmerge=0;SD.fog=Array.from({length:8},()=>({x:Math.random()*w,y:Math.random()*h,r:Math.random()*150+80,ph:Math.random()*Math.PI*2,speed:0.001+Math.random()*0.002}));}
   if(sc==='MOUNT_OLYMPUS'){SD.lightnings=[];SD.ltTimer=0;SD.clouds=Array.from({length:8},()=>({x:Math.random()*w,y:Math.random()*h*0.6,r:Math.random()*120+60,vx:(Math.random()-0.5)*0.3,ci:Math.floor(Math.random()*2)}));SD.boltsComing=[];SD.zeusFace={alpha:0,scale:0.3};}
-  if(sc==='SUPER_MARIO'){SD.platforms=Array.from({length:12},(_,i)=>({x:i*w/11,y:h*0.4+Math.sin(i)*h*0.2,w:Math.random()*120+60}));SD.coins=Array.from({length:20},()=>({x:Math.random()*w,y:Math.random()*h*0.7,ph:0}));SD.goombas=Array.from({length:5},()=>({x:Math.random()*w,y:h*0.75,vx:(Math.random()-0.5)*2}));SD.scrollX=0;SD.pipes=Array.from({length:4},(_,i)=>({x:w*(0.15+i*0.23),h:Math.random()*h*0.25+h*0.1}));}
   if(sc==='ATLANTIS'){SD.fish=Array.from({length:30},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*1.5,vy:(Math.random()-0.5)*0.5,sz:Math.random()*20+8,ci:Math.floor(Math.random()*4)}));SD.bubbles=Array.from({length:60},()=>({x:Math.random()*w,y:Math.random()*h,r:Math.random()*8+2,vy:-(Math.random()*0.8+0.2),ph:Math.random()*Math.PI*2}));SD.ruins=Array.from({length:10},(_,i)=>({x:i/9,h:Math.random()*h*0.4+h*0.1,w:Math.random()*80+30,ci:i%4}));SD.lightShafts=Array.from({length:6},(_,i)=>({x:w*(0.05+i*0.18),ph:Math.random()*Math.PI*2}));}
   if(sc==='CARNIVAL'){SD.ferrisSegs=Array.from({length:12},(_,i)=>({angle:i/12*Math.PI*2,ci:i%4}));SD.ferrisRot=0;SD.confetti=Array.from({length:150},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*2,vy:Math.random()*2+0.5,rot:Math.random()*Math.PI*2,rotS:(Math.random()-0.5)*0.1,sz:Math.random()*8+3,ci:Math.floor(Math.random()*4)}));}
   if(sc==='EGYPTIAN_TOMB'){SD.hieroglyphs=Array.from({length:40},()=>({x:Math.random()*w,y:Math.random()*h,char:Math.floor(Math.random()*12),ci:Math.floor(Math.random()*4),alpha:Math.random()*0.5+0.2}));SD.torches=Array.from({length:6},(_,i)=>({x:(i/5)*0.9+0.05,ph:Math.random()*Math.PI*2}));SD.tunnelZ=0;SD.traps=[];}
@@ -1442,28 +1451,15 @@ function drawStormChaser(t){
 
   if(!SD.storm){
     SD.storm={
-      tornadoA:0,
-      stormIntensity:0.2,
-      lightnings:[],
-      ltTimer:0,
+      tornadoA:0,stormIntensity:0.2,lightnings:[],ltTimer:0,
       debris:Array.from({length:25},()=>mkDebris()),
-      dorothyHouse:null,
-      dorothyTimer:0,
-      colorLightning:false,
-      colorLightningTimer:0,
-      heavyRain:false,
-      heavyRainTimer:0,
-      transformerExplosion:false,
-      transformerTimer:0,
-      transformerSparks:[],
-      cpOrbits:Array.from({length:8},(_,i)=>({angle:i/8*Math.PI*2,orbitSpeed:0.008+Math.random()*0.008,orbitR:0.14+Math.random()*0.06,phase:i/8*Math.PI*2})),
-      towers:[
-        {x:w*0.12,baseY:h*0.92,topY:h*0.48,ci:0},
-        {x:w*0.88,baseY:h*0.92,topY:h*0.48,ci:1},
-      ],
-      // Tornado dots — persistent array of spinning particles
-      tornadoDots:Array.from({length:1200},(_,i)=>{
-        const z=Math.random(); // 0=top(wide), 1=bottom(narrow)
+      dorothyHouse:null,dorothyTimer:0,
+      colorLightning:false,colorLightningTimer:0,
+      heavyRain:false,heavyRainTimer:0,
+      transformerExplosion:false,transformerTimer:0,transformerSparks:[],sparkStreams:[],
+      towers:[{x:w*0.12,baseY:h*0.92,topY:h*0.48,ci:0},{x:w*0.88,baseY:h*0.92,topY:h*0.48,ci:1}],
+      tornadoDots:Array.from({length:1500},(_,i)=>{
+        const z=Math.random();
         return{z,angle:Math.random()*Math.PI*2,speed:0.03+Math.random()*0.025,ci:i%4,r:1+Math.random()*2,drift:Math.random()*0.3-0.15};
       }),
     };
@@ -1476,10 +1472,7 @@ function drawStormChaser(t){
   if(ST.heavyRainTimer>0){ST.heavyRainTimer-=16;if(ST.heavyRainTimer<=0)ST.heavyRain=false;}
   if(ST.transformerTimer>0){ST.transformerTimer-=16;if(ST.transformerTimer<=0){ST.transformerExplosion=false;ST.transformerSparks=[];}}
 
-  const stormI=ST.stormIntensity;
-  const superRain=ST.heavyRain;
-  const colorLt=ST.colorLightning;
-  const texpl=ST.transformerExplosion;
+  const stormI=ST.stormIntensity;const superRain=ST.heavyRain;const colorLt=ST.colorLightning;const texpl=ST.transformerExplosion;
 
   // BG — stormy sky
   const sg=x0.createRadialGradient(cx,cy*0.3,0,cx,h*0.5,h*0.8);
@@ -1488,276 +1481,161 @@ function drawStormChaser(t){
   sg.addColorStop(0.5,THEME.bgColor);sg.addColorStop(1,'rgba(0,0,0,0.95)');
   x0.fillStyle=sg;x0.fillRect(0,0,w,h);
 
-  // Rain — normal or heavy
+  // Rain
   const numDrops=superRain?500:Math.floor(100+stormI*200);
-  const dropLen=superRain?30:18;
-  const dropAlpha=(superRain?0.35:0.12)+stormI*0.2;
-  const dropSpeed=superRain?3:1;
+  const dropLen=superRain?30:18;const dropAlpha=(superRain?0.35:0.12)+stormI*0.2;const dropSpeed=superRain?3:1;
   x0.lineWidth=superRain?1.5:0.8;
-  for(let i=0;i<numDrops;i++){
-    const rx=Math.random()*w,ry=Math.random()*h;
-    const ciIdx=superRain?Math.floor(Math.random()*4):2;
+  for(let i=0;i<numDrops;i++){const rx=Math.random()*w,ry=Math.random()*h;const ciIdx=superRain?Math.floor(Math.random()*4):2;
     x0.strokeStyle=rgba(pc(ciIdx),(dropAlpha+Math.random()*0.1)*(superRain?1.5:1));
-    x0.beginPath();x0.moveTo(rx,ry);x0.lineTo(rx-4*stormI*dropSpeed,ry+dropLen*dropSpeed);x0.stroke();
-  }
+    x0.beginPath();x0.moveTo(rx,ry);x0.lineTo(rx-4*stormI*dropSpeed,ry+dropLen*dropSpeed);x0.stroke();}
 
   // ══════════════════════════════════════════════════════
-  // TORNADO — thousands of tiny neon dots spinning in funnel
-  // Wide at top, skinny at bottom, pulses with beat
+  // TORNADO — exponential flare, like a real tornado
   // ══════════════════════════════════════════════════════
   ST.tornadoA+=0.018*(1+energy*0.4+beat*0.3);
   const tornadoX=cx+Math.sin(t*0.0003)*w*0.04;
-  const tornadoTopY=h*0.02;
-  const tornadoBottomY=h*0.9;
-  const tornadoH=tornadoBottomY-tornadoTopY;
-  const topWidth=Math.min(w,h)*(0.4+beat*0.06);
-  const bottomWidth=Math.min(w,h)*0.02;
+  const tornadoTopY=h*0.02;const tornadoBottomY=h*0.9;const tornadoH=tornadoBottomY-tornadoTopY;
+  const topWidth=w*(1.4+beat*0.05);const bottomWidth=w*0.08;
 
-  // Translucent funnel fill behind dots
+  function tornadoWidthAt(z){const heightFrac=1-z;return bottomWidth+(topWidth-bottomWidth)*Math.pow(heightFrac,1.6);}
+
+  // Funnel fill
   const funnelG=x0.createLinearGradient(tornadoX,tornadoTopY,tornadoX,tornadoBottomY);
-  funnelG.addColorStop(0,rgba(pc(2),0.07+beat*0.03));
-  funnelG.addColorStop(0.5,rgba(pc(3),0.04));funnelG.addColorStop(1,'transparent');
-  x0.fillStyle=funnelG;
-  x0.beginPath();
-  x0.moveTo(tornadoX-topWidth*0.5,tornadoTopY);
-  x0.lineTo(tornadoX+topWidth*0.5,tornadoTopY);
-  x0.lineTo(tornadoX+bottomWidth*0.5,tornadoBottomY);
-  x0.lineTo(tornadoX-bottomWidth*0.5,tornadoBottomY);
+  funnelG.addColorStop(0,rgba(pc(2),0.07+beat*0.03));funnelG.addColorStop(0.5,rgba(pc(3),0.04));funnelG.addColorStop(1,'transparent');
+  x0.fillStyle=funnelG;x0.beginPath();
+  const funnelSteps=40;
+  for(let fs=0;fs<=funnelSteps;fs++){const fz=fs/funnelSteps;const fw=tornadoWidthAt(fz);
+    if(fs===0)x0.moveTo(tornadoX-fw*0.5,tornadoTopY+fz*tornadoH);else x0.lineTo(tornadoX-fw*0.5,tornadoTopY+fz*tornadoH);}
+  for(let fs=funnelSteps;fs>=0;fs--){const fz=fs/funnelSteps;const fw=tornadoWidthAt(fz);x0.lineTo(tornadoX+fw*0.5,tornadoTopY+fz*tornadoH);}
   x0.closePath();x0.fill();
 
-  // Draw thousands of spinning dots
+  // Spinning dots
   for(const dot of ST.tornadoDots){
-    // Spin faster with beat and energy
-    dot.angle+=dot.speed*(1+energy*0.5+beat*0.4);
-    // Slight vertical drift
-    dot.z+=dot.drift*0.001;
-    if(dot.z<0)dot.z+=1;if(dot.z>1)dot.z-=1;
-
-    // Width at this Z position — lerp from topWidth to bottomWidth
-    const ringR=(topWidth*(1-dot.z)+bottomWidth*dot.z)*0.5;
-    const dotY=tornadoTopY+dot.z*tornadoH;
-    // Wobble the center slightly per ring
+    dot.angle+=dot.speed*(1+energy*0.5+beat*0.4);dot.z+=dot.drift*0.001;if(dot.z<0)dot.z+=1;if(dot.z>1)dot.z-=1;
+    const ringR=tornadoWidthAt(dot.z)*0.5;const dotY=tornadoTopY+dot.z*tornadoH;
     const wobble=Math.sin(ST.tornadoA+dot.z*5)*ringR*0.06;
     const dotX=tornadoX+wobble+Math.cos(dot.angle)*ringR*(0.5+Math.sin(dot.angle*0.5)*0.08);
     const dotYoff=dotY+Math.sin(dot.angle*2)*ringR*0.04;
-
-    // Alpha varies — denser at edges, beat reactive
     const alpha=(0.25+dot.z*0.15)*(1+beat*0.4)*stormI;
     x0.fillStyle=rgba(pc(dot.ci),Math.min(0.9,alpha));
-    x0.beginPath();x0.arc(dotX,dotYoff,dot.r*(1+beat*0.3),0,Math.PI*2);x0.fill();
-  }
+    x0.beginPath();x0.arc(dotX,dotYoff,dot.r*(1+beat*0.3),0,Math.PI*2);x0.fill();}
 
-  // Glow core along center of funnel
+  // Glow core
   x0.shadowBlur=40+beat*20;x0.shadowColor=rgba(pc(0),0.6);
   x0.strokeStyle=rgba(pc(0),0.06+beat*0.04);x0.lineWidth=3;
-  x0.beginPath();x0.moveTo(tornadoX,tornadoTopY+tornadoH*0.1);x0.lineTo(tornadoX,tornadoBottomY);x0.stroke();
-  x0.shadowBlur=0;
+  x0.beginPath();x0.moveTo(tornadoX,tornadoTopY+tornadoH*0.1);x0.lineTo(tornadoX,tornadoBottomY);x0.stroke();x0.shadowBlur=0;
 
-  // ── 8 CENTERPIECES orbiting the tornado ──────────────
+  // ── Single big centerpiece in tornado center ──
   if(THEME.centerpiece){
-    const baseOrbitR=Math.min(w,h)*(0.2+stormI*0.08);
-    cpPh+=0.013;
-    for(const orb of ST.cpOrbits){
-      orb.angle+=orb.orbitSpeed*(1+stormI+beat*0.5);
-      const orbitY=tornadoTopY+tornadoH*(0.3+Math.sin(orb.phase+t*0.0005)*0.35);
-      const orbitR=baseOrbitR*(0.6+Math.sin(orb.phase)*0.4);
-      const orbitX=tornadoX+Math.cos(orb.angle)*orbitR;
-      const wobbleY=orbitY+Math.sin(orb.angle*2+ST.tornadoA)*orbitR*0.25;
-      const osz=Math.min(w,h)*(0.038+Math.sin(orb.phase)*0.012+beat*0.015);
-      cpRot+=0.04*(1+beat*0.5);
-      x0.globalAlpha=0.7+stormI*0.25+beat*0.05;
-      x0.shadowBlur=10+beat*8;x0.shadowColor=pc(0);
-      drawCPMini(x0,THEME.centerpiece,orbitX,wobbleY,osz,cpRot+orb.angle);
-      x0.globalAlpha=1;x0.shadowBlur=0;
-    }
+    const cpCenterY=tornadoTopY+tornadoH*0.35;
+    const cpSz=Math.min(w,h)*(0.12+beat*0.04+songProg*0.03);const cpBob=Math.sin(t*0.0008)*h*0.02;
+    cpPh+=0.013;cpRot+=0.015*(1+energy*0.2+beat*0.3);
+    const cpGlow=x0.createRadialGradient(tornadoX,cpCenterY+cpBob,0,tornadoX,cpCenterY+cpBob,cpSz*4);
+    cpGlow.addColorStop(0,rgba(pc(0),0.12+beat*0.06));cpGlow.addColorStop(0.5,rgba(pc(3),0.04));cpGlow.addColorStop(1,'transparent');
+    x0.fillStyle=cpGlow;x0.fillRect(0,0,w,h);
+    x0.globalAlpha=0.85+beat*0.15;x0.shadowBlur=30+beat*20;x0.shadowColor=pc(0);
+    drawCPMini(x0,THEME.centerpiece,tornadoX,cpCenterY+cpBob,cpSz,cpRot);
+    x0.globalAlpha=1;x0.shadowBlur=0;
   }
 
-  // ── DEBRIS around tornado ──────────────────────────
+  // ── Debris ──
   for(const d of ST.debris){
-    d.x+=d.vx*(1+energy*0.5+beat*0.2);
-    d.y+=d.vy*(1+energy*0.4);
-    const dx=d.x-tornadoX,dy=d.y-cy;
-    const dist=Math.sqrt(dx*dx+dy*dy);
+    d.x+=d.vx*(1+energy*0.5+beat*0.2);d.y+=d.vy*(1+energy*0.4);
+    const dx=d.x-tornadoX,dy=d.y-cy;const dist=Math.sqrt(dx*dx+dy*dy);
     if(dist>0&&dist<Math.min(w,h)*0.45){d.x-=dy/dist*2.2;d.y+=dx/dist*2.2;}
-    d.rot+=d.rotS;
-    if(d.x<-60||d.x>w+60||d.y<-60||d.y>h+60)Object.assign(d,mkDebris());
-    x0.save();x0.translate(d.x,d.y);x0.rotate(d.rot);
-    x0.fillStyle=rgba(pc(d.ci),0.5+stormI*0.3+beat*0.1);
+    d.rot+=d.rotS;if(d.x<-60||d.x>w+60||d.y<-60||d.y>h+60)Object.assign(d,mkDebris());
+    x0.save();x0.translate(d.x,d.y);x0.rotate(d.rot);x0.fillStyle=rgba(pc(d.ci),0.5+stormI*0.3+beat*0.1);
     if(d.type===0)x0.fillRect(-d.sz/2,-d.sz*0.1,d.sz,d.sz*0.2);
-    else{x0.beginPath();x0.arc(0,0,d.sz*0.3,0,Math.PI*2);x0.fill();}
-    x0.restore();
-  }
+    else{x0.beginPath();x0.arc(0,0,d.sz*0.3,0,Math.PI*2);x0.fill();}x0.restore();}
 
-  // ── LIGHTNING ──────────────────────────────────────
-  ST.ltTimer-=16;
-  const ltInterval=Math.max(80,600-songProg*400);
-  if(ST.ltTimer<0){
-    const ltCount=colorLt?4:(stormI>0.5?2:1);
-    for(let i=0;i<ltCount;i++){
-      const lt=mkLightning();
-      if(colorLt)lt.ci=Math.floor(Math.random()*4);
-      ST.lightnings.push(lt);
-    }
-    ST.ltTimer=ltInterval+Math.random()*300;
-  }
-  for(let i=ST.lightnings.length-1;i>=0;i--){
-    const lt=ST.lightnings[i];lt.life-=0.06;
-    if(lt.life<=0){ST.lightnings.splice(i,1);continue;}
+  // ── Lightning ──
+  ST.ltTimer-=16;const ltInterval=Math.max(80,600-songProg*400);
+  if(ST.ltTimer<0){const ltCount=colorLt?4:(stormI>0.5?2:1);
+    for(let i=0;i<ltCount;i++){const lt=mkLightning();if(colorLt)lt.ci=Math.floor(Math.random()*4);ST.lightnings.push(lt);}
+    ST.ltTimer=ltInterval+Math.random()*300;}
+  for(let i=ST.lightnings.length-1;i>=0;i--){const lt=ST.lightnings[i];lt.life-=0.06;if(lt.life<=0){ST.lightnings.splice(i,1);continue;}
     x0.shadowBlur=colorLt?30:20;x0.shadowColor=colorLt?pc(lt.ci):'rgba(200,220,255,0.9)';
-    for(const seg of lt.segs){
-      x0.beginPath();x0.moveTo(seg.x1,seg.y1);x0.lineTo(seg.x2,seg.y2);
-      x0.strokeStyle=colorLt?rgba(pc(lt.ci),lt.life*stormI):`rgba(220,235,255,${lt.life*stormI})`;
-      x0.lineWidth=lt.life*(colorLt?3:2);x0.stroke();
-    }
-    x0.shadowBlur=0;
-    if(colorLt&&lt.life>0.8)flash(rgba(pc(lt.ci),0.15),200);
-  }
+    for(const seg of lt.segs){x0.beginPath();x0.moveTo(seg.x1,seg.y1);x0.lineTo(seg.x2,seg.y2);
+      x0.strokeStyle=colorLt?rgba(pc(lt.ci),lt.life*stormI):`rgba(220,235,255,${lt.life*stormI})`;x0.lineWidth=lt.life*(colorLt?3:2);x0.stroke();}
+    x0.shadowBlur=0;if(colorLt&&lt.life>0.8)flash(rgba(pc(lt.ci),0.15),200);}
 
   // ══════════════════════════════════════════════════════
-  // POWER TOWERS — wider, more solid, vibrant glow
+  // POWER TOWERS
   // ══════════════════════════════════════════════════════
   if(ST.towers)for(const tow of ST.towers){
-    const tx=tow.x,by=tow.baseY,ty=tow.topY;
-    const towW=40; // wider tower base
-    const towTopW=20; // narrower at top
-
+    const tx=tow.x,by=tow.baseY,ty=tow.topY;const towW=40,towTopW=20;
     x0.shadowBlur=14+beat*8;x0.shadowColor=pc(tow.ci);
-
-    // Main legs — thick, solid
     x0.strokeStyle=rgba(pc(tow.ci),0.6+beat*0.2);x0.lineWidth=5;
     x0.beginPath();x0.moveTo(tx-towW,by);x0.lineTo(tx-towTopW,ty);x0.stroke();
     x0.beginPath();x0.moveTo(tx+towW,by);x0.lineTo(tx+towTopW,ty);x0.stroke();
-
-    // Cross braces — more, wider
-    for(let cb=0;cb<7;cb++){
-      const cbFrac=cb/7;
-      const cbY=by-(by-ty)*cbFrac;
-      const cbW=towW-(towW-towTopW)*cbFrac;
+    for(let cb=0;cb<7;cb++){const cbFrac=cb/7;const cbY=by-(by-ty)*cbFrac;const cbW=towW-(towW-towTopW)*cbFrac;
       x0.strokeStyle=rgba(pc(tow.ci),(0.5+beat*0.15));x0.lineWidth=3;
       x0.beginPath();x0.moveTo(tx-cbW,cbY);x0.lineTo(tx+cbW,cbY);x0.stroke();
-      // X-braces between horizontals
-      if(cb<6){
-        const nextY=by-(by-ty)*((cb+1)/7);
-        const nextW=towW-(towW-towTopW)*((cb+1)/7);
+      if(cb<6){const nextY=by-(by-ty)*((cb+1)/7);const nextW=towW-(towW-towTopW)*((cb+1)/7);
         x0.strokeStyle=rgba(pc(tow.ci),(0.35+beat*0.1));x0.lineWidth=2;
         x0.beginPath();x0.moveTo(tx-cbW,cbY);x0.lineTo(tx+nextW,nextY);x0.stroke();
-        x0.beginPath();x0.moveTo(tx+cbW,cbY);x0.lineTo(tx-nextW,nextY);x0.stroke();
-      }
-    }
-
-    // Top crossbar — wide, prominent
+        x0.beginPath();x0.moveTo(tx+cbW,cbY);x0.lineTo(tx-nextW,nextY);x0.stroke();}}
     x0.strokeStyle=rgba(pc(tow.ci),0.7+beat*0.2);x0.lineWidth=4;
     x0.beginPath();x0.moveTo(tx-towW*1.2,ty);x0.lineTo(tx+towW*1.2,ty);x0.stroke();
-    // Insulators hanging from crossbar
-    for(let ins=-2;ins<=2;ins++){
-      const ix=tx+ins*towW*0.5;
+    for(let ins=-2;ins<=2;ins++){const ix=tx+ins*towW*0.5;
       x0.strokeStyle=rgba(pc((tow.ci+1)%4),(0.5+beat*0.2));x0.lineWidth=2;
       x0.beginPath();x0.moveTo(ix,ty);x0.lineTo(ix,ty+12);x0.stroke();
-      x0.fillStyle=rgba(pc((tow.ci+1)%4),(0.6+beat*0.2));
-      x0.beginPath();x0.arc(ix,ty+14,4,0,Math.PI*2);x0.fill();
-    }
-
-    // ── TRANSFORMER BOX — larger, more detailed ──
-    const tfW=30,tfH=22;
-    const tfY=ty+(by-ty)*0.15;
-    // Box body
-    x0.fillStyle=rgba(pc(tow.ci),(0.35+beat*0.15));
-    x0.fillRect(tx-tfW/2,tfY,tfW,tfH);
-    x0.strokeStyle=rgba(pc(tow.ci),(0.7+beat*0.2));x0.lineWidth=2;
-    x0.strokeRect(tx-tfW/2,tfY,tfW,tfH);
-    // Internal detail lines
+      x0.fillStyle=rgba(pc((tow.ci+1)%4),(0.6+beat*0.2));x0.beginPath();x0.arc(ix,ty+14,4,0,Math.PI*2);x0.fill();}
+    // Transformer box
+    const tfW=30,tfH=22,tfY=ty+(by-ty)*0.15;
+    x0.fillStyle=rgba(pc(tow.ci),(0.35+beat*0.15));x0.fillRect(tx-tfW/2,tfY,tfW,tfH);
+    x0.strokeStyle=rgba(pc(tow.ci),(0.7+beat*0.2));x0.lineWidth=2;x0.strokeRect(tx-tfW/2,tfY,tfW,tfH);
     x0.strokeStyle=rgba(pc((tow.ci+2)%4),(0.3+beat*0.1));x0.lineWidth=1;
     x0.beginPath();x0.moveTo(tx-tfW*0.3,tfY+tfH*0.3);x0.lineTo(tx+tfW*0.3,tfY+tfH*0.3);x0.stroke();
     x0.beginPath();x0.moveTo(tx-tfW*0.3,tfY+tfH*0.65);x0.lineTo(tx+tfW*0.3,tfY+tfH*0.65);x0.stroke();
-    // Warning glow
     x0.shadowBlur=20+beat*15;x0.shadowColor=rgba(pc(tow.ci),0.8);
-    x0.fillStyle=rgba(pc(tow.ci),(0.4+beat*0.3));
-    x0.beginPath();x0.arc(tx,tfY+tfH/2,6+beat*3,0,Math.PI*2);x0.fill();
-
-    // ── SPARKS from transformer — much more apparent ──
-    // Always emit some sparks, way more on beat
-    const sparkActive=beat>0.2||texpl;
-    if(sparkActive){
-      const sparkCount=texpl?25:(beat>0.5?12:5);
-      const sparkScale=texpl?10:1;
-      for(let sp=0;sp<sparkCount;sp++){
-        const sx=tx+(Math.random()-0.5)*tfW*1.5;
-        const sy=tfY+tfH*0.5;
-        const sLen=(15+Math.random()*25)*sparkScale;
-        const sAngle=-(Math.random()*Math.PI*0.7+Math.PI*0.15); // mostly upward
-        const ex=sx+Math.cos(sAngle)*sLen;
-        const ey=sy+Math.sin(sAngle)*sLen;
-        x0.strokeStyle=rgba(pc(Math.floor(Math.random()*4)),(0.8+beat*0.2));
-        x0.lineWidth=texpl?(2+Math.random()*2):(1+Math.random());
-        x0.shadowBlur=texpl?25:14;x0.shadowColor=pc(sp%4);
-        x0.beginPath();x0.moveTo(sx,sy);x0.lineTo(ex,ey);x0.stroke();
-        // Spark tip glow
-        x0.fillStyle=rgba(pc(sp%4),(0.9+beat*0.1));
-        x0.beginPath();x0.arc(ex,ey,texpl?(3+Math.random()*3):(2+Math.random()),0,Math.PI*2);x0.fill();
-      }
-    }
+    x0.fillStyle=rgba(pc(tow.ci),(0.4+beat*0.3));x0.beginPath();x0.arc(tx,tfY+tfH/2,6+beat*3,0,Math.PI*2);x0.fill();
+    // Spark streams — handful at a time with long falling streaks
+    if(Math.random()<(texpl?0.4:0.08+beat*0.06)){
+      const sAngle2=-(Math.random()*Math.PI*0.4+Math.PI*0.3);
+      ST.sparkStreams.push({x:tx+(Math.random()-0.5)*tfW,y:tfY+tfH*0.5,
+        vx:Math.cos(sAngle2)*(1+Math.random()*1.5)*(texpl?2:1),vy:Math.sin(sAngle2)*(1.5+Math.random()*2)*(texpl?1.5:1),
+        life:1,ci:Math.floor(Math.random()*4),r:4+Math.random()*3,trail:[]});}
     x0.shadowBlur=0;
   }
 
-  // Power lines — sagging catenary between towers
+  // Render spark streams
+  if(ST.sparkStreams.length>150)ST.sparkStreams.length=150;
+  for(let i=ST.sparkStreams.length-1;i>=0;i--){
+    const sp=ST.sparkStreams[i];sp.trail.push({x:sp.x,y:sp.y});if(sp.trail.length>20)sp.trail.shift();
+    sp.x+=sp.vx;sp.y+=sp.vy;sp.vy+=0.06;sp.vx*=0.99;sp.life-=0.006;
+    if(sp.life<=0||sp.y>h){ST.sparkStreams.splice(i,1);continue;}
+    if(sp.trail.length>1){x0.strokeStyle=rgba(pc(sp.ci),sp.life*0.8);x0.lineWidth=sp.r*sp.life;
+      x0.shadowBlur=10+beat*6;x0.shadowColor=pc(sp.ci);x0.beginPath();x0.moveTo(sp.trail[0].x,sp.trail[0].y);
+      for(let ti=1;ti<sp.trail.length;ti++){x0.lineTo(sp.trail[ti].x,sp.trail[ti].y);}x0.lineTo(sp.x,sp.y);x0.stroke();}
+    x0.fillStyle=rgba(pc(sp.ci),Math.min(1,sp.life*1.2));x0.shadowBlur=16+beat*8;x0.shadowColor=pc(sp.ci);
+    x0.beginPath();x0.arc(sp.x,sp.y,sp.r*sp.life*1.2,0,Math.PI*2);x0.fill();}
+  x0.shadowBlur=0;
+
+  // Power lines — continuous from edge to edge
   if(ST.towers&&ST.towers.length>=2){
     const t1=ST.towers[0],t2=ST.towers[1];
-    for(let ln=0;ln<3;ln++){
-      const ly=t1.topY-5+ln*8;
-      const sag=45+Math.sin(t*0.002+ln)*12;
-      x0.strokeStyle=rgba(pc(ln%4),(0.3+beat*0.12));x0.lineWidth=1.5;
-      x0.shadowBlur=6+beat*4;x0.shadowColor=pc(ln%4);
-      x0.beginPath();x0.moveTo(t1.x+45,ly);
-      x0.quadraticCurveTo(cx,ly+sag,t2.x-45,ly);x0.stroke();
-    }
-    x0.shadowBlur=0;
-  }
+    for(let ln=0;ln<3;ln++){const ly=t1.topY-5+ln*8;const sag=45+Math.sin(t*0.002+ln)*12;
+      x0.strokeStyle=rgba(pc(ln%4),(0.3+beat*0.12));x0.lineWidth=1.5;x0.shadowBlur=6+beat*4;x0.shadowColor=pc(ln%4);
+      x0.beginPath();x0.moveTo(0,ly+15);x0.quadraticCurveTo(t1.x*0.5,ly+sag*0.4,t1.x+45,ly);x0.stroke();
+      x0.beginPath();x0.moveTo(t1.x+45,ly);x0.quadraticCurveTo(cx,ly+sag,t2.x-45,ly);x0.stroke();
+      x0.beginPath();x0.moveTo(t2.x-45,ly);x0.quadraticCurveTo(t2.x+(w-t2.x)*0.5,ly+sag*0.4,w,ly+15);x0.stroke();}
+    x0.shadowBlur=0;}
 
-  // ══════════════════════════════════════════════════════
-  // TRANSFORMER EXPLOSION — 10x scale spark fountain
-  // Continuous massive sparks flying out of tower tops
-  // ══════════════════════════════════════════════════════
+  // Transformer explosion
   if(texpl){
-    // Spawn LOTS of sparks per frame — 10x the normal rate
-    for(let burst=0;burst<3;burst++){
-      for(const tow of ST.towers){
-        const tfY=tow.topY+(tow.baseY-tow.topY)*0.15;
-        for(let sp=0;sp<6;sp++){
-          ST.transformerSparks.push({
-            x:tow.x+(Math.random()-0.5)*60,
-            y:tfY+10,
-            vx:(Math.random()-0.5)*18,
-            vy:-(Math.random()*16+6),
-            life:1,
-            ci:Math.floor(Math.random()*4),
-            r:3+Math.random()*6,
-          });
-        }
-      }
-    }
-    // Cap array to prevent lag
+    for(let burst=0;burst<3;burst++){for(const tow of ST.towers){const tfY=tow.topY+(tow.baseY-tow.topY)*0.15;
+      for(let sp=0;sp<6;sp++){ST.transformerSparks.push({x:tow.x+(Math.random()-0.5)*60,y:tfY+10,vx:(Math.random()-0.5)*18,vy:-(Math.random()*16+6),life:1,ci:Math.floor(Math.random()*4),r:3+Math.random()*6});}}}
     if(ST.transformerSparks.length>800)ST.transformerSparks.length=800;
-
-    // Render all sparks
-    for(let i=ST.transformerSparks.length-1;i>=0;i--){
-      const sp=ST.transformerSparks[i];
-      sp.x+=sp.vx;sp.y+=sp.vy;sp.vy+=0.2;sp.life-=0.008;
+    for(let i=ST.transformerSparks.length-1;i>=0;i--){const sp=ST.transformerSparks[i];sp.x+=sp.vx;sp.y+=sp.vy;sp.vy+=0.2;sp.life-=0.008;
       if(sp.life<=0){ST.transformerSparks.splice(i,1);continue;}
-      x0.fillStyle=rgba(pc(sp.ci),sp.life*0.95);
-      x0.shadowBlur=16+beat*10;x0.shadowColor=pc(sp.ci);
-      x0.beginPath();x0.arc(sp.x,sp.y,sp.r*sp.life,0,Math.PI*2);x0.fill();
-    }
+      x0.fillStyle=rgba(pc(sp.ci),sp.life*0.95);x0.shadowBlur=16+beat*10;x0.shadowColor=pc(sp.ci);
+      x0.beginPath();x0.arc(sp.x,sp.y,sp.r*sp.life,0,Math.PI*2);x0.fill();}
     x0.shadowBlur=0;
-
-    // Explosion glow halos on both towers
-    for(const tow of ST.towers){
-      const tfY=tow.topY+(tow.baseY-tow.topY)*0.15;
+    for(const tow of ST.towers){const tfY=tow.topY+(tow.baseY-tow.topY)*0.15;
       const explGlow=x0.createRadialGradient(tow.x,tfY,0,tow.x,tfY,Math.min(w,h)*0.25);
-      explGlow.addColorStop(0,rgba(pc(tow.ci),(0.3+beat*0.3)));
-      explGlow.addColorStop(0.5,rgba(pc((tow.ci+1)%4),(0.1+beat*0.1)));
-      explGlow.addColorStop(1,'transparent');
-      x0.fillStyle=explGlow;x0.fillRect(0,0,w,h);
-    }
+      explGlow.addColorStop(0,rgba(pc(tow.ci),(0.3+beat*0.3)));explGlow.addColorStop(0.5,rgba(pc((tow.ci+1)%4),(0.1+beat*0.1)));explGlow.addColorStop(1,'transparent');
+      x0.fillStyle=explGlow;x0.fillRect(0,0,w,h);}
   }
 }
 
@@ -1851,7 +1729,7 @@ function drawDiscoDimension(t){
   if(!SD.disco){
     const cols=8,rows=6,tiles=[];for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)tiles.push({r,c,ci:Math.floor(Math.random()*4),ph:Math.random()*Math.PI*2,bright:Math.random(),strobe:Math.random()<0.3});
     SD.disco={tiles,cols,rows,
-      balls:[{x:cx-w*0.25,y:h*0.12,rot:0,rotS:0.018,size:Math.min(w,h)*0.10,laserPh:0,laserSpeed:0.012,ci:0},{x:cx,y:h*0.09,rot:0,rotS:0.022,size:Math.min(w,h)*0.13,laserPh:Math.PI/3,laserSpeed:-0.009,ci:1},{x:cx+w*0.25,y:h*0.12,rot:0,rotS:0.016,size:Math.min(w,h)*0.10,laserPh:Math.PI,laserSpeed:0.015,ci:2}],
+      balls:[{x:cx-w*0.25,y:h*0.18,rot:0,rotS:0.018,size:Math.min(w,h)*0.10,laserPh:0,laserSpeed:0.012,ci:0},{x:cx,y:h*0.15,rot:0,rotS:0.022,size:Math.min(w,h)*0.13,laserPh:Math.PI/3,laserSpeed:-0.009,ci:1},{x:cx+w*0.25,y:h*0.18,rot:0,rotS:0.016,size:Math.min(w,h)*0.10,laserPh:Math.PI,laserSpeed:0.015,ci:2}],
       floorBright:1,superFloor:false,superFloorTimer:0,superLaser:false,superLaserTimer:0,patternType:0,patternTimer:0,ripplePhase:0,wavePhase:0};
   }
   const D=SD.disco;if(D.superFloorTimer>0){D.superFloorTimer-=16;if(D.superFloorTimer<=0)D.superFloor=false;}if(D.superLaserTimer>0){D.superLaserTimer-=16;if(D.superLaserTimer<=0)D.superLaser=false;}
@@ -1860,12 +1738,45 @@ function drawDiscoDimension(t){
   D.ripplePhase+=0.05+beat*0.1;D.wavePhase+=0.03+beat*0.06;
   // BG
   x0.fillStyle='rgba(4,0,12,1)';x0.fillRect(0,0,w,h);const ceilG=x0.createLinearGradient(0,0,0,h*0.1);ceilG.addColorStop(0,'rgba(12,8,25,1)');ceilG.addColorStop(1,'rgba(4,0,12,1)');x0.fillStyle=ceilG;x0.fillRect(0,0,w,h*0.1);
-  // Floor — framed, Saturday Night Fever
-  const floorY=h*0.52,floorH=h*0.42,floorMargin=w*0.12,floorW=w-floorMargin*2,cols=D.cols,rows=D.rows,tw=floorW/cols,th2=floorH/rows;
-  x0.strokeStyle=rgba(pc(0),0.6+beat*0.3);x0.lineWidth=4;x0.shadowBlur=20+beat*12;x0.shadowColor=pc(0);x0.strokeRect(floorMargin-2,floorY-2,floorW+4,floorH+4);x0.shadowBlur=0;
-  x0.fillStyle='rgba(2,0,6,0.98)';x0.fillRect(0,floorY,floorMargin,floorH);x0.fillRect(w-floorMargin,floorY,floorMargin,floorH);
+  // Floor — framed, Saturday Night Fever, with perspective tilt
+  const floorY=h*0.48,floorH=h*0.48,floorMargin=w*0.12,floorW=w-floorMargin*2,cols=D.cols,rows=D.rows,tw=floorW/cols,th2=floorH/rows;
+  // Apply perspective transform — narrower at top, wider at bottom
+  x0.save();
+  const perspAmt=0.15;// how much to pinch the top edge inward
+  const fCx=w/2,fTop=floorY,fBot=floorY+floorH;
+  const topLeft=floorMargin+floorW*perspAmt,topRight=floorMargin+floorW*(1-perspAmt);
+  const topW=topRight-topLeft,botW=floorW;
+  // Use a 2D transform approximation: scale x narrower as we go up
+  // We'll draw row-by-row with per-row horizontal scaling for perspective
+  x0.strokeStyle=rgba(pc(0),0.6+beat*0.3);x0.lineWidth=4;x0.shadowBlur=20+beat*12;x0.shadowColor=pc(0);
+  // Draw perspective frame (trapezoid)
+  x0.beginPath();
+  x0.moveTo(topLeft-2,fTop-2);x0.lineTo(topRight+2,fTop-2);
+  x0.lineTo(floorMargin+floorW+2,fBot+2);x0.lineTo(floorMargin-2,fBot+2);
+  x0.closePath();x0.stroke();x0.shadowBlur=0;
+  // Dark sides
+  x0.fillStyle='rgba(2,0,6,0.98)';
+  // Left side trapezoid
+  x0.beginPath();x0.moveTo(0,fTop);x0.lineTo(topLeft,fTop);x0.lineTo(floorMargin,fBot);x0.lineTo(0,fBot);x0.closePath();x0.fill();
+  // Right side trapezoid
+  x0.beginPath();x0.moveTo(w,fTop);x0.lineTo(topRight,fTop);x0.lineTo(floorMargin+floorW,fBot);x0.lineTo(w,fBot);x0.closePath();x0.fill();
+
   for(const tile of D.tiles){tile.ph+=0.02+beat*0.04*(superFloor?3:1);
-    const tx=floorMargin+tile.c*tw,ty=floorY+tile.r*th2,isLight=(tile.r+tile.c)%2===0;
+    // Calculate perspective-adjusted tile position
+    const rowFrac=tile.r/rows;// 0=top (far), 1=bottom (near)
+    const rowLeft=topLeft+(floorMargin-topLeft)*rowFrac;
+    const rowW=topW+(botW-topW)*rowFrac;
+    const rowTW=rowW/cols;
+    const rowNextFrac=(tile.r+1)/rows;
+    const nextRowLeft=topLeft+(floorMargin-topLeft)*rowNextFrac;
+    const nextRowW=topW+(botW-topW)*rowNextFrac;
+    const nextRowTW=nextRowW/cols;
+    const tileY=fTop+rowFrac*floorH;
+    const tileNextY=fTop+rowNextFrac*floorH;
+    const tileH=tileNextY-tileY;
+    const tx=rowLeft+tile.c*rowTW;
+    const txNext=nextRowLeft+tile.c*nextRowTW;
+    const isLight=(tile.r+tile.c)%2===0;
     let pB=0,pCi=tile.ci;const tcx=tile.c-cols/2+0.5,tcy=tile.r-rows/2+0.5,dfc=Math.sqrt(tcx*tcx+tcy*tcy);
     switch(D.patternType){
       case 0:pB=Math.abs(Math.sin(D.ripplePhase-dfc*1.2))*0.9;pCi=Math.floor(dfc+D.ripplePhase*0.3)%4;break;
@@ -1877,12 +1788,18 @@ function drawDiscoDimension(t){
     if(beat>0.4){pB=Math.min(1,pB+beat*0.4);if(superFloor&&Math.random()<0.15)pCi=Math.floor(Math.random()*4);}
     const bright=pB*(0.7+beat*0.5),strobeMult=superFloor?(0.5+Math.sin(t*0.05+tile.ph)*0.5):1;
     const alpha=Math.min(1,(0.15+bright*0.85)*THEME.sceneIntensity*floorBrightMult*strobeMult);
-    const c=h2r(pc(pCi));x0.fillStyle=`rgba(${c.r},${c.g},${c.b},${alpha*(isLight?1:0.5)})`;x0.shadowBlur=alpha>0.5?(12+beat*10+(superFloor?12:0)):0;x0.shadowColor=pc(pCi);x0.fillRect(tx,ty,tw,th2);x0.shadowBlur=0;
-    x0.strokeStyle=`rgba(0,0,0,${0.6+alpha*0.2})`;x0.lineWidth=1.5;x0.strokeRect(tx,ty,tw,th2);
-    if(alpha>0.5||superFloor){x0.fillStyle=`rgba(${c.r},${c.g},${c.b},${(alpha-0.3)*0.35})`;x0.shadowBlur=20;x0.shadowColor=pc(pCi);x0.fillRect(tx+2,ty+2,tw-4,th2-4);x0.shadowBlur=0;}
-    if(alpha>0.6){const sG=x0.createLinearGradient(tx,ty,tx+tw,ty+th2);sG.addColorStop(0,'transparent');sG.addColorStop(0.4,`rgba(255,255,255,${alpha*0.08})`);sG.addColorStop(1,'transparent');x0.fillStyle=sG;x0.fillRect(tx,ty,tw,th2);}
+    const c=h2r(pc(pCi));x0.fillStyle=`rgba(${c.r},${c.g},${c.b},${alpha*(isLight?1:0.5)})`;x0.shadowBlur=alpha>0.5?(12+beat*10+(superFloor?12:0)):0;x0.shadowColor=pc(pCi);
+    // Draw perspective trapezoid tile
+    x0.beginPath();x0.moveTo(tx,tileY);x0.lineTo(tx+rowTW,tileY);x0.lineTo(txNext+nextRowTW,tileNextY);x0.lineTo(txNext,tileNextY);x0.closePath();x0.fill();x0.shadowBlur=0;
+    x0.strokeStyle=`rgba(0,0,0,${0.6+alpha*0.2})`;x0.lineWidth=1.5;
+    x0.beginPath();x0.moveTo(tx,tileY);x0.lineTo(tx+rowTW,tileY);x0.lineTo(txNext+nextRowTW,tileNextY);x0.lineTo(txNext,tileNextY);x0.closePath();x0.stroke();
+    if(alpha>0.5||superFloor){x0.fillStyle=`rgba(${c.r},${c.g},${c.b},${(alpha-0.3)*0.35})`;x0.shadowBlur=20;x0.shadowColor=pc(pCi);
+      x0.beginPath();x0.moveTo(tx+2,tileY+2);x0.lineTo(tx+rowTW-2,tileY+2);x0.lineTo(txNext+nextRowTW-2,tileNextY-2);x0.lineTo(txNext+2,tileNextY-2);x0.closePath();x0.fill();x0.shadowBlur=0;}
+    if(alpha>0.6){const sG=x0.createLinearGradient(tx,tileY,tx+rowTW,tileNextY);sG.addColorStop(0,'transparent');sG.addColorStop(0.4,`rgba(255,255,255,${alpha*0.08})`);sG.addColorStop(1,'transparent');x0.fillStyle=sG;
+      x0.beginPath();x0.moveTo(tx,tileY);x0.lineTo(tx+rowTW,tileY);x0.lineTo(txNext+nextRowTW,tileNextY);x0.lineTo(txNext,tileNextY);x0.closePath();x0.fill();}
   }
-  x0.strokeStyle=rgba(pc(0),0.5+beat*0.4);x0.lineWidth=3;x0.shadowBlur=15;x0.shadowColor=pc(0);x0.beginPath();x0.moveTo(floorMargin,floorY);x0.lineTo(floorMargin+floorW,floorY);x0.stroke();x0.shadowBlur=0;
+  x0.strokeStyle=rgba(pc(0),0.5+beat*0.4);x0.lineWidth=3;x0.shadowBlur=15;x0.shadowColor=pc(0);x0.beginPath();x0.moveTo(topLeft,fTop);x0.lineTo(topRight,fTop);x0.stroke();x0.shadowBlur=0;
+  x0.restore();
   // Disco balls — faceted mirrors with centerpiece
   for(const ball of D.balls){ball.rot+=ball.rotS*ballSpeedMult*(1+energy*0.4);ball.laserPh+=ball.laserSpeed*ballSpeedMult*(1+beat*0.3);
     x0.strokeStyle='rgba(180,180,180,0.6)';x0.lineWidth=2;x0.beginPath();x0.moveTo(ball.x,0);x0.lineTo(ball.x,ball.y-ball.size);x0.stroke();
@@ -1947,83 +1864,198 @@ function drawSpaceStation(t){
       starExplosion:false,starExpTimer:0,starExpX:cx*0.35,starExpY:cy*0.45,starExpR:0,starExpParticles:[],
       starExpPhase:'dormant',starExpBuildUp:0,starExpStrobeTimer:0,
       asteroidShower:false,asteroidTimer:0,asteroids:[],
-      issX:w*0.3,issY:h*0.25,issRot:0,issVx:0.08,issRotSpeed:0.0003};
+      issRot:0,issRotSpeed:0.026,
+      panelPatternType:0,panelPatternTimer:0,
+      panelRipplePhase:0,panelWavePhase:0};
   }
   const SP=SD.space;
   if(SP.superUFOTimer>0){SP.superUFOTimer-=16;if(SP.superUFOTimer<=0){SP.superUFO=false;SP.ufos=[];}}
   if(SP.starExpTimer>0){SP.starExpTimer-=16;if(SP.starExpTimer<=0){SP.starExplosion=false;SP.starExpParticles=[];SP.starExpPhase='dormant';SP.starExpBuildUp=0;SP.starExpStrobeTimer=0;}}
   if(SP.asteroidTimer>0){SP.asteroidTimer-=16;if(SP.asteroidTimer<=0){SP.asteroidShower=false;SP.asteroids=[];}}
+
+  // Panel pattern cycling
+  SP.panelPatternTimer+=16;
+  if(SP.panelPatternTimer>6000){SP.panelPatternTimer=0;SP.panelPatternType=(SP.panelPatternType+1)%5;}
+  SP.panelRipplePhase+=0.06+beat*0.12;
+  SP.panelWavePhase+=0.04+beat*0.08;
+  SP.issRot+=SP.issRotSpeed*(1+beat*0.3);
+
   // BG
   x0.fillStyle='rgba(0,0,4,1)';x0.fillRect(0,0,w,h);
   for(const nb of SP.nebulae){nb.ph+=0.005;const ng=x0.createRadialGradient(nb.x+Math.sin(nb.ph)*20,nb.y+Math.cos(nb.ph*0.7)*15,0,nb.x,nb.y,nb.r*(1+beat*0.1));ng.addColorStop(0,rgba(pc(nb.ci),0.07+beat*0.03));ng.addColorStop(0.5,rgba(pc((nb.ci+1)%4),0.04));ng.addColorStop(1,'transparent');x0.fillStyle=ng;x0.fillRect(0,0,w,h);}
-  // ISS — faint neon-line
-  SP.issX+=SP.issVx;SP.issRot+=SP.issRotSpeed;if(SP.issX>w+200)SP.issX=-200;
-  x0.save();x0.translate(SP.issX,SP.issY);x0.rotate(SP.issRot);const iS=0.35,iA=0.18+beat*0.06;
-  x0.strokeStyle=rgba(pc(2),iA);x0.lineWidth=1.5;x0.shadowBlur=6;x0.shadowColor=pc(2);
-  x0.beginPath();x0.moveTo(-120*iS,0);x0.lineTo(120*iS,0);x0.stroke();
-  x0.strokeStyle=rgba(pc(1),iA*1.2);x0.lineWidth=2;x0.strokeRect(-20*iS,-8*iS,40*iS,16*iS);x0.strokeRect(-35*iS,-6*iS,15*iS,12*iS);x0.strokeRect(20*iS,-6*iS,15*iS,12*iS);
-  x0.strokeStyle=rgba(pc(0),iA);x0.lineWidth=1;
-  for(const px of[-100,-70,70,100]){x0.strokeRect((px-14)*iS,-28*iS,28*iS,20*iS);x0.strokeRect((px-14)*iS,8*iS,28*iS,20*iS);for(let pl=0;pl<3;pl++){x0.beginPath();x0.moveTo((px-14+pl*9.3)*iS,-28*iS);x0.lineTo((px-14+pl*9.3)*iS,-8*iS);x0.stroke();x0.beginPath();x0.moveTo((px-14+pl*9.3)*iS,8*iS);x0.lineTo((px-14+pl*9.3)*iS,28*iS);x0.stroke();}}
-  x0.shadowBlur=0;x0.restore();
-  // Stars — bigger
+
+  // Stars
   for(const s of SP.stars){s.z-=0.0006*THEME.sceneSpeed*(1+beatFX.speedBoost*0.3)*(1+energy*0.3);if(s.z<0.01){s.z=1;s.x=(Math.random()-0.5)*2;s.y=(Math.random()-0.5)*2;s.trail=[];}
     const px=cx+(s.x/s.z)*cx,py=cy+(s.y/s.z)*cy;if(px<-10||px>w+10||py<-10||py>h+10)continue;
     const sz=(1-s.z)*5+0.5,alpha=(1-s.z)*0.95;x0.fillStyle=rgba(pc(s.ci),alpha);x0.shadowBlur=(1-s.z)>0.6?10+beat*4:3;x0.shadowColor=pc(s.ci);x0.beginPath();x0.arc(px,py,sz,0,Math.PI*2);x0.fill();
     if((1-s.z)>0.5){s.trail.push({x:px,y:py});if(s.trail.length>5)s.trail.shift();if(s.trail.length>1){x0.strokeStyle=rgba(pc(s.ci),alpha*0.5);x0.lineWidth=sz*0.6;x0.beginPath();for(let i=0;i<s.trail.length;i++){if(i===0)x0.moveTo(s.trail[i].x,s.trail[i].y);else x0.lineTo(s.trail[i].x,s.trail[i].y);}x0.stroke();}}x0.shadowBlur=0;}
-  // Comets — bigger
+
+  // Comets
   for(const cm of SP.comets){if(!cm.active){cm.resetTimer-=16;if(cm.resetTimer<=0){cm.x=w+50+Math.random()*w*0.5;cm.y=Math.random()*h*0.7;cm.active=true;cm.resetTimer=3000+Math.random()*5000;}continue;}
     cm.x+=cm.vx*(1+energy*0.3+beat*0.1);cm.y+=cm.vy*(0.5+energy*0.2);if(cm.x<-cm.trailLen||cm.y>h+50)cm.active=false;
     x0.fillStyle=rgba(pc(cm.ci),0.95);x0.shadowBlur=18+beat*10;x0.shadowColor=pc(cm.ci);x0.beginPath();x0.arc(cm.x,cm.y,7+beat*3,0,Math.PI*2);x0.fill();x0.shadowBlur=0;
     const tdx=-cm.vx/Math.hypot(cm.vx,cm.vy),tdy=-cm.vy/Math.hypot(cm.vx,cm.vy);const tG=x0.createLinearGradient(cm.x,cm.y,cm.x+tdx*cm.trailLen,cm.y+tdy*cm.trailLen);const tc=h2r(pc(cm.ci));tG.addColorStop(0,`rgba(${tc.r},${tc.g},${tc.b},0.8)`);tG.addColorStop(1,'transparent');x0.strokeStyle=tG;x0.lineWidth=5+beat*3;x0.beginPath();x0.moveTo(cm.x,cm.y);x0.lineTo(cm.x+tdx*cm.trailLen,cm.y+tdy*cm.trailLen);x0.stroke();
     x0.strokeStyle=rgba(pc(cm.ci),0.2);x0.lineWidth=12+beat*6;x0.beginPath();x0.moveTo(cm.x,cm.y);x0.lineTo(cm.x+tdx*cm.trailLen*0.6,cm.y+tdy*cm.trailLen*0.6);x0.stroke();}
+
   // Shooting stars
   for(const ss of SP.shootingStars){if(!ss.active){ss.timer-=16;if(ss.timer<=0){ss.x=Math.random()*w*0.7;ss.y=Math.random()*h*0.4;ss.vx=4+Math.random()*8;ss.vy=2+Math.random()*4;ss.len=80+Math.random()*140;ss.life=1;ss.ci=Math.floor(Math.random()*4);ss.active=true;}}
     else{ss.x+=ss.vx;ss.y+=ss.vy;ss.life-=0.02;if(ss.life<=0){ss.active=false;ss.timer=4000+Math.random()*8000;continue;}x0.fillStyle=rgba(pc(ss.ci),ss.life*0.95);x0.shadowBlur=14;x0.shadowColor=pc(ss.ci);x0.beginPath();x0.arc(ss.x,ss.y,4,0,Math.PI*2);x0.fill();x0.shadowBlur=0;
       const sG=x0.createLinearGradient(ss.x,ss.y,ss.x-ss.vx*(ss.len/ss.vx),ss.y-ss.vy*(ss.len/ss.vx));sG.addColorStop(0,rgba(pc(ss.ci),ss.life*0.85));sG.addColorStop(1,'transparent');x0.strokeStyle=sG;x0.lineWidth=2.5;x0.beginPath();x0.moveTo(ss.x,ss.y);x0.lineTo(ss.x-ss.vx*ss.len/Math.hypot(ss.vx,ss.vy),ss.y-ss.vy*ss.len/Math.hypot(ss.vx,ss.vy));x0.stroke();}}
-  // Centerpiece
-  if(THEME.centerpiece){cpRot+=0.015*(1+energy*0.2+beat*0.1);cpPh+=0.013;const gs=Math.min(w,h)*(0.22+beat*0.06+songProg*0.05);x0.shadowBlur=20+beat*20+songProg*10;x0.shadowColor=pc(0);x0.globalAlpha=0.9+beat*0.1;drawCPMini(x0,THEME.centerpiece,cx,cy*0.82,gs,cpRot);x0.globalAlpha=1;x0.shadowBlur=0;
-    for(let or2=0;or2<3;or2++){const orR=gs*(1.4+or2*0.55);x0.strokeStyle=rgba(pc(or2%4),(0.12+beat*0.12));x0.lineWidth=1;x0.shadowBlur=6;x0.shadowColor=pc(or2%4);x0.beginPath();x0.ellipse(cx,cy*0.82,orR,orR*0.3,or2*0.3+t*0.0003,0,Math.PI*2);x0.stroke();x0.shadowBlur=0;}}
+
+  // ── HUGE ISS — centered, slowly rotating, disco solar panels ──
+  const issX=cx,issY=cy*0.75;
+  const iScale=Math.min(w,h)*0.007;
+  const rot=SP.issRot;
+
+  x0.save();
+  x0.translate(issX,issY);
+  x0.rotate(rot);
+
+  // Main truss
+  x0.strokeStyle=rgba(pc(1),0.5+beat*0.15);x0.lineWidth=3*iScale;
+  x0.shadowBlur=8+beat*4;x0.shadowColor=pc(1);
+  x0.beginPath();x0.moveTo(-140*iScale,0);x0.lineTo(140*iScale,0);x0.stroke();
+
+  // Central hub — large circular module for centerpiece
+  const hubR=22*iScale;
+  x0.strokeStyle=rgba(pc(0),0.6+beat*0.2);x0.lineWidth=3*iScale;
+  x0.shadowBlur=14+beat*10;x0.shadowColor=pc(0);
+  x0.beginPath();x0.arc(0,0,hubR,0,Math.PI*2);x0.stroke();
+  x0.strokeStyle=rgba(pc(1),0.4+beat*0.15);x0.lineWidth=2*iScale;
+  x0.beginPath();x0.arc(0,0,hubR*0.7,0,Math.PI*2);x0.stroke();
+  const hubGrad=x0.createRadialGradient(0,0,0,0,0,hubR);
+  hubGrad.addColorStop(0,rgba(pc(0),0.06+beat*0.04));
+  hubGrad.addColorStop(0.6,rgba(pc(1),0.03+beat*0.02));
+  hubGrad.addColorStop(1,'transparent');
+  x0.fillStyle=hubGrad;x0.beginPath();x0.arc(0,0,hubR,0,Math.PI*2);x0.fill();
+  x0.strokeStyle=rgba(pc(2),0.25+beat*0.1);x0.lineWidth=1*iScale;
+  for(let hp=0;hp<8;hp++){const ha=hp/8*Math.PI*2;x0.beginPath();x0.moveTo(Math.cos(ha)*hubR*0.7,Math.sin(ha)*hubR*0.7);x0.lineTo(Math.cos(ha)*hubR,Math.sin(ha)*hubR);x0.stroke();}
+
+  // Forward and aft connector modules
+  x0.strokeStyle=rgba(pc(2),0.5+beat*0.1);x0.lineWidth=2*iScale;
+  x0.strokeRect(-55*iScale,-7*iScale,20*iScale,14*iScale);
+  x0.strokeRect(35*iScale,-7*iScale,20*iScale,14*iScale);
+  x0.strokeStyle=rgba(pc(3),0.4+beat*0.1);x0.lineWidth=1.5*iScale;
+  x0.strokeRect(-60*iScale,-5*iScale,5*iScale,10*iScale);
+  x0.strokeRect(55*iScale,-5*iScale,5*iScale,10*iScale);
+  for(const dx of [-62,58]){x0.strokeStyle=rgba(pc(1),0.3);x0.lineWidth=1*iScale;x0.beginPath();x0.moveTo(dx*iScale,-6*iScale);x0.lineTo(dx*iScale,6*iScale);x0.stroke();}
+  x0.shadowBlur=0;
+
+  // ── SOLAR PANELS — disco-style strobing tiles ──
+  const panelPositions=[{x:-110,y:0,pw:32,ph:45},{x:-80,y:0,pw:32,ph:45},{x:80,y:0,pw:32,ph:45},{x:110,y:0,pw:32,ph:45}];
+  const panelCols=4,panelRows=6;
+
+  for(const pp of panelPositions){
+    for(const yDir of [-1,1]){
+      const pby=yDir===1?(4*iScale):(-pp.ph*iScale-4*iScale);
+      const panelW=pp.pw*iScale;
+      const panelH=pp.ph*iScale;
+      const tileW=panelW/panelCols;
+      const tileH=panelH/panelRows;
+      const pbx=(pp.x-pp.pw/2)*iScale;
+
+      x0.strokeStyle=rgba(pc(0),0.3+beat*0.1);x0.lineWidth=1.5*iScale;
+      x0.strokeRect(pbx,pby,panelW,panelH);
+
+      x0.strokeStyle=rgba(pc(1),0.35);x0.lineWidth=2*iScale;
+      x0.beginPath();x0.moveTo(pp.x*iScale,0);x0.lineTo(pp.x*iScale,pby+(yDir===1?0:panelH));x0.stroke();
+
+      for(let row=0;row<panelRows;row++){
+        for(let col=0;col<panelCols;col++){
+          const tx=pbx+col*tileW;
+          const ty=pby+row*tileH;
+          const tcx=col-panelCols/2+0.5;
+          const tcy=row-panelRows/2+0.5;
+          const dfc=Math.sqrt(tcx*tcx+tcy*tcy);
+          let pB=0,pCi=0;
+          switch(SP.panelPatternType){
+            case 0:pB=Math.abs(Math.sin(SP.panelRipplePhase-dfc*1.2))*0.9;pCi=Math.floor(dfc+SP.panelRipplePhase*0.3)%4;break;
+            case 1:{const onC=Math.abs(tcx)<1.2||Math.abs(tcy)<1.2;const onD=Math.abs(Math.abs(tcx)-Math.abs(tcy))<1;pB=onC?(0.7+Math.sin(SP.panelWavePhase*2)*0.3):(onD?(0.5+Math.sin(SP.panelWavePhase*3)*0.3):0.15);pCi=onC?(Math.floor(SP.panelWavePhase)%4):((Math.floor(SP.panelWavePhase)+2)%4);break;}
+            case 2:pB=Math.max(0,Math.sin(SP.panelWavePhase*1.5+row*0.8))*0.85;pCi=(row+Math.floor(SP.panelWavePhase))%4;break;
+            case 3:pB=Math.max(0,Math.sin(SP.panelWavePhase*1.5+col*0.8))*0.85;pCi=(col+Math.floor(SP.panelWavePhase))%4;break;
+            case 4:pB=Math.abs(Math.sin(SP.panelRipplePhase-(Math.abs(tcx)+Math.abs(tcy))*0.7))*0.85;pCi=Math.floor((Math.abs(tcx)+Math.abs(tcy))+SP.panelRipplePhase*0.5)%4;break;
+          }
+          if(beat>0.4){pB=Math.min(1,pB+beat*0.5);}
+          const bright=pB*(0.6+beat*0.6);
+          const alpha=Math.min(1,0.08+bright*0.9);
+          const clr=h2r(pc(pCi));
+          x0.fillStyle='rgba('+clr.r+','+clr.g+','+clr.b+','+alpha.toFixed(3)+')';
+          x0.shadowBlur=alpha>0.4?(8+beat*8):0;x0.shadowColor=pc(pCi);
+          x0.fillRect(tx+0.5,ty+0.5,tileW-1,tileH-1);x0.shadowBlur=0;
+          x0.strokeStyle='rgba(0,0,0,0.4)';x0.lineWidth=0.5;x0.strokeRect(tx+0.5,ty+0.5,tileW-1,tileH-1);
+          if(alpha>0.5){x0.fillStyle='rgba('+clr.r+','+clr.g+','+clr.b+','+(alpha*0.25).toFixed(3)+')';x0.shadowBlur=12+beat*8;x0.shadowColor=pc(pCi);x0.fillRect(tx+2,ty+2,tileW-4,tileH-4);x0.shadowBlur=0;}
+        }
+      }
+      x0.strokeStyle=rgba(pc(1),0.2);x0.lineWidth=0.8*iScale;
+      for(let pl=1;pl<panelCols;pl++){x0.beginPath();x0.moveTo(pbx+pl*tileW,pby);x0.lineTo(pbx+pl*tileW,pby+panelH);x0.stroke();}
+      for(let pl=1;pl<panelRows;pl++){x0.beginPath();x0.moveTo(pbx,pby+pl*tileH);x0.lineTo(pbx+panelW,pby+pl*tileH);x0.stroke();}
+    }
+  }
+
+  // Radiator panels
+  for(const rx of [-95,95]){
+    x0.strokeStyle=rgba(pc(3),0.25+beat*0.08);x0.lineWidth=1.5*iScale;
+    x0.strokeRect((rx-6)*iScale,-18*iScale,12*iScale,36*iScale);
+    x0.strokeStyle=rgba(pc(3),0.15);x0.lineWidth=0.5*iScale;
+    for(let rl=0;rl<5;rl++){const ry=-16*iScale+rl*7*iScale;x0.beginPath();x0.moveTo((rx-5)*iScale,ry);x0.lineTo((rx+5)*iScale,ry);x0.stroke();}
+  }
+
+  // Antennas
+  x0.strokeStyle=rgba(pc(0),0.4+beat*0.1);x0.lineWidth=1*iScale;
+  x0.beginPath();x0.moveTo(0,-hubR-2*iScale);x0.lineTo(0,-hubR-10*iScale);x0.stroke();
+  x0.beginPath();x0.moveTo(-3*iScale,-hubR-8*iScale);x0.lineTo(3*iScale,-hubR-8*iScale);x0.stroke();
+  x0.beginPath();x0.arc(10*iScale,-hubR-5*iScale,4*iScale,Math.PI*0.8,Math.PI*1.8);x0.stroke();
+
+  // Centerpiece inside hub — counter-rotate to stay upright
+  if(THEME.centerpiece){
+    x0.save();
+    x0.rotate(-rot);
+    cpRot+=0.015*(1+energy*0.2+beat*0.1);cpPh+=0.013;
+    const gs=hubR*1.3;
+    x0.shadowBlur=20+beat*20+songProg*10;x0.shadowColor=pc(0);x0.globalAlpha=0.9+beat*0.1;
+    drawCPMini(x0,THEME.centerpiece,0,0,gs,cpRot);
+    x0.globalAlpha=1;x0.shadowBlur=0;
+    x0.restore();
+  }
+
+  x0.restore();// end ISS transform
+
+  // ISS ambient glow
+  const issGlow=x0.createRadialGradient(issX,issY,0,issX,issY,Math.min(w,h)*0.35);
+  issGlow.addColorStop(0,rgba(pc(0),0.03+beat*0.02));issGlow.addColorStop(0.5,rgba(pc(1),0.01));issGlow.addColorStop(1,'transparent');
+  x0.fillStyle=issGlow;x0.fillRect(0,0,w,h);
+
   // UFO Swarm
   if(SP.superUFO){while(SP.ufos.length<20)SP.ufos.push({x:Math.random()*w,y:h*(0.05+Math.random()*0.6),phase:Math.random()*Math.PI*2,speed:(Math.random()-0.5)*2,orbitR:30+Math.random()*80,orbitA:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4),beamOn:Math.random()>0.5});
     for(const u of SP.ufos){u.orbitA+=u.speed*0.015*(1+beat*0.5);u.x+=Math.cos(u.orbitA)*u.orbitR*0.005;u.y+=Math.sin(u.orbitA)*u.orbitR*0.003;if(u.x<-60)u.x=w+60;if(u.x>w+60)u.x=-60;if(u.y<0)u.y=h*0.1;if(u.y>h*0.7)u.y=h*0.6;const strobe=0.5+Math.sin(t*0.04+u.phase)*0.5+beat*0.4;
       x0.fillStyle=rgba(pc(u.ci),(0.4+strobe*0.4)*0.85);x0.shadowBlur=15+beat*10;x0.shadowColor=pc(u.ci);x0.beginPath();x0.ellipse(u.x,u.y,28,10,0,0,Math.PI*2);x0.fill();x0.fillStyle=rgba(pc((u.ci+1)%4),(0.6+strobe*0.4));x0.beginPath();x0.ellipse(u.x,u.y-8,14,10,0,0,Math.PI*2);x0.fill();x0.shadowBlur=0;
       for(let w2=0;w2<5;w2++){const wa=w2/5*Math.PI*2+u.orbitA;x0.fillStyle=rgba(pc((u.ci+w2)%4),strobe*0.9);x0.beginPath();x0.arc(u.x+Math.cos(wa)*18,u.y+Math.sin(wa)*4,3,0,Math.PI*2);x0.fill();}
       if(u.beamOn&&beat>0.3){const bG=x0.createLinearGradient(u.x,u.y+10,u.x,h*0.95);const bc=h2r(pc(u.ci));bG.addColorStop(0,`rgba(${bc.r},${bc.g},${bc.b},${0.25*strobe})`);bG.addColorStop(1,'transparent');x0.fillStyle=bG;x0.beginPath();x0.moveTo(u.x-15,u.y+10);x0.lineTo(u.x+15,u.y+10);x0.lineTo(u.x+40,h*0.95);x0.lineTo(u.x-40,h*0.95);x0.closePath();x0.fill();}}}
-  // STAR EXPLOSION — massive, offset, slow buildup, 15s strobe
+  // STAR EXPLOSION
   if(SP.starExplosion){
     const totalTime=35000;const buildTime=8000;const blastTime=2000;const strobeTime=15000;const fadeTime=totalTime-buildTime-blastTime-strobeTime;
     const elapsed=totalTime-SP.starExpTimer;const ex=SP.starExpX,ey=SP.starExpY;
     if(elapsed<buildTime){
-      // Slow buildup — star grows brighter, pulses
       SP.starExpBuildUp=elapsed/buildTime;const prog=SP.starExpBuildUp;const pulse=1+Math.sin(t*0.02*(1+prog*3))*0.3*prog;const starR=Math.min(w,h)*(0.03+prog*0.12)*pulse;
       const sg=x0.createRadialGradient(ex,ey,0,ex,ey,starR);sg.addColorStop(0,`rgba(255,255,${Math.floor(200+prog*55)},${0.3+prog*0.7})`);sg.addColorStop(0.3,rgba(pc(0),0.5*prog));sg.addColorStop(1,'transparent');x0.fillStyle=sg;x0.fillRect(0,0,w,h);
-      // Core dot
       x0.fillStyle=`rgba(255,255,255,${0.5+prog*0.5})`;x0.shadowBlur=30*prog+beat*20;x0.shadowColor=`rgba(255,255,200,${prog})`;x0.beginPath();x0.arc(ex,ey,4+prog*12,0,Math.PI*2);x0.fill();x0.shadowBlur=0;
-      // Rays
       for(let r=0;r<8;r++){const ra=r/8*Math.PI*2+t*0.003;const rl=starR*(0.8+Math.sin(ra*3+t*0.01)*0.3);x0.strokeStyle=rgba(pc(r%4),0.2*prog+beat*0.1);x0.lineWidth=2;x0.beginPath();x0.moveTo(ex,ey);x0.lineTo(ex+Math.cos(ra)*rl,ey+Math.sin(ra)*rl);x0.stroke();}
     } else if(elapsed<buildTime+blastTime){
-      // MASSIVE EXPLOSION — fills screen
       const blastProg=(elapsed-buildTime)/blastTime;const blastR=Math.max(w,h)*1.5*blastProg;
       x0.fillStyle=`rgba(255,255,255,${(1-blastProg)*0.9})`;x0.fillRect(0,0,w,h);
       const bg=x0.createRadialGradient(ex,ey,0,ex,ey,blastR);bg.addColorStop(0,rgba(pc(Math.floor(t*0.02)%4),0.9*(1-blastProg*0.3)));bg.addColorStop(0.5,rgba(pc((Math.floor(t*0.02)+2)%4),0.5));bg.addColorStop(1,'transparent');x0.fillStyle=bg;x0.fillRect(0,0,w,h);
-      // Spawn debris
       if(SP.starExpParticles.length<300){for(let i=0;i<15;i++){const a=Math.random()*Math.PI*2,spd=5+Math.random()*20;SP.starExpParticles.push({x:ex,y:ey,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,life:1,r:3+Math.random()*8,ci:Math.floor(Math.random()*4)});}}
     } else if(elapsed<buildTime+blastTime+strobeTime){
-      // 15-SECOND COLORFUL STROBE
       SP.starExpStrobeTimer+=16;const sProg=(elapsed-buildTime-blastTime)/strobeTime;
       const strobeSpeed=0.06+beat*0.08+sProg*0.04;const strobeVal=Math.sin(SP.starExpStrobeTimer*strobeSpeed);const sCi=Math.floor(SP.starExpStrobeTimer*0.008+strobeVal*2)%4;
       const sAlpha=(1-sProg*0.5)*(0.3+Math.abs(strobeVal)*0.5+beat*0.3);
       x0.fillStyle=rgba(pc(sCi),sAlpha*0.7);x0.fillRect(0,0,w,h);
-      // Radial burst waves
       const waveR=(SP.starExpStrobeTimer*0.5)%(Math.max(w,h));x0.strokeStyle=rgba(pc((sCi+1)%4),sAlpha*0.5);x0.lineWidth=4+beat*6;x0.shadowBlur=20+beat*15;x0.shadowColor=pc((sCi+1)%4);x0.beginPath();x0.arc(ex,ey,waveR,0,Math.PI*2);x0.stroke();x0.shadowBlur=0;
-      // Cross beams
       for(let cb=0;cb<4;cb++){const cba=cb/4*Math.PI*2+t*0.002;x0.strokeStyle=rgba(pc(cb),sAlpha*0.4);x0.lineWidth=8+beat*10;x0.shadowBlur=15;x0.shadowColor=pc(cb);x0.beginPath();x0.moveTo(ex,ey);x0.lineTo(ex+Math.cos(cba)*w,ey+Math.sin(cba)*h);x0.stroke();x0.shadowBlur=0;}
     } else {
-      // Fade out
       const fProg=(elapsed-buildTime-blastTime-strobeTime)/fadeTime;const fAlpha=(1-fProg)*0.3;
       const fg=x0.createRadialGradient(ex,ey,0,ex,ey,Math.max(w,h)*0.5*(1-fProg));fg.addColorStop(0,rgba(pc(0),fAlpha));fg.addColorStop(1,'transparent');x0.fillStyle=fg;x0.fillRect(0,0,w,h);
     }
-    // Particles throughout
     for(let i=SP.starExpParticles.length-1;i>=0;i--){const p=SP.starExpParticles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=0.05;p.vx*=0.995;p.life-=0.005;if(p.life<=0){SP.starExpParticles.splice(i,1);continue;}
       x0.fillStyle=rgba(pc(p.ci),p.life*0.9);x0.shadowBlur=12;x0.shadowColor=pc(p.ci);x0.beginPath();x0.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);x0.fill();x0.shadowBlur=0;}
   }
@@ -2726,306 +2758,271 @@ function drawElectricForest(t){
 
   // Timer updates
   if(EF.laserOverloadTimer>0){EF.laserOverloadTimer-=16;if(EF.laserOverloadTimer<=0)EF.laserOverload=false;}
-  if(EF.monkeySwarmTimer>0){EF.monkeySwarmTimer-=16;if(EF.monkeySwarmTimer<=0){EF.monkeySwarm=false;EF.monkeys=[];}}
+  if(EF.mushroomBloomTimer>0){EF.mushroomBloomTimer-=16;if(EF.mushroomBloomTimer<=0)EF.mushroomBloom=false;}
   if(EF.windstormTimer>0){EF.windstormTimer-=16;if(EF.windstormTimer<=0)EF.windstorm=false;}
   const wind=EF.windstorm;
   const laserOL=EF.laserOverload;
 
   // ══════════════════════════════════════════════════════
-  // BACKGROUND — dark forest night sky
+  // BACKGROUND — NO SKY. Dense dark forest canopy above.
   // ══════════════════════════════════════════════════════
   const bgG=x0.createLinearGradient(0,0,0,h);
-  bgG.addColorStop(0,'rgba(1,2,6,1)');bgG.addColorStop(0.4,'rgba(2,5,10,1)');bgG.addColorStop(1,'rgba(0,1,3,1)');
+  bgG.addColorStop(0,'rgba(2,2,4,1)');bgG.addColorStop(0.3,'rgba(3,3,5,1)');bgG.addColorStop(0.6,'rgba(2,2,3,1)');bgG.addColorStop(1,'rgba(1,1,2,1)');
   x0.fillStyle=bgG;x0.fillRect(0,0,w,h);
 
-  // Ground — forest floor path with perspective
-  const vanishY=h*0.38; // vanishing point (where stage is)
-  const gG=x0.createLinearGradient(0,vanishY,0,h);
-  gG.addColorStop(0,rgba(pc(2),0.06));gG.addColorStop(0.3,rgba(pc(2),0.1));gG.addColorStop(1,'rgba(2,4,2,0.95)');
-  x0.fillStyle=gG;x0.fillRect(0,vanishY,w,h-vanishY);
+  // Canopy overhead — dense leafy coverage
+  for(let cy2=0;cy2<5;cy2++){
+    const canopyY=h*(-0.02+cy2*0.04);const canopyAlpha=0.12-cy2*0.015;
+    for(let cx2=0;cx2<8;cx2++){
+      const canopyX=w*(cx2/7)+Math.sin(t*0.0005+cx2)*w*0.02;
+      const cw2=w*0.22+Math.sin(cx2+cy2)*w*0.05;const ch2=h*0.08+Math.sin(cx2*2)*h*0.03;
+      x0.fillStyle=rgba(pc(cx2%4),canopyAlpha+beat*0.01);
+      x0.shadowBlur=15+beat*5;x0.shadowColor=pc(cx2%4);
+      x0.beginPath();x0.ellipse(canopyX,canopyY,cw2,ch2,0,0,Math.PI*2);x0.fill();
+    }
+  }
+  x0.shadowBlur=0;
 
-  // Path edges — perspective lines converging to stage
-  x0.strokeStyle=rgba(pc(2),0.07+beat*0.03);x0.lineWidth=1;
+  // Dark canopy overlay
+  const canopyG=x0.createLinearGradient(0,0,0,h*0.2);
+  canopyG.addColorStop(0,'rgba(1,1,2,0.95)');canopyG.addColorStop(0.5,'rgba(2,2,3,0.6)');canopyG.addColorStop(1,'transparent');
+  x0.fillStyle=canopyG;x0.fillRect(0,0,w,h*0.2);
+
+  // Hanging vines from canopy
+  for(const vine of EF.vines){
+    vine.sway+=0.008+(wind?0.02:0);
+    const vx=vine.x+Math.sin(vine.sway)*15+(wind?Math.sin(t*0.003)*20:0);
+    x0.strokeStyle=rgba(pc(vine.ci),0.15+beat*0.05);
+    x0.lineWidth=vine.width;x0.shadowBlur=4;x0.shadowColor=pc(vine.ci);
+    x0.beginPath();x0.moveTo(vine.x,0);
+    x0.bezierCurveTo(vine.x,vine.len*0.3,vx,vine.len*0.6,vx+Math.sin(vine.sway*2)*8,vine.len);
+    x0.stroke();
+    x0.fillStyle=rgba(pc(vine.ci),0.1+beat*0.03);
+    x0.beginPath();x0.ellipse(vx+Math.sin(vine.sway*2)*8,vine.len,8+Math.random()*4,5,0,0,Math.PI*2);x0.fill();
+  }
+  x0.shadowBlur=0;
+
+  // ══════════════════════════════════════════════════════
+  // GROUND — solid, clearly visible forest floor
+  // ══════════════════════════════════════════════════════
+  const vanishY=h*0.68;
+  const groundY=h*0.72;
+  x0.fillStyle='rgb(10,8,14)';x0.fillRect(0,groundY,w,h-groundY);
+  const gG=x0.createLinearGradient(0,groundY,0,h);
+  gG.addColorStop(0,'rgb(18,14,22)');gG.addColorStop(0.3,'rgb(12,10,16)');gG.addColorStop(1,'rgb(6,5,9)');
+  x0.fillStyle=gG;x0.fillRect(0,groundY,w,h-groundY);
+  for(let gl=0;gl<8;gl++){
+    const glY=groundY+gl*(h-groundY)/8;const glAlpha=0.06-gl*0.005;
+    x0.strokeStyle=rgba(pc(0),glAlpha);x0.lineWidth=1;
+    x0.beginPath();x0.moveTo(0,glY);x0.lineTo(w,glY);x0.stroke();
+  }
+  x0.strokeStyle=rgba(pc(0),0.12+beat*0.06);x0.lineWidth=1.5;
+  x0.shadowBlur=6+beat*3;x0.shadowColor=pc(0);
+  x0.beginPath();x0.moveTo(0,groundY);x0.lineTo(w,groundY);x0.stroke();x0.shadowBlur=0;
+
+  // Path edges
+  x0.strokeStyle=rgba(pc(0),0.05+beat*0.03);x0.lineWidth=1;
   x0.beginPath();x0.moveTo(cx-w*0.06,vanishY);x0.lineTo(0,h);x0.stroke();
   x0.beginPath();x0.moveTo(cx+w*0.06,vanishY);x0.lineTo(w,h);x0.stroke();
-  // Inner path lines
-  x0.strokeStyle=rgba(pc(2),0.04);
+  x0.strokeStyle=rgba(pc(0),0.03);
   x0.beginPath();x0.moveTo(cx-w*0.03,vanishY);x0.lineTo(cx-w*0.35,h);x0.stroke();
   x0.beginPath();x0.moveTo(cx+w*0.03,vanishY);x0.lineTo(cx+w*0.35,h);x0.stroke();
 
-  // ══════════════════════════════════════════════════════
-  // TREES — immersive depth perspective, flanking sides
-  // Foreground trees (near edges) are LARGE and partially off-screen
-  // Background trees (near center) are smaller and higher up
-  // ══════════════════════════════════════════════════════
-  // Sort trees by depth (background first so foreground draws on top)
-  const sortedTrees=[...EF.trees].sort((a,b)=>{
-    const aD=Math.abs(a.x-cx);const bD=Math.abs(b.x-cx);return aD-bD;
-  });
+  // ── Ground mushrooms ──
+  const bloom=EF.mushroomBloom;
 
-  for(const tr of sortedTrees){
-    tr.ph+=0.005;const glm=tr.glowMult||1;
-    // Wind sway
-    const windSway=wind?(Math.sin(t*0.003+tr.x*0.01)*35+Math.sin(t*0.007)*20):0;
-    tr.swayOffset+=(windSway-tr.swayOffset)*0.05;
-
-    // Depth factor: how far from center (0=center/deep, 1=edge/close)
-    const edgeDist=Math.abs(tr.x-cx)/(w*0.5);
-    const depth=Math.min(1,edgeDist*1.3); // 0=far, 1=near
-
-    // Scale by depth — foreground trees are MUCH bigger
-    const scaleF=0.4+depth*0.9; // 0.4x at back to 1.3x at front
-    const trunkW=tr.trunkW*scaleF;
-    const trunkH=tr.trunkH*scaleF;
-
-    // Y position: foreground trees start at bottom, background trees start higher
-    const baseY=h+depth*h*0.05; // foreground slightly below edge
-    const topY=baseY-trunkH;
-
-    // X position: foreground trees pushed further to edges (partially off-screen)
-    const pushFactor=depth*0.12;
-    const baseX=tr.side<0?(tr.x-w*pushFactor):(tr.x+w*pushFactor);
-    const topX=baseX+tr.swayOffset;
-
-    // Alpha: background trees slightly more transparent
-    const depthAlpha=0.5+depth*0.5;
-
-    x0.save();
-    x0.globalAlpha=depthAlpha;
-
-    // ── Trunk — thick solid dark with neon glow edges ──
-    const twBase=trunkW*(1.2+depth*0.4); // wider at base for foreground
-    const twTop=trunkW*(0.5+depth*0.2);
-    x0.fillStyle=`rgba(4,10,4,${0.9+depth*0.08})`;
-    x0.beginPath();
-    x0.moveTo(baseX-twBase,baseY);
-    x0.lineTo(topX-twTop,topY+trunkH*0.25);
-    x0.lineTo(topX-twTop*0.7,topY);
-    x0.lineTo(topX+twTop*0.7,topY);
-    x0.lineTo(topX+twTop,topY+trunkH*0.25);
-    x0.lineTo(baseX+twBase,baseY);
-    x0.closePath();x0.fill();
-
-    // Neon glow outline on trunk
-    x0.strokeStyle=rgba(pc(tr.ci),(0.3+beat*0.15)*glm*depthAlpha);
-    x0.lineWidth=(1.5+depth*1.5)*glm;
-    x0.shadowBlur=(8+beat*6+depth*8)*glm;x0.shadowColor=pc(tr.ci);
-    x0.stroke();
-
-    // ── Branches — spreading outward, more on foreground trees ──
-    const numBranches=Math.floor(2+depth*3);
-    x0.strokeStyle=rgba(pc(tr.ci),(0.25+beat*0.1)*glm);
-    x0.lineWidth=(1+depth)*glm;
-    for(let b=0;b<numBranches;b++){
-      const by=topY+trunkH*(0.15+b*0.18);
-      const bSide=(b%2===0)?-1:1;
-      const bLen=trunkW*(1.5+depth*1.2+Math.sin(tr.ph+b)*0.3);
-      const bx=lerp(topX,baseX,b*0.18/(numBranches*0.18));
-      x0.beginPath();
-      x0.moveTo(bx,by);
-      x0.bezierCurveTo(
-        bx+bSide*bLen*0.4,by-trunkH*0.06,
-        bx+bSide*bLen*0.7,by-trunkH*0.02+tr.swayOffset*0.3,
-        bx+bSide*bLen+tr.swayOffset*0.5,by+trunkH*0.02
-      );
-      x0.stroke();
-      // Small leaf clusters at branch ends
-      x0.fillStyle=rgba(pc(tr.ci),(0.15+beat*0.06)*glm);
-      x0.shadowBlur=(10+beat*5)*glm;
-      x0.beginPath();
-      x0.ellipse(bx+bSide*bLen+tr.swayOffset*0.5,by,bLen*0.25,bLen*0.12,bSide*0.2,0,Math.PI*2);
-      x0.fill();
+  function drawMushrooms(bloomed){
+    for(const mush of EF.mushrooms){
+      if(!bloomed) mush.ph+=0.02+(bloom?0.06:0);
+      const bloomScale=bloomed?(8+Math.sin(mush.ph*2)*2+beat*3):1;
+      const sz=mush.sz*bloomScale;const stemW=bloomed?(3+beat*5):2;
+      const bloomCi=bloomed?Math.floor(t*0.008+mush.ph)%4:mush.ci;
+      const strobeFlash=bloomed?(0.5+beat*0.5+Math.sin(mush.ph*6)*0.3):0;
+      const glow=(bloomed?(0.7+strobeFlash):(0.4+Math.sin(mush.ph)*0.3+beat*0.2));
+      x0.fillStyle=rgba(pc(bloomCi),glow*(bloomed?0.9:0.4));
+      x0.shadowBlur=bloomed?(12+beat*8):(8+beat*4);x0.shadowColor=pc(bloomCi);
+      x0.fillRect(mush.x-stemW/2,mush.y-sz*0.6,stemW,sz*0.6);
+      x0.beginPath();x0.ellipse(mush.x,mush.y-sz*0.6,sz*0.5,sz*0.3,0,Math.PI,Math.PI*2);x0.fill();
+      if(bloomed){
+        const capCx2=mush.x,capCy2=mush.y-sz*0.6,capW2=sz*0.5,capH2=sz*0.3;
+        const spots=[{nx:-0.55,ny:-0.3,r:0.09},{nx:-0.15,ny:-0.6,r:0.07},{nx:0.3,ny:-0.45,r:0.1},{nx:0.6,ny:-0.15,r:0.06},{nx:-0.35,ny:-0.65,r:0.055},{nx:0.05,ny:-0.25,r:0.08},{nx:-0.6,ny:-0.55,r:0.05}];
+        for(let sp=0;sp<spots.length;sp++){
+          const s=spots[sp];const spotCi=(bloomCi+sp)%4;
+          x0.fillStyle=rgba(pc(spotCi),(0.5+beat*0.3));
+          x0.beginPath();x0.arc(capCx2+s.nx*capW2,capCy2+s.ny*capH2,sz*s.r+beat*sz*0.01,0,Math.PI*2);x0.fill();
+        }
+      }
+      const auraR=bloomed?(sz*1.8):(sz*1.5);
+      const mgG=x0.createRadialGradient(mush.x,mush.y-sz*0.3,0,mush.x,mush.y-sz*0.3,auraR);
+      mgG.addColorStop(0,rgba(pc(bloomCi),glow*(bloomed?0.08:0.12)));mgG.addColorStop(1,'transparent');
+      x0.fillStyle=mgG;x0.fillRect(mush.x-auraR,mush.y-auraR,auraR*2,auraR*2);
     }
-
-    // ── Canopy glow at top — subtle, not blocking sky ──
-    x0.fillStyle=rgba(pc(tr.ci),(0.12+beat*0.05)*glm);
-    x0.shadowBlur=(15+beat*8)*glm;x0.shadowColor=pc(tr.ci);
-    x0.beginPath();x0.ellipse(topX,topY+trunkH*0.05,trunkW*1.8,trunkH*0.12,0,0,Math.PI*2);x0.fill();
-
-    // ── Neon bark highlights ──
-    x0.strokeStyle=rgba(pc(tr.ci),(0.1+beat*0.06)*glm);x0.lineWidth=1;x0.shadowBlur=4*glm;
-    for(let bk=0;bk<(2+Math.floor(depth*2));bk++){
-      const bky=baseY-(bk+1)*trunkH*0.2;
-      const bkx=lerp(topX,baseX,(bk+1)*0.2);
-      const bkw=lerp(twTop,twBase,(bk+1)*0.2)*0.7;
-      x0.beginPath();x0.moveTo(bkx-bkw,bky);x0.lineTo(bkx+bkw,bky);x0.stroke();
-    }
-
-    x0.shadowBlur=0;x0.globalAlpha=1;x0.restore();
-    if(tr.glowMult>1)tr.glowMult*=0.995;
+    x0.shadowBlur=0;
   }
 
-  // ══════════════════════════════════════════════════════
-  // STAGE — centerpiece as the festival stage
-  // Positioned at the vanishing point, framed by a stage structure
-  // ══════════════════════════════════════════════════════
-  const stageX=cx, stageY=vanishY+h*0.08;
-  const stageSz=Math.min(w,h)*0.12;
+  if(!bloom) drawMushrooms(false);
 
-  // Stage platform — trapezoidal, perspective
-  const stgW1=w*0.08, stgW2=w*0.18, stgH=h*0.04;
-  x0.fillStyle=rgba(pc(3),0.12);
-  x0.beginPath();
-  x0.moveTo(stageX-stgW1,stageY);x0.lineTo(stageX-stgW2,stageY+stgH);
-  x0.lineTo(stageX+stgW2,stageY+stgH);x0.lineTo(stageX+stgW1,stageY);
-  x0.closePath();x0.fill();
-  x0.strokeStyle=rgba(pc(3),0.3+beat*0.15);x0.lineWidth=1.5;
-  x0.shadowBlur=8+beat*5;x0.shadowColor=pc(3);x0.stroke();x0.shadowBlur=0;
+  // ══════════════════════════════════════════════════════
+  // TREES + STAGE — layered rendering
+  // ══════════════════════════════════════════════════════
+  const sortedTrees=[...EF.trees].sort((a,b)=>a.layer-b.layer);
 
-  // Stage truss/rigging outline above centerpiece
-  const trussW=w*0.14, trussTop=stageY-h*0.18;
-  x0.strokeStyle=rgba(pc(0),0.2+beat*0.1);x0.lineWidth=1.5;
-  x0.shadowBlur=6+beat*4;x0.shadowColor=pc(0);
-  // Vertical truss legs
-  x0.beginPath();x0.moveTo(stageX-trussW,stageY);x0.lineTo(stageX-trussW*0.8,trussTop);x0.stroke();
-  x0.beginPath();x0.moveTo(stageX+trussW,stageY);x0.lineTo(stageX+trussW*0.8,trussTop);x0.stroke();
-  // Top bar
-  x0.beginPath();x0.moveTo(stageX-trussW*0.8,trussTop);x0.lineTo(stageX+trussW*0.8,trussTop);x0.stroke();
-  // Cross braces
-  x0.strokeStyle=rgba(pc(0),0.1);x0.lineWidth=1;
-  x0.beginPath();x0.moveTo(stageX-trussW*0.85,stageY-h*0.05);x0.lineTo(stageX+trussW*0.85,stageY-h*0.12);x0.stroke();
-  x0.beginPath();x0.moveTo(stageX+trussW*0.85,stageY-h*0.05);x0.lineTo(stageX-trussW*0.85,stageY-h*0.12);x0.stroke();
+  function drawTree(tr){
+    tr.ph+=0.005;const glm=tr.glowMult||1;
+    const windSway=wind?(Math.sin(t*0.003+tr.x*0.01)*35+Math.sin(t*0.007)*20):0;
+    tr.swayOffset+=(windSway-tr.swayOffset)*0.05;
+    const layerScale=[0.7,0.85,1.1][tr.layer];const layerAlpha=[0.45,0.7,0.9][tr.layer];const layerGlow=[0.6,0.85,1.0][tr.layer];
+    const trunkW=tr.trunkW*layerScale;const trunkH=tr.trunkH*layerScale;
+    const baseY=groundY+tr.layer*h*0.08;const topY=baseY-trunkH;
+    const pushFactor=tr.layer*0.06;
+    const baseX=tr.side<0?(tr.x-w*pushFactor):(tr.x+w*pushFactor);const topX=baseX+tr.swayOffset;
+    x0.save();x0.globalAlpha=layerAlpha;
+    const twBase=trunkW*(1.3+tr.layer*0.3);const twTop=trunkW*(0.5+tr.layer*0.15);
+    x0.fillStyle=`rgba(4,4,6,${0.85+tr.layer*0.05})`;
+    x0.beginPath();x0.moveTo(baseX-twBase,baseY);x0.lineTo(topX-twTop,topY+trunkH*0.25);
+    x0.lineTo(topX-twTop*0.7,topY);x0.lineTo(topX+twTop*0.7,topY);
+    x0.lineTo(topX+twTop,topY+trunkH*0.25);x0.lineTo(baseX+twBase,baseY);x0.closePath();x0.fill();
+    x0.strokeStyle=rgba(pc(tr.ci),(0.25+beat*0.15)*glm*layerGlow);
+    x0.lineWidth=(1.5+tr.layer*1.5)*glm;x0.shadowBlur=(6+beat*5+tr.layer*8)*glm;x0.shadowColor=pc(tr.ci);x0.stroke();
+    if(tr.layer>=1){const numRoots=2+tr.layer;x0.strokeStyle=rgba(pc(tr.ci),(0.15+beat*0.05)*glm);x0.lineWidth=(1+tr.layer*0.5)*glm;
+      for(let r=0;r<numRoots;r++){const rSide=(r%2===0)?-1:1;const rLen=twBase*(0.8+r*0.3);const ry=baseY-trunkH*0.02;
+        x0.beginPath();x0.moveTo(baseX+rSide*twBase*0.5,ry);x0.bezierCurveTo(baseX+rSide*(twBase+rLen*0.3),ry+trunkH*0.02,baseX+rSide*(twBase+rLen*0.6),ry+trunkH*0.04,baseX+rSide*(twBase+rLen),ry+trunkH*0.05);x0.stroke();}}
+    const numBranches=Math.floor(3+tr.layer*3);x0.strokeStyle=rgba(pc(tr.ci),(0.2+beat*0.08)*glm);x0.lineWidth=(1+tr.layer*0.8)*glm;
+    for(let b=0;b<numBranches;b++){const bFrac=0.1+b*0.8/numBranches;const by=topY+trunkH*bFrac;const bSide=(b%2===0)?-1:1;
+      const bLen=trunkW*(1.8+tr.layer*1.5+Math.sin(tr.branchSeed+b)*0.4);const bx=lerp(topX,baseX,bFrac);
+      x0.beginPath();x0.moveTo(bx,by);x0.bezierCurveTo(bx+bSide*bLen*0.35,by-trunkH*0.04,bx+bSide*bLen*0.65,by-trunkH*0.01+tr.swayOffset*0.3,bx+bSide*bLen+tr.swayOffset*0.5,by+trunkH*0.015);x0.stroke();
+      const leafSz=bLen*(0.2+tr.layer*0.1);x0.fillStyle=rgba(pc(tr.ci),(0.1+beat*0.04)*glm);x0.shadowBlur=(8+beat*4)*glm;
+      x0.beginPath();x0.ellipse(bx+bSide*bLen+tr.swayOffset*0.5,by,leafSz,leafSz*0.5,bSide*0.15,0,Math.PI*2);x0.fill();
+      if(tr.layer===2&&b%2===0){const sbLen=bLen*0.4;x0.strokeStyle=rgba(pc((tr.ci+1)%4),(0.12+beat*0.04)*glm);x0.lineWidth=0.8*glm;
+        x0.beginPath();x0.moveTo(bx+bSide*bLen*0.6,by-trunkH*0.01);x0.lineTo(bx+bSide*(bLen*0.6+sbLen*0.5),by-trunkH*0.06);x0.stroke();}}
+    x0.strokeStyle=rgba(pc(tr.ci),(0.08+beat*0.04)*glm);x0.lineWidth=1;x0.shadowBlur=3*glm;
+    for(let bk=0;bk<(2+tr.layer*2);bk++){const bky=baseY-(bk+1)*trunkH*0.15;const bkx=lerp(topX,baseX,(bk+1)*0.15);const bkw=lerp(twTop,twBase,(bk+1)*0.15)*0.6;
+      x0.beginPath();x0.moveTo(bkx-bkw,bky);x0.lineTo(bkx+bkw,bky);x0.stroke();}
+    if(tr.layer>=1){const numWraps=3+tr.layer*3;
+      for(let wl=0;wl<numWraps;wl++){const wFrac=0.15+wl*0.7/numWraps;const wy=baseY-trunkH*wFrac;const wx=lerp(baseX,topX,wFrac);
+        const wRad=lerp(twBase,twTop,wFrac)*0.9;const wAngle=wl*1.2+t*0.002;
+        const dotX=wx+Math.sin(wAngle)*wRad;const dotY=wy+Math.cos(wAngle)*2;
+        x0.fillStyle=rgba(pc((tr.ci+wl)%4),0.5+beat*0.3);x0.shadowBlur=6+beat*3;x0.shadowColor=pc((tr.ci+wl)%4);
+        x0.beginPath();x0.arc(dotX,dotY,2+tr.layer,0,Math.PI*2);x0.fill();}}
+    x0.shadowBlur=0;x0.globalAlpha=1;x0.restore();if(tr.glowMult>1)tr.glowMult*=0.995;
+  }
+
+  // PASS 1: Background trees
+  for(const tr of sortedTrees){if(tr.layer===0)drawTree(tr);}
+
+  // ── STAGE — solid, grounded ──
+  const stageX=cx,stageY=groundY;const stageSz=Math.min(w,h)*0.28;
+  const stgW1=w*0.15,stgW2=w*0.32,stgH=h*0.04;
+  const trussW=w*0.25,trussTop=stageY-h*0.55;
+  // Solid opaque backdrop
+  x0.fillStyle='rgb(4,3,6)';x0.beginPath();
+  x0.moveTo(stageX-trussW*0.88,trussTop);x0.lineTo(stageX+trussW*0.88,trussTop);
+  x0.lineTo(stageX+trussW*1.05,stageY+stgH);x0.lineTo(stageX-trussW*1.05,stageY+stgH);x0.closePath();x0.fill();
+  // LED screen glow
+  const screenG=x0.createRadialGradient(stageX,stageY-h*0.25,0,stageX,stageY-h*0.25,trussW*0.7);
+  screenG.addColorStop(0,rgba(pc(0),0.08+beat*0.05));screenG.addColorStop(0.4,rgba(pc(3),0.04+beat*0.02));screenG.addColorStop(1,'transparent');
+  x0.fillStyle=screenG;x0.fillRect(stageX-trussW,trussTop,trussW*2,stageY-trussTop);
+  // Platform
+  const platG=x0.createLinearGradient(stageX-stgW2,stageY,stageX+stgW2,stageY);
+  platG.addColorStop(0,rgba(pc(0),0.08));platG.addColorStop(0.5,rgba(pc(3),0.15));platG.addColorStop(1,rgba(pc(0),0.08));
+  x0.fillStyle=platG;x0.beginPath();x0.moveTo(stageX-stgW1,stageY);x0.lineTo(stageX-stgW2,stageY+stgH);
+  x0.lineTo(stageX+stgW2,stageY+stgH);x0.lineTo(stageX+stgW1,stageY);x0.closePath();x0.fill();
+  x0.strokeStyle=rgba(pc(3),0.4+beat*0.2);x0.lineWidth=2;x0.shadowBlur=10+beat*6;x0.shadowColor=pc(3);x0.stroke();x0.shadowBlur=0;
+  // Truss
+  x0.strokeStyle=rgba(pc(0),0.3+beat*0.12);x0.lineWidth=2.5;x0.shadowBlur=8+beat*5;x0.shadowColor=pc(0);
+  x0.beginPath();x0.moveTo(stageX-trussW,stageY);x0.lineTo(stageX-trussW*0.85,trussTop);x0.stroke();
+  x0.beginPath();x0.moveTo(stageX+trussW,stageY);x0.lineTo(stageX+trussW*0.85,trussTop);x0.stroke();
+  x0.beginPath();x0.moveTo(stageX-trussW*0.85,trussTop);x0.lineTo(stageX+trussW*0.85,trussTop);x0.stroke();
+  x0.strokeStyle=rgba(pc(0),0.12);x0.lineWidth=1;
+  for(let tb=0;tb<6;tb++){const tbFrac=tb/6;const tbY=stageY-(stageY-trussTop)*tbFrac;const tbW=lerp(trussW,trussW*0.85,tbFrac);
+    x0.beginPath();x0.moveTo(stageX-tbW,tbY);x0.lineTo(stageX+tbW,tbY);x0.stroke();}
+  x0.strokeStyle=rgba(pc(0),0.08);x0.lineWidth=1;
+  x0.beginPath();x0.moveTo(stageX-trussW*0.9,stageY);x0.lineTo(stageX+trussW*0.85,trussTop);x0.stroke();
+  x0.beginPath();x0.moveTo(stageX+trussW*0.9,stageY);x0.lineTo(stageX-trussW*0.85,trussTop);x0.stroke();
+  // Truss lights
+  for(let sl=0;sl<8;sl++){const slX=stageX+lerp(-trussW*0.8,trussW*0.8,sl/7);const slCi=sl%4;
+    const slBr=0.4+beat*0.3+Math.sin(t*0.003+sl*0.8)*0.2;x0.fillStyle=rgba(pc(slCi),slBr*0.7);
+    x0.shadowBlur=12+beat*6;x0.shadowColor=pc(slCi);x0.beginPath();x0.arc(slX,trussTop+3,3+beat*2,0,Math.PI*2);x0.fill();
+    const beamG=x0.createRadialGradient(slX,trussTop,0,slX,stageY,w*0.08);beamG.addColorStop(0,rgba(pc(slCi),slBr*0.08));beamG.addColorStop(1,'transparent');
+    x0.fillStyle=beamG;x0.beginPath();x0.moveTo(slX,trussTop);x0.lineTo(slX-w*0.04,stageY+h*0.05);x0.lineTo(slX+w*0.04,stageY+h*0.05);x0.closePath();x0.fill();}
   x0.shadowBlur=0;
 
-  // Centerpiece — the festival stage focal point
+  // Centerpiece
   if(THEME.centerpiece){
-    const windPulse=wind?1.3:1;
-    cpRot+=0.012*(1+energy*0.2+beat*0.3)*windPulse;cpPh+=0.013;
-    const cpSz=stageSz*(0.7+beat*0.15+songProg*0.15)*windPulse;
-    const cpBob=Math.sin(t*0.001)*h*0.01;
-    x0.shadowBlur=(18+beat*12)*windPulse;x0.shadowColor=pc(0);
-    x0.globalAlpha=0.9+beat*0.1;
-    drawCPMini(x0,THEME.centerpiece,stageX,stageY-h*0.06+cpBob,cpSz,cpRot);
-    x0.globalAlpha=1;x0.shadowBlur=0;
-    // Stage glow halo
-    const cpGlow=x0.createRadialGradient(stageX,stageY-h*0.04,0,stageX,stageY-h*0.04,cpSz*3);
-    cpGlow.addColorStop(0,rgba(pc(0),0.12*(1+beat*0.4)));cpGlow.addColorStop(1,'transparent');
+    const windPulse=wind?1.3:1;cpRot+=0.012*(1+energy*0.2+beat*0.3)*windPulse;cpPh+=0.013;
+    const cpSz=stageSz*(0.7+beat*0.15+songProg*0.15)*windPulse;const cpBob=Math.sin(t*0.001)*h*0.005;
+    const cpY=(stageY+trussTop)/2+cpBob;
+    x0.shadowBlur=(20+beat*14)*windPulse;x0.shadowColor=pc(0);x0.globalAlpha=0.9+beat*0.1;
+    drawCPMini(x0,THEME.centerpiece,stageX,cpY,cpSz,cpRot);x0.globalAlpha=1;x0.shadowBlur=0;
+    const cpGlow=x0.createRadialGradient(stageX,cpY,0,stageX,cpY,cpSz*3.5);
+    cpGlow.addColorStop(0,rgba(pc(0),0.1*(1+beat*0.5)));cpGlow.addColorStop(0.5,rgba(pc(3),0.04));cpGlow.addColorStop(1,'transparent');
     x0.fillStyle=cpGlow;x0.fillRect(0,0,w,h);
   }
 
-  // ══════════════════════════════════════════════════════
-  // LASERS — from stage truss, aimed at viewer (fan outward toward edges)
-  // Creates the "lasers pointed at you" festival perspective
-  // ══════════════════════════════════════════════════════
-  const laserOriginX=stageX, laserOriginY=trussTop;
-  const laserBright=laserOL?2:1;
+  // PASS 2: Mid + foreground trees
+  for(const tr of sortedTrees){if(tr.layer>=1)drawTree(tr);}
 
+  // ── LASERS ──
+  const laserOriginX=stageX,laserOriginY=trussTop;const laserBright=laserOL?2:1;
   for(let li=0;li<EF.lasers.length;li++){
-    const lz=EF.lasers[li];
-    const speedMult=laserOL?(2.5+Math.random()*1.5):1;
-    lz.angle+=lz.speed*speedMult*(1+beat*0.6);
-
-    // Fan outward from stage toward viewer — beams spread wide toward screen edges and bottom
-    const spreadAngle=lz.angle;
-    // Horizontal spread: beams fan left and right
-    const hSpread=Math.sin(spreadAngle)*w*0.7;
-    // Vertical: beams come toward the viewer (bottom of screen)
-    const vTarget=h*0.6+Math.cos(spreadAngle*0.7)*h*0.35;
-    const endX=laserOriginX+hSpread;
-    const endY=vTarget;
-
-    x0.strokeStyle=rgba(pc(lz.ci),(0.2+beat*0.15)*laserBright);
-    x0.lineWidth=lz.width*(laserOL?1.8:1);
-    x0.shadowBlur=(6+beat*5)*laserBright;x0.shadowColor=pc(lz.ci);
+    const lz=EF.lasers[li];const speedMult=laserOL?(2.5+Math.random()*1.5):1;
+    lz.angle+=lz.speed*speedMult*(1+beat*0.6);const spreadAngle=lz.angle;
+    const hSpread=Math.sin(spreadAngle)*w*0.75;const vTarget=h*(0.55+lz.baseY*0.3)+Math.cos(spreadAngle*0.7)*h*0.3;
+    const endX=laserOriginX+hSpread;const endY=vTarget;
+    x0.strokeStyle=rgba(pc(lz.ci),(0.18+beat*0.15)*laserBright);x0.lineWidth=lz.width*(laserOL?1.8:1);
+    x0.shadowBlur=(5+beat*4)*laserBright;x0.shadowColor=pc(lz.ci);
     x0.beginPath();x0.moveTo(laserOriginX,laserOriginY);x0.lineTo(endX,endY);x0.stroke();
-
-    // Laser overload: extra beams, erratic angles
-    if(laserOL){
-      const a2=spreadAngle+Math.PI*0.15+Math.sin(t*0.012+li)*0.6;
-      const ex2=laserOriginX+Math.sin(a2)*w*0.8;
-      const ey2=h*0.5+Math.cos(a2*0.5)*h*0.4;
-      x0.strokeStyle=rgba(pc((lz.ci+1)%4),(0.15+beat*0.12)*laserBright);
-      x0.lineWidth=lz.width*1.2;
+    x0.strokeStyle=rgba(pc(lz.ci),(0.04+beat*0.03)*laserBright);x0.lineWidth=lz.width*4;
+    x0.beginPath();x0.moveTo(laserOriginX,laserOriginY);x0.lineTo(endX,endY);x0.stroke();
+    if(laserOL){const a2=spreadAngle+Math.PI*0.15+Math.sin(t*0.012+li)*0.6;const ex2=laserOriginX+Math.sin(a2)*w*0.8;const ey2=h*0.5+Math.cos(a2*0.5)*h*0.4;
+      x0.strokeStyle=rgba(pc((lz.ci+1)%4),(0.15+beat*0.12)*laserBright);x0.lineWidth=lz.width*1.2;
       x0.beginPath();x0.moveTo(laserOriginX,laserOriginY);x0.lineTo(ex2,ey2);x0.stroke();
-      // Third beam for intensity
-      if(li%2===0){
-        const a3=spreadAngle-Math.PI*0.2+Math.cos(t*0.008+li)*0.4;
-        const ex3=laserOriginX+Math.sin(a3)*w*0.6;
-        const ey3=h*0.7+Math.cos(a3)*h*0.25;
-        x0.strokeStyle=rgba(pc((lz.ci+2)%4),(0.1+beat*0.1)*laserBright);
-        x0.beginPath();x0.moveTo(laserOriginX,laserOriginY);x0.lineTo(ex3,ey3);x0.stroke();
-      }
-    }
+      if(li%2===0){const a3=spreadAngle-Math.PI*0.2+Math.cos(t*0.008+li)*0.4;const ex3=laserOriginX+Math.sin(a3)*w*0.6;const ey3=h*0.7+Math.cos(a3)*h*0.25;
+        x0.strokeStyle=rgba(pc((lz.ci+2)%4),(0.1+beat*0.1)*laserBright);x0.beginPath();x0.moveTo(laserOriginX,laserOriginY);x0.lineTo(ex3,ey3);x0.stroke();}}
   }
   x0.shadowBlur=0;
 
-  // ══════════════════════════════════════════════════════
-  // FIREFLIES — floating particles through the forest
-  // ══════════════════════════════════════════════════════
+  // ── FOG ──
+  for(const fg of EF.fog){
+    fg.x+=fg.vx+(wind?Math.sin(t*0.002)*1.5:0);fg.ph+=0.008;
+    if(fg.x<-fg.w)fg.x=w+fg.w/2;if(fg.x>w+fg.w)fg.x=-fg.w/2;
+    const fogAlpha=fg.alpha*(0.8+Math.sin(fg.ph)*0.3+beat*0.15);
+    const fogG=x0.createRadialGradient(fg.x,fg.y,0,fg.x,fg.y,fg.w);
+    fogG.addColorStop(0,'rgba(180,180,200,'+fogAlpha+')');fogG.addColorStop(0.6,'rgba(180,180,200,'+(fogAlpha*0.3)+')');fogG.addColorStop(1,'transparent');
+    x0.fillStyle=fogG;x0.fillRect(fg.x-fg.w,fg.y-fg.h2*2,fg.w*2,fg.h2*4);
+  }
+  const hazeG=x0.createLinearGradient(0,h*0.3,0,h*0.7);hazeG.addColorStop(0,'transparent');
+  hazeG.addColorStop(0.5,'rgba(140,140,160,'+(0.02+beat*0.01)+')');hazeG.addColorStop(1,'transparent');
+  x0.fillStyle=hazeG;x0.fillRect(0,0,w,h);
+
+  // ── FIREFLIES ──
   for(const f of EF.fairies){
     f.x+=f.vx+Math.sin(t*0.001+f.ph)*0.4+(wind?Math.sin(t*0.005)*3:0);
     f.y+=f.vy+Math.cos(t*0.0008+f.ph)*0.4;f.ph+=0.05;
     if(f.x<0||f.x>w)f.vx*=-1;if(f.y<0||f.y>h)f.vy*=-1;
     const br=Math.sin(f.ph)*0.4+0.6;
     x0.beginPath();x0.arc(f.x,f.y,f.r*(0.5+br*0.5),0,Math.PI*2);
-    x0.fillStyle=rgba(pc(f.ci),br*0.5);x0.shadowBlur=8;x0.shadowColor=pc(f.ci);x0.fill();x0.shadowBlur=0;
+    x0.fillStyle=rgba(pc(f.ci),br*0.5);x0.shadowBlur=10;x0.shadowColor=pc(f.ci);x0.fill();
+    x0.fillStyle=rgba(pc(f.ci),br*0.1);x0.beginPath();x0.arc(f.x-f.vx*3,f.y-f.vy*3,f.r*0.3,0,Math.PI*2);x0.fill();
   }
+  x0.shadowBlur=0;
 
-  // ══════════════════════════════════════════════════════
-  // WIND PARTICLES (windstorm surprise)
-  // ══════════════════════════════════════════════════════
-  if(wind){
-    for(let wp=0;wp<60;wp++){
-      const wx=((t*0.8+wp*w/60)%w),wy=Math.random()*h;
-      x0.fillStyle=rgba(pc(wp%4),0.25+beat*0.2);
-      x0.beginPath();x0.ellipse(wx,wy,5+Math.random()*4,1,0.3,0,Math.PI*2);x0.fill();
-    }
-  }
+  // ── VIGNETTE ──
+  const topVig=x0.createLinearGradient(0,0,0,h*0.12);topVig.addColorStop(0,'rgba(0,0,0,0.7)');topVig.addColorStop(1,'transparent');
+  x0.fillStyle=topVig;x0.fillRect(0,0,w,h*0.12);
+  const botVig=x0.createLinearGradient(0,h*0.88,0,h);botVig.addColorStop(0,'transparent');botVig.addColorStop(1,'rgba(0,0,0,0.5)');
+  x0.fillStyle=botVig;x0.fillRect(0,h*0.88,w,h*0.12);
+  const leftVig=x0.createLinearGradient(0,0,w*0.1,0);leftVig.addColorStop(0,'rgba(0,0,0,0.5)');leftVig.addColorStop(1,'transparent');
+  x0.fillStyle=leftVig;x0.fillRect(0,0,w*0.1,h);
+  const rightVig=x0.createLinearGradient(w*0.9,0,w,0);rightVig.addColorStop(0,'transparent');rightVig.addColorStop(1,'rgba(0,0,0,0.5)');
+  x0.fillStyle=rightVig;x0.fillRect(w*0.9,0,w*0.1,h);
 
-  // ══════════════════════════════════════════════════════
-  // NEON MONKEYS (monkey swarm surprise)
-  // ══════════════════════════════════════════════════════
-  if(EF.monkeySwarm){
-    // Spawn monkeys if needed
-    while(EF.monkeys.length<12){
-      const treeIdx=Math.floor(Math.random()*EF.trees.length);
-      const tr=EF.trees[treeIdx];
-      EF.monkeys.push({x:tr.x,y:h-tr.trunkH*(0.3+Math.random()*0.4),vx:(Math.random()-0.5)*4,vy:(Math.random()-0.5)*3,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4),sz:20+Math.random()*14,swinging:Math.random()>0.4,swingTree:treeIdx,swingAngle:Math.random()*Math.PI});
-    }
-    for(const mk of EF.monkeys){
-      mk.ph+=0.06*(1+beat*0.4);
-      const strobeOn=Math.sin(t*0.015+mk.ph*3)>-0.2;
-      if(mk.swinging){
-        mk.swingAngle+=0.04*(1+beat*0.3);
-        const tr=EF.trees[mk.swingTree%EF.trees.length];
-        mk.x=tr.x+Math.sin(mk.swingAngle)*55;
-        mk.y=(h-tr.trunkH*0.5)+Math.cos(mk.swingAngle)*35;
-        if(Math.random()<0.008){mk.swinging=false;mk.vx=(Math.random()-0.5)*6;mk.vy=-2.5-Math.random()*3;}
-      } else {
-        mk.x+=mk.vx;mk.y+=mk.vy;mk.vy+=0.08;
-        if(mk.y>h*0.8){mk.swinging=true;mk.swingTree=Math.floor(Math.random()*EF.trees.length);}
-      }
-      if(!strobeOn)continue;
-      // Draw neon-tube outline monkey
-      const mci=mk.ci;
-      x0.strokeStyle=rgba(pc(mci),0.8+beat*0.2);x0.lineWidth=2;
-      x0.shadowBlur=10+beat*6;x0.shadowColor=pc(mci);
-      // Body oval
-      x0.beginPath();x0.ellipse(mk.x,mk.y,mk.sz*0.35,mk.sz*0.45,0,0,Math.PI*2);x0.stroke();
-      // Head
-      x0.beginPath();x0.arc(mk.x,mk.y-mk.sz*0.55,mk.sz*0.25,0,Math.PI*2);x0.stroke();
-      // Eyes
-      x0.fillStyle=rgba(pc((mci+2)%4),0.9);
-      x0.beginPath();x0.arc(mk.x-mk.sz*0.1,mk.y-mk.sz*0.58,mk.sz*0.06,0,Math.PI*2);x0.fill();
-      x0.beginPath();x0.arc(mk.x+mk.sz*0.1,mk.y-mk.sz*0.58,mk.sz*0.06,0,Math.PI*2);x0.fill();
-      // Tail — long curly
-      x0.beginPath();x0.moveTo(mk.x-mk.sz*0.2,mk.y+mk.sz*0.3);
-      x0.bezierCurveTo(mk.x-mk.sz*0.65,mk.y+mk.sz*0.6,mk.x-mk.sz*0.9,mk.y,mk.x-mk.sz*0.55,mk.y-mk.sz*0.3);
-      x0.stroke();
-      // Arms (swinging)
-      const armSwing=Math.sin(mk.ph)*mk.sz*0.2;
-      x0.beginPath();x0.moveTo(mk.x-mk.sz*0.3,mk.y-mk.sz*0.15);
-      x0.lineTo(mk.x-mk.sz*0.6,mk.y-mk.sz*0.4+armSwing);x0.stroke();
-      x0.beginPath();x0.moveTo(mk.x+mk.sz*0.3,mk.y-mk.sz*0.15);
-      x0.lineTo(mk.x+mk.sz*0.6,mk.y-mk.sz*0.4-armSwing);x0.stroke();
-      // Legs (bent)
-      x0.beginPath();x0.moveTo(mk.x-mk.sz*0.15,mk.y+mk.sz*0.35);
-      x0.lineTo(mk.x-mk.sz*0.25,mk.y+mk.sz*0.6);x0.stroke();
-      x0.beginPath();x0.moveTo(mk.x+mk.sz*0.15,mk.y+mk.sz*0.35);
-      x0.lineTo(mk.x+mk.sz*0.25,mk.y+mk.sz*0.6);x0.stroke();
-      x0.shadowBlur=0;
-    }
-  }
+  // ── BLOOMED MUSHROOMS — on top of everything ──
+  if(bloom) drawMushrooms(true);
+
+  // Wind particles
+  if(wind){for(let wp=0;wp<60;wp++){const wx=((t*0.8+wp*w/60)%w),wy=Math.random()*h;
+    x0.fillStyle=rgba(pc(wp%4),0.25+beat*0.2);x0.beginPath();x0.ellipse(wx,wy,5+Math.random()*4,1,0.3,0,Math.PI*2);x0.fill();}}
 }
 
 
@@ -3482,32 +3479,6 @@ function drawOmniaNightclub(t){
 }
 
 
-// ═══ SCENE: pirateShip ═══
-
-function drawPirateShip(t){
-  const w=W(),h=H();
-  x0.fillStyle=THEME.bgColor;x0.fillRect(0,0,w,h);
-  if(SD.stars)for(const s of SD.stars){x0.fillStyle=`rgba(255,255,255,${s.br*0.8})`;x0.fillRect(s.x,s.y,1.5,1.5);}
-  const hor=h*0.6;
-  if(SD.waves)for(let wv=0;wv<5;wv++){const wave=SD.waves[wv];wave.ph+=wave.speed*(1+SM.energy*0.3);x0.beginPath();for(let px=0;px<=w;px+=4){const py=hor+wv*25+Math.sin(px*0.01+wave.ph)*wave.amp*(1+SM.beatPulse*0.2);px===0?x0.moveTo(px,py):x0.lineTo(px,py);}x0.lineTo(w,h);x0.lineTo(0,h);x0.closePath();const wg=x0.createLinearGradient(0,hor,0,h);const wc=h2r(pc(wv%4));wg.addColorStop(0,`rgba(${wc.r},${wc.g},${wc.b},${0.3*(1+SM.beatPulse*0.2)})`);wg.addColorStop(1,'rgba(0,20,60,0.9)');x0.fillStyle=wg;x0.fill();}
-  x0.fillStyle='rgba(20,10,5,0.95)';x0.beginPath();x0.moveTo(w*0.1,hor*0.98);x0.lineTo(w*0.9,hor*0.98);x0.lineTo(w*0.85,h*0.55);x0.lineTo(w*0.15,h*0.55);x0.closePath();x0.fill();
-  x0.strokeStyle='rgba(40,20,5,0.9)';x0.lineWidth=8;x0.beginPath();x0.moveTo(w*0.35,h*0.55);x0.lineTo(w*0.35,h*0.05);x0.stroke();x0.beginPath();x0.moveTo(w*0.65,h*0.55);x0.lineTo(w*0.65,h*0.12);x0.stroke();
-  x0.fillStyle=rgba(pc(1),0.3+SM.beatPulse*0.1);x0.beginPath();x0.moveTo(w*0.35,h*0.08);x0.lineTo(w*0.52,h*0.18+Math.sin(t*0.001)*10);x0.lineTo(w*0.35,h*0.38);x0.closePath();x0.fill();x0.beginPath();x0.moveTo(w*0.65,h*0.15);x0.lineTo(w*0.82,h*0.25+Math.sin(t*0.001)*10);x0.lineTo(w*0.65,h*0.45);x0.closePath();x0.fill();
-  // Centerpiece emblem on main sail
-  if(THEME.centerpiece){
-    // INTEGRATED: centerpiece emblem on main sail
-    const sailCX=w*0.43,sailCY=h*0.23+Math.sin(t*0.001)*5;
-    const emblemSz=Math.min(w,h)*(0.07+SM.beatPulse*0.012);
-    cpRot+=0.004;cpPh+=0.013;
-    x0.globalAlpha=0.65+SM.beatPulse*0.2;
-    drawCPMini(x0,THEME.centerpiece,sailCX,sailCY,emblemSz,cpRot);
-    x0.globalAlpha=1;
-  }
-  if(SD.seagulls)for(const sg of SD.seagulls){sg.x+=sg.vx;sg.ph+=0.08;if(sg.x>w+20)sg.x=-20;x0.beginPath();x0.moveTo(sg.x-10,sg.y+Math.sin(sg.ph)*3);x0.quadraticCurveTo(sg.x,sg.y-5,sg.x+10,sg.y+Math.sin(sg.ph)*3);x0.strokeStyle='rgba(255,255,255,0.5)';x0.lineWidth=1.5;x0.stroke();}
-  if(SD.cannonballs)for(let i=SD.cannonballs.length-1;i>=0;i--){const cb=SD.cannonballs[i];cb.x+=cb.vx;cb.y+=cb.vy;cb.vy+=0.3;cb.life-=0.02;if(cb.life<=0||cb.y>h){SD.cannonballs.splice(i,1);continue;}x0.beginPath();x0.arc(cb.x,cb.y,cb.r,0,Math.PI*2);x0.fillStyle=rgba(pc(0),cb.life*0.9);x0.shadowBlur=15;x0.shadowColor=pc(0);x0.fill();x0.shadowBlur=0;}
-}
-
-
 // ═══ SCENE: junkyard ═══
 
 function drawJunkyard(t){
@@ -3633,7 +3604,7 @@ function drawSuperhero(t){
         };
       }),
       rainDrops:Array.from({length:180},()=>({x:Math.random()*w,y:Math.random()*h,vy:9+Math.random()*7,len:8+Math.random()*16,alpha:0.1+Math.random()*0.22})),
-      spotlight:{angle:Math.PI*0.55,rotDir:1,speed:0.003,x:w*0.18,y:h*0.95},
+      spotlight:{panX:w*0.5,panDir:1,speed:1.2},
       riddler:null,
       riddlerAlpha:0,
       fireBlazeMode:false,
@@ -3673,17 +3644,14 @@ function drawSuperhero(t){
   // Fire appear/disappear — GLOBAL cap of 3-5 total fires across all buildings
   if(G.fireTimerAcc>500){
     G.fireTimerAcc=0;
-    // Count total fires
     let totalFires=0;for(const b of G.buildings)totalFires+=b.fires.length;
     const maxTotal=G.fireBlazeMode?12:Math.min(5,3+Math.floor(songProg*3));
     if(totalFires<maxTotal&&Math.random()>0.4){
-      // Add fire to a random building
       const rb=G.buildings[Math.floor(Math.random()*G.buildings.length)];
-      if(rb.fires.length<2){ // max 2 per building
+      if(rb.fires.length<2){
         rb.fires.push({ph:Math.random()*Math.PI*2,active:true,x:Math.random()*rb.w,ci:Math.floor(Math.random()*4),buildingY:Math.random()*rb.h*0.6});
       }
     } else if(totalFires>maxTotal&&!G.fireBlazeMode){
-      // Remove a random fire
       const withFires=G.buildings.filter(b=>b.fires.length>0);
       if(withFires.length>0){withFires[Math.floor(Math.random()*withFires.length)].fires.pop();}
     }
@@ -3737,11 +3705,10 @@ function drawSuperhero(t){
     // Progressive damage — cracks and broken windows increase with songProg
     const dmg=typeof songProg==='number'?songProg:0;
     if(dmg>0.15){
-      // Cracks — more appear as song progresses
       const numCracks=Math.floor(dmg*5);
       x0.strokeStyle=rgba(pc(b.ci),0.15+dmg*0.2);x0.lineWidth=1;
       for(let cr=0;cr<numCracks;cr++){
-        const crSeed=(b.x*13+cr*77)%1000/1000; // deterministic per building
+        const crSeed=(b.x*13+cr*77)%1000/1000;
         const crx=b.x+crSeed*b.w;
         const cry=bh+crSeed*b.h*0.6;
         x0.beginPath();x0.moveTo(crx,cry);
@@ -3751,7 +3718,6 @@ function drawSuperhero(t){
       }
     }
     if(dmg>0.4){
-      // Broken windows — dark holes with jagged edges
       const numBroken=Math.floor((dmg-0.4)*8);
       for(let bw=0;bw<Math.min(numBroken,4);bw++){
         const bwSeed=(b.x*7+bw*41)%1000/1000;
@@ -3759,25 +3725,22 @@ function drawSuperhero(t){
         const bwy=bh+bwSeed*b.h*0.5+20;
         x0.fillStyle='rgba(0,0,0,0.9)';x0.fillRect(bwx-5,bwy-4,10,12);
         x0.strokeStyle=rgba(pc(b.ci),0.3);x0.lineWidth=1;
-        // jagged edge
         x0.beginPath();x0.moveTo(bwx-5,bwy-4);x0.lineTo(bwx-3,bwy-1);x0.lineTo(bwx-5,bwy+2);x0.stroke();
         x0.beginPath();x0.moveTo(bwx+5,bwy-2);x0.lineTo(bwx+3,bwy+3);x0.lineTo(bwx+5,bwy+8);x0.stroke();
       }
     }
     if(dmg>0.7){
-      // Structural damage — chunks missing from roofline
       x0.fillStyle='rgba(4,6,20,0.98)';
       const chunkW=b.w*0.15+dmg*b.w*0.1;
       const chunkSeed=(b.x*3+17)%1000/1000;
       x0.fillRect(b.x+chunkSeed*b.w*0.5,bh-2,chunkW,8+dmg*6);
-      // Rubble at base
       for(let rb=0;rb<3;rb++){
         x0.fillStyle=rgba(pc(b.ci),0.15);
         x0.fillRect(b.x+rb*b.w*0.25+b.w*0.1,h*0.87-4-rb*3,6+rb*3,4+rb*2);
       }
     }
 
-    // Fires on building — fewer but MUCH larger, appear anywhere
+    // Fires on building
     for(const fire of b.fires){
       fire.ph+=0.08*(1+beat*0.3);
       const fx=b.x+fire.x,fy=bh+8+(fire.buildingY||0);
@@ -3788,7 +3751,6 @@ function drawSuperhero(t){
       if(fireBlazeMode){fG.addColorStop(0,rgba(pc(fci),0.95));fG.addColorStop(0.5,rgba(pc((fci+1)%4),0.7));fG.addColorStop(1,'transparent');}
       else{fG.addColorStop(0,'rgba(255,230,100,0.9)');fG.addColorStop(0.4,'rgba(255,100,20,0.7)');fG.addColorStop(1,'transparent');}
       x0.fillStyle=fG;x0.beginPath();x0.arc(fx+Math.sin(fire.ph)*8,fy,fSize,0,Math.PI*2);x0.fill();
-      // Flame licks — upward tendrils
       x0.strokeStyle=fireBlazeMode?rgba(pc(fci),0.6):'rgba(255,180,50,0.5)';x0.lineWidth=2;
       for(let fl=0;fl<3;fl++){
         const flx=fx+Math.sin(fire.ph+fl*2)*fSize*0.3;
@@ -3808,49 +3770,116 @@ function drawSuperhero(t){
     }
   }
 
-  // ── SPOTLIGHT — bigger, brighter, lingers at screen edges ──
-  const sp=G.spotlight;
-  const spMode=G.spotlightMode;
-  const spSpeed=spMode?0.015:sp.speed;
-  // Edge linger — when near limits, slow way down instead of instant reverse
-  if(!sp.edgePause)sp.edgePause=0;
-  if(sp.edgePause>0){
-    sp.edgePause-=16;
-  } else {
-    sp.angle+=sp.rotDir*spSpeed*(1+beat*0.4);
-    // Narrower sweep so spotlight stays more on-screen
-    if(sp.angle>Math.PI*0.78){sp.rotDir=-1;sp.edgePause=1500+Math.random()*1000;}
-    if(sp.angle<Math.PI*0.22){sp.rotDir=1;sp.edgePause=1500+Math.random()*1000;}
+  // ── COP LIGHTS — realistic red-red-blue-blue flash pattern ──
+  if(!G.copLights){
+    G.copLights={
+      cars:[
+        {x:w*0.2},
+        {x:w*0.7},
+      ],
+      phase:0,
+      timer:0,
+      flashOn:false,
+      flashTimer:0,
+      activeClr:null,
+      activeCarIdx:0,
+      flashCount:0,
+    };
+  }
+  const CL=G.copLights;
+  CL.timer+=16;
+
+  const flashDurOn=80, flashDurOff=90;
+  const cycleDur=flashDurOn+flashDurOff;
+
+  CL.flashTimer+=16;
+  if(CL.flashTimer>=cycleDur){
+    CL.flashTimer=0;
+    CL.flashCount++;
+    if(CL.flashCount>=4){
+      CL.flashCount=0;
+      CL.activeCarIdx=(CL.activeCarIdx+1)%CL.cars.length;
+    }
+  }
+  const isOn=CL.flashTimer<flashDurOn;
+  const isRed=CL.flashCount<2;
+  const clrRgb=isRed?'255,20,20':'30,60,255';
+  const car=CL.cars[CL.activeCarIdx];
+
+  if(isOn){
+    const reach=w*0.28;
+    for(const b of G.buildings){
+      const dist=Math.abs(b.x+b.w/2-car.x);
+      if(dist>reach)continue;
+      const falloff=1-dist/reach;
+      const bh=h-b.h;
+      const a=falloff*falloff*0.22;
+
+      x0.fillStyle='rgba('+clrRgb+','+a.toFixed(3)+')';
+      x0.fillRect(b.x,bh,b.w,b.h);
+
+      const sideX=car.x<b.x+b.w/2?b.x:b.x+b.w*0.6;
+      x0.fillStyle='rgba('+clrRgb+','+(a*0.7).toFixed(3)+')';
+      x0.fillRect(sideX,bh,b.w*0.4,b.h);
+    }
+
+    const poolR=reach*0.8;
+    const poolG=x0.createRadialGradient(car.x,h*0.9,0,car.x,h*0.9,poolR);
+    poolG.addColorStop(0,'rgba('+clrRgb+',0.25)');
+    poolG.addColorStop(0.6,'rgba('+clrRgb+',0.08)');
+    poolG.addColorStop(1,'transparent');
+    x0.fillStyle=poolG;
+    x0.fillRect(car.x-poolR,h*0.85,poolR*2,h*0.15);
+
+    for(const b of G.buildings){
+      const dist=Math.abs(b.x+b.w/2-car.x);
+      if(dist>reach)continue;
+      const falloff=1-dist/reach;
+      x0.fillStyle='rgba('+clrRgb+','+(falloff*0.1).toFixed(3)+')';
+      x0.fillRect(b.x,h*0.87,b.w,h*0.13);
+    }
+
+    x0.fillStyle='rgba('+clrRgb+',0.03)';
+    x0.fillRect(car.x-reach,0,reach*2,h);
   }
 
-  // Beam stays more visible — shorter throw so it doesn't clip off-screen
-  const spBeamX=spMode?cx:(sp.x+Math.cos(sp.angle)*w*0.85);
-  const spBeamY=sp.y+Math.sin(sp.angle-Math.PI)*h*0.9;
-  const spAlpha=spMode?(0.18+beat*0.1):(0.12+beat*0.06);
+  // ── SPOTLIGHT — linear pan across sky ──────────────────
+  const sp=G.spotlight;
+  const spMode=G.spotlightMode;
+  const spSpeed=spMode?2.5:(sp.speed*(1+beat*0.4+energy*0.3));
+
+  sp.panX+=sp.panDir*spSpeed;
+  if(sp.panX>w*1.08){sp.panDir=-1;}
+  if(sp.panX<w*-0.08){sp.panDir=1;}
+
+  const spBaseX=w*0.15,spBaseY=h*0.95;
+  const spCloudX=spMode?cx:sp.panX;
+  const spCloudY=h*0.18;
+  const spAlpha=spMode?(0.22+beat*0.12):(0.16+beat*0.08);
 
   x0.save();x0.globalAlpha=spAlpha;
-  const spG=x0.createLinearGradient(sp.x,sp.y,spBeamX,spBeamY);
-  spG.addColorStop(0,'rgba(230,230,255,0.95)');spG.addColorStop(1,'transparent');
+  const spG=x0.createLinearGradient(spBaseX,spBaseY,spCloudX,spCloudY);
+  spG.addColorStop(0,'rgba(230,230,255,0.95)');spG.addColorStop(0.7,'rgba(200,210,240,0.3)');spG.addColorStop(1,'transparent');
   x0.fillStyle=spG;
-  const beamW=spMode?80:45;
-  x0.beginPath();x0.moveTo(sp.x-beamW/4,sp.y);x0.lineTo(sp.x+beamW/4,sp.y);
-  x0.lineTo(spBeamX+beamW*(spMode?2.5:1.5),spBeamY);x0.lineTo(spBeamX-beamW*(spMode?2.5:1.5),spBeamY);
+  const beamW=spMode?110:65;
+  x0.beginPath();x0.moveTo(spBaseX-beamW/3,spBaseY);x0.lineTo(spBaseX+beamW/3,spBaseY);
+  x0.lineTo(spCloudX+beamW*(spMode?3:2),spCloudY);x0.lineTo(spCloudX-beamW*(spMode?3:2),spCloudY);
   x0.closePath();x0.fill();x0.restore();
 
-  // Spotlight circle in sky — LARGER and BRIGHTER
-  const cloudX=spBeamX,cloudY=Math.max(h*0.03,Math.min(h*0.55,spBeamY));
-  x0.fillStyle=`rgba(200,210,240,${spMode?0.3:0.2})`;
-  x0.shadowBlur=spMode?(80+beat*40):55;x0.shadowColor='rgba(210,220,255,0.7)';
-  x0.beginPath();x0.arc(cloudX,cloudY,spMode?(h*0.16+beat*h*0.06):(h*0.13+beat*h*0.02),0,Math.PI*2);x0.fill();
+  // Spotlight circle in sky
+  x0.fillStyle='rgba(200,210,240,'+(spMode?0.35:0.25)+')';
+  x0.shadowBlur=spMode?(100+beat*50):70;x0.shadowColor='rgba(210,220,255,0.8)';
+  x0.beginPath();x0.arc(spCloudX,spCloudY,spMode?(h*0.2+beat*h*0.08):(h*0.16+beat*h*0.03),0,Math.PI*2);x0.fill();
   x0.shadowBlur=0;
 
   // Centerpiece IN the spotlight
   if(THEME.centerpiece){
     cpRot+=(spMode?0.04:0.01)*(1+beat*0.5);cpPh+=0.013;
-    const csSz=Math.min(w,h)*(spMode?(0.14+beat*0.06):(0.06+beat*0.02));
-    x0.globalAlpha=spMode?(0.9+beat*0.1):(0.3+beat*0.1);
-    if(spMode){x0.shadowBlur=25+beat*20;x0.shadowColor=pc(Math.floor(t*0.01)%4);}
-    drawCPMini(x0,THEME.centerpiece,cloudX,cloudY,csSz,cpRot);
+    const csSz=Math.min(w,h)*(spMode?(0.18+beat*0.08):(0.10+beat*0.04));
+    const cpCi=Math.floor(t*0.008)%4;
+    x0.globalAlpha=spMode?(0.95+beat*0.05):(0.7+beat*0.2);
+    x0.shadowBlur=spMode?(50+beat*35):(20+beat*15);x0.shadowColor=pc(cpCi);
+    drawCPMini(x0,THEME.centerpiece,spCloudX,spCloudY,csSz,cpRot);
     x0.globalAlpha=1;x0.shadowBlur=0;
   }
 
@@ -3861,90 +3890,221 @@ function drawSuperhero(t){
     else{G.riddlerAlpha=Math.max(0,G.riddlerAlpha-0.015);if(G.riddlerAlpha<=0)G.riddler=null;}
   }
 
-  // Spawn question marks
+  // Spawn question marks — large and vibrant
   if(G.riddler){
-    if(Math.random()<0.15){
-      G.questionMarks.push({x:Math.random()*w,y:-30,vy:3+Math.random()*4,rot:Math.random()*0.4-0.2,sz:20+Math.random()*40,ci:Math.floor(Math.random()*4)});
+    if(Math.random()<0.25){
+      G.questionMarks.push({x:Math.random()*w,y:-60,vy:2.5+Math.random()*3.5,rot:Math.random()*0.4-0.2,sz:50+Math.random()*90,ci:Math.floor(Math.random()*4)});
     }
   }
   for(let i=G.questionMarks.length-1;i>=0;i--){
-    const qm=G.questionMarks[i];qm.y+=qm.vy*(1+beat*0.3);qm.rot+=0.01;
-    if(qm.y>h+50){G.questionMarks.splice(i,1);continue;}
+    const qm=G.questionMarks[i];qm.y+=qm.vy*(1+beat*0.3);qm.rot+=0.008;
+    if(qm.y>h+80){G.questionMarks.splice(i,1);continue;}
     x0.save();x0.translate(qm.x,qm.y);x0.rotate(qm.rot);
-    x0.fillStyle=rgba(pc(qm.ci),0.85+beat*0.15);
-    x0.shadowBlur=10+beat*6;x0.shadowColor=pc(qm.ci);
-    x0.font=`bold ${qm.sz}px serif`;x0.textAlign='center';
-    x0.fillText('?',0,0);x0.shadowBlur=0;
+    // Outer glow layer
+    x0.fillStyle=rgba(pc(qm.ci),0.3);
+    x0.shadowBlur=30+beat*20;x0.shadowColor=pc(qm.ci);
+    x0.font='bold '+Math.round(qm.sz*1.1)+'px serif';x0.textAlign='center';
+    x0.fillText('?',0,0);
+    // Main bright layer
+    x0.fillStyle=rgba(pc(qm.ci),0.9+beat*0.1);
+    x0.shadowBlur=18+beat*12;x0.shadowColor=pc(qm.ci);
+    x0.font='bold '+qm.sz+'px serif';
+    x0.fillText('?',0,0);
+    x0.shadowBlur=0;
     x0.restore();
   }
 
-  // ── RIDDLER FACE — neon outline, green bowler, question mark ──
+  // ── RIDDLER FACE — detailed neon villain portrait ─────
   if(G.riddler&&G.riddlerAlpha>0){
-    const rd=G.riddler;
     const alpha=G.riddlerAlpha;
     const strobe=0.5+Math.abs(Math.sin(t*0.04+beat*10))*0.5;
-    const rfcx=cx,rfcy=h*0.4;
-    const rfr=Math.min(w,h)*0.28;
+    const rfcx=cx,rfcy=h*0.42;
+    const rfr=Math.min(w,h)*0.30;
     const strobeCi=Math.floor(t*0.012+beat*6)%4;
 
     x0.save();x0.globalAlpha=alpha*strobe;
 
-    // Dark overlay
-    x0.fillStyle=`rgba(0,12,0,${0.7*alpha})`;x0.fillRect(0,0,w,h);
+    // Dark green overlay
+    x0.fillStyle='rgba(0,12,0,'+(0.75*alpha)+')';x0.fillRect(0,0,w,h);
 
-    const nClr=pc(2); // green primary
-    const nClr2=pc(strobeCi);
-    x0.strokeStyle=rgba(nClr,0.95);x0.lineWidth=3;
-    x0.shadowBlur=20+beat*15;x0.shadowColor=nClr;
+    const nG='#00ff41';// Riddler green — always green regardless of palette
 
-    // Angular face outline
+    // ── Skull / jaw structure — angular, gaunt ──
+    x0.strokeStyle=rgba(nG,0.9);x0.lineWidth=2.5;
+    x0.shadowBlur=22+beat*15;x0.shadowColor=nG;
+
+    // Forehead
     x0.beginPath();
-    x0.moveTo(rfcx,rfcy-rfr*0.9);
-    x0.lineTo(rfcx+rfr*0.6,rfcy-rfr*0.5);
-    x0.lineTo(rfcx+rfr*0.7,rfcy+rfr*0.2);
-    x0.lineTo(rfcx+rfr*0.4,rfcy+rfr*0.8);
-    x0.lineTo(rfcx,rfcy+rfr*1.0);
-    x0.lineTo(rfcx-rfr*0.4,rfcy+rfr*0.8);
-    x0.lineTo(rfcx-rfr*0.7,rfcy+rfr*0.2);
-    x0.lineTo(rfcx-rfr*0.6,rfcy-rfr*0.5);
-    x0.closePath();x0.stroke();
+    x0.moveTo(rfcx-rfr*0.42,rfcy-rfr*0.75);
+    x0.bezierCurveTo(rfcx-rfr*0.2,rfcy-rfr*0.92,rfcx+rfr*0.2,rfcy-rfr*0.92,rfcx+rfr*0.42,rfcy-rfr*0.75);
+    x0.stroke();
 
-    // Green bowler hat with question mark
-    x0.strokeStyle=rgba(nClr,0.9);x0.lineWidth=3;
-    const hatY=rfcy-rfr*0.9;
-    x0.beginPath();x0.ellipse(rfcx,hatY,rfr*0.7,rfr*0.12,0,0,Math.PI*2);x0.stroke();
-    x0.beginPath();x0.ellipse(rfcx,hatY-rfr*0.22,rfr*0.35,rfr*0.22,0,Math.PI,0);x0.stroke();
-    // Question mark on hat
-    x0.fillStyle=rgba(nClr2,0.9);x0.shadowColor=nClr2;x0.shadowBlur=15+beat*10;
-    x0.font=`bold ${rfr*0.35}px serif`;x0.textAlign='center';
-    x0.fillText('?',rfcx,hatY-rfr*0.08);
-
-    // Blue/purple mask over eyes
-    x0.strokeStyle=rgba(pc(1),0.85);x0.lineWidth=3;x0.shadowColor=pc(1);x0.shadowBlur=15;
+    // Temples down to cheekbones — left
     x0.beginPath();
-    x0.moveTo(rfcx-rfr*0.6,rfcy-rfr*0.25);
-    x0.bezierCurveTo(rfcx-rfr*0.5,rfcy-rfr*0.5,rfcx+rfr*0.5,rfcy-rfr*0.5,rfcx+rfr*0.6,rfcy-rfr*0.25);
-    x0.bezierCurveTo(rfcx+rfr*0.5,rfcy-rfr*0.05,rfcx-rfr*0.5,rfcy-rfr*0.05,rfcx-rfr*0.6,rfcy-rfr*0.25);
-    x0.closePath();x0.stroke();
+    x0.moveTo(rfcx-rfr*0.42,rfcy-rfr*0.75);
+    x0.bezierCurveTo(rfcx-rfr*0.55,rfcy-rfr*0.55,rfcx-rfr*0.62,rfcy-rfr*0.25,rfcx-rfr*0.58,rfcy+rfr*0.05);
+    x0.lineTo(rfcx-rfr*0.52,rfcy+rfr*0.12);
+    x0.bezierCurveTo(rfcx-rfr*0.48,rfcy+rfr*0.25,rfcx-rfr*0.38,rfcy+rfr*0.45,rfcx-rfr*0.28,rfcy+rfr*0.58);
+    x0.bezierCurveTo(rfcx-rfr*0.15,rfcy+rfr*0.72,rfcx-rfr*0.05,rfcy+rfr*0.82,rfcx,rfcy+rfr*0.88);
+    x0.stroke();
 
-    // Eyes — glowing through mask
-    for(const ex of [rfcx-rfr*0.28,rfcx+rfr*0.28]){
-      x0.fillStyle=rgba(pc(3),0.9+beat*0.1);x0.shadowBlur=12+beat*8;x0.shadowColor=pc(3);
-      x0.beginPath();x0.ellipse(ex,rfcy-rfr*0.18,rfr*0.08,rfr*0.06,0,0,Math.PI*2);x0.fill();
+    // Mirror right side
+    x0.beginPath();
+    x0.moveTo(rfcx+rfr*0.42,rfcy-rfr*0.75);
+    x0.bezierCurveTo(rfcx+rfr*0.55,rfcy-rfr*0.55,rfcx+rfr*0.62,rfcy-rfr*0.25,rfcx+rfr*0.58,rfcy+rfr*0.05);
+    x0.lineTo(rfcx+rfr*0.52,rfcy+rfr*0.12);
+    x0.bezierCurveTo(rfcx+rfr*0.48,rfcy+rfr*0.25,rfcx+rfr*0.38,rfcy+rfr*0.45,rfcx+rfr*0.28,rfcy+rfr*0.58);
+    x0.bezierCurveTo(rfcx+rfr*0.15,rfcy+rfr*0.72,rfcx+rfr*0.05,rfcy+rfr*0.82,rfcx,rfcy+rfr*0.88);
+    x0.stroke();
+
+    // ── Bowler hat — 3D with crown overlapping brim ──
+    const hatY=rfcy-rfr*0.68;
+    // LAYER 1: Back brim
+    x0.fillStyle='rgba(0,30,0,0.95)';
+    x0.strokeStyle=rgba(nG,0.6);x0.lineWidth=2;
+    x0.beginPath();x0.ellipse(rfcx,hatY+rfr*0.12,rfr*0.82,rfr*0.14,0,Math.PI,Math.PI*2);x0.fill();x0.stroke();
+
+    // LAYER 2: Crown dome
+    const crownGrad=x0.createLinearGradient(rfcx-rfr*0.45,hatY,rfcx+rfr*0.45,hatY);
+    crownGrad.addColorStop(0,'rgba(0,25,0,0.95)');
+    crownGrad.addColorStop(0.3,'rgba(0,50,0,0.95)');
+    crownGrad.addColorStop(0.5,'rgba(0,65,0,0.95)');
+    crownGrad.addColorStop(0.7,'rgba(0,50,0,0.95)');
+    crownGrad.addColorStop(1,'rgba(0,25,0,0.95)');
+    x0.fillStyle=crownGrad;
+    x0.beginPath();
+    x0.moveTo(rfcx-rfr*0.46,hatY+rfr*0.15);
+    x0.bezierCurveTo(rfcx-rfr*0.48,hatY-rfr*0.05,rfcx-rfr*0.42,hatY-rfr*0.38,rfcx-rfr*0.15,hatY-rfr*0.48);
+    x0.bezierCurveTo(rfcx-rfr*0.05,hatY-rfr*0.52,rfcx+rfr*0.05,hatY-rfr*0.52,rfcx+rfr*0.15,hatY-rfr*0.48);
+    x0.bezierCurveTo(rfcx+rfr*0.42,hatY-rfr*0.38,rfcx+rfr*0.48,hatY-rfr*0.05,rfcx+rfr*0.46,hatY+rfr*0.15);
+    x0.closePath();x0.fill();
+    x0.strokeStyle=rgba(nG,0.9);x0.lineWidth=2.5;x0.shadowBlur=12;x0.shadowColor=nG;
+    x0.beginPath();
+    x0.moveTo(rfcx-rfr*0.46,hatY+rfr*0.15);
+    x0.bezierCurveTo(rfcx-rfr*0.48,hatY-rfr*0.05,rfcx-rfr*0.42,hatY-rfr*0.38,rfcx-rfr*0.15,hatY-rfr*0.48);
+    x0.bezierCurveTo(rfcx-rfr*0.05,hatY-rfr*0.52,rfcx+rfr*0.05,hatY-rfr*0.52,rfcx+rfr*0.15,hatY-rfr*0.48);
+    x0.bezierCurveTo(rfcx+rfr*0.42,hatY-rfr*0.38,rfcx+rfr*0.48,hatY-rfr*0.05,rfcx+rfr*0.46,hatY+rfr*0.15);
+    x0.stroke();
+    // Crown highlight
+    x0.strokeStyle=rgba(nG,0.2);x0.lineWidth=6;
+    x0.beginPath();
+    x0.moveTo(rfcx-rfr*0.25,hatY-rfr*0.42);
+    x0.bezierCurveTo(rfcx-rfr*0.35,hatY-rfr*0.25,rfcx-rfr*0.4,hatY-rfr*0.05,rfcx-rfr*0.42,hatY+rfr*0.1);
+    x0.stroke();
+
+    // LAYER 3: Front brim — over crown base
+    x0.fillStyle='rgba(0,40,0,0.95)';
+    x0.beginPath();x0.ellipse(rfcx,hatY+rfr*0.12,rfr*0.82,rfr*0.14,0,0,Math.PI);x0.fill();
+    x0.strokeStyle=rgba(nG,0.85);x0.lineWidth=2.5;
+    x0.beginPath();x0.ellipse(rfcx,hatY+rfr*0.12,rfr*0.82,rfr*0.14,0,0,Math.PI);x0.stroke();
+    // Brim thickness
+    x0.fillStyle='rgba(0,25,0,0.9)';
+    x0.beginPath();x0.ellipse(rfcx,hatY+rfr*0.15,rfr*0.8,rfr*0.08,0,0,Math.PI);x0.fill();
+    x0.strokeStyle=rgba(nG,0.4);x0.lineWidth=1;
+    x0.beginPath();x0.ellipse(rfcx,hatY+rfr*0.15,rfr*0.8,rfr*0.08,0,0,Math.PI);x0.stroke();
+
+    // Hat band
+    x0.strokeStyle=rgba(nG,0.75);x0.lineWidth=5;x0.shadowBlur=6;x0.shadowColor=nG;
+    x0.beginPath();
+    x0.moveTo(rfcx-rfr*0.44,hatY+rfr*0.08);
+    x0.bezierCurveTo(rfcx-rfr*0.2,hatY+rfr*0.02,rfcx+rfr*0.2,hatY+rfr*0.02,rfcx+rfr*0.44,hatY+rfr*0.08);
+    x0.stroke();
+
+    // Single large question mark on crown
+    x0.fillStyle=rgba(nG,0.95);x0.shadowColor=nG;x0.shadowBlur=30+beat*18;
+    x0.font='bold '+Math.round(rfr*0.4)+'px serif';x0.textAlign='center';
+    x0.fillText('?',rfcx,hatY-rfr*0.05);
+    x0.shadowBlur=0;
+
+    // ── Domino mask — sleek with pointed edges ──
+    x0.strokeStyle=rgba(nG,0.9);x0.lineWidth=3;x0.shadowColor=nG;x0.shadowBlur=18+beat*10;
+    x0.beginPath();
+    x0.moveTo(rfcx-rfr*0.65,rfcy-rfr*0.28);
+    x0.bezierCurveTo(rfcx-rfr*0.58,rfcy-rfr*0.48,rfcx-rfr*0.2,rfcy-rfr*0.5,rfcx,rfcy-rfr*0.38);
+    x0.bezierCurveTo(rfcx+rfr*0.2,rfcy-rfr*0.5,rfcx+rfr*0.58,rfcy-rfr*0.48,rfcx+rfr*0.65,rfcy-rfr*0.28);
+    x0.bezierCurveTo(rfcx+rfr*0.55,rfcy-rfr*0.08,rfcx+rfr*0.2,rfcy-rfr*0.05,rfcx,rfcy-rfr*0.12);
+    x0.bezierCurveTo(rfcx-rfr*0.2,rfcy-rfr*0.05,rfcx-rfr*0.55,rfcy-rfr*0.08,rfcx-rfr*0.65,rfcy-rfr*0.28);
+    x0.closePath();x0.stroke();
+    x0.fillStyle=rgba(nG,0.06);x0.fill();
+
+    // ── Eyes — narrow, menacing slits with bright pupils ──
+    for(const side of [-1,1]){
+      const ex=rfcx+side*rfr*0.28;
+      const ey=rfcy-rfr*0.22;
+      x0.strokeStyle=rgba(nG,0.7);x0.lineWidth=1.5;x0.shadowBlur=8;x0.shadowColor=nG;
+      x0.beginPath();
+      x0.moveTo(ex-rfr*0.14,ey);
+      x0.bezierCurveTo(ex-rfr*0.08,ey-rfr*0.08,ex+rfr*0.08,ey-rfr*0.08,ex+rfr*0.14,ey);
+      x0.bezierCurveTo(ex+rfr*0.08,ey+rfr*0.05,ex-rfr*0.08,ey+rfr*0.05,ex-rfr*0.14,ey);
+      x0.closePath();x0.stroke();
+      // Glowing pupil
+      x0.fillStyle=rgba(nG,0.95+beat*0.05);x0.shadowBlur=16+beat*12;x0.shadowColor=nG;
+      x0.beginPath();x0.ellipse(ex,ey,rfr*0.045+beat*rfr*0.015,rfr*0.035+beat*rfr*0.01,0,0,Math.PI*2);x0.fill();
+      // Pupil slit
+      x0.fillStyle=rgba(nG,0.9);
+      x0.beginPath();x0.ellipse(ex,ey,rfr*0.012,rfr*0.03,0,0,Math.PI*2);x0.fill();
     }
 
-    // Big menacing grin
-    x0.strokeStyle=rgba(nClr,0.9);x0.lineWidth=3;x0.shadowColor=nClr;x0.shadowBlur=15;
+    // ── Nose ──
+    x0.strokeStyle=rgba(nG,0.4);x0.lineWidth=1.5;x0.shadowBlur=6;x0.shadowColor=nG;
     x0.beginPath();
-    x0.moveTo(rfcx-rfr*0.45,rfcy+rfr*0.35);
-    x0.bezierCurveTo(rfcx-rfr*0.2,rfcy+rfr*0.65,rfcx+rfr*0.2,rfcy+rfr*0.65,rfcx+rfr*0.45,rfcy+rfr*0.35);
+    x0.moveTo(rfcx-rfr*0.04,rfcy-rfr*0.05);
+    x0.lineTo(rfcx-rfr*0.06,rfcy+rfr*0.1);
+    x0.lineTo(rfcx,rfcy+rfr*0.13);
+    x0.lineTo(rfcx+rfr*0.06,rfcy+rfr*0.1);
+    x0.lineTo(rfcx+rfr*0.04,rfcy-rfr*0.05);
     x0.stroke();
-    // Teeth lines
-    x0.lineWidth=1.5;
-    for(let tk=0;tk<6;tk++){
-      const tx2=rfcx-rfr*0.35+tk*rfr*0.14;
-      const ty2=rfcy+rfr*0.38+Math.sin(tk*0.7)*rfr*0.04;
-      x0.beginPath();x0.moveTo(tx2,ty2);x0.lineTo(tx2,ty2+rfr*0.15);x0.stroke();
+
+    // ── Mouth — wide sinister grin with individual teeth ──
+    x0.strokeStyle=rgba(nG,0.9);x0.lineWidth=2.5;x0.shadowColor=nG;x0.shadowBlur=18+beat*12;
+    // Upper lip
+    x0.beginPath();
+    x0.moveTo(rfcx-rfr*0.4,rfcy+rfr*0.32);
+    x0.bezierCurveTo(rfcx-rfr*0.35,rfcy+rfr*0.28,rfcx-rfr*0.15,rfcy+rfr*0.26,rfcx,rfcy+rfr*0.28);
+    x0.bezierCurveTo(rfcx+rfr*0.15,rfcy+rfr*0.26,rfcx+rfr*0.35,rfcy+rfr*0.28,rfcx+rfr*0.4,rfcy+rfr*0.32);
+    x0.stroke();
+    // Lower lip
+    x0.beginPath();
+    x0.moveTo(rfcx-rfr*0.4,rfcy+rfr*0.32);
+    x0.bezierCurveTo(rfcx-rfr*0.3,rfcy+rfr*0.55,rfcx+rfr*0.3,rfcy+rfr*0.55,rfcx+rfr*0.4,rfcy+rfr*0.32);
+    x0.stroke();
+    // Individual teeth
+    x0.strokeStyle=rgba(nG,0.65);x0.lineWidth=1.5;
+    const teethCount=9;
+    for(let tk=0;tk<teethCount;tk++){
+      const tFrac=(tk/(teethCount-1))-0.5;
+      const tx=rfcx+tFrac*rfr*0.72;
+      const upperY=rfcy+rfr*0.28+Math.cos(tFrac*Math.PI)*rfr*0.04;
+      const lowerY=rfcy+rfr*0.32+(0.22-Math.abs(tFrac)*0.35)*rfr;
+      const toothH=(lowerY-upperY)*0.45;
+      x0.beginPath();x0.moveTo(tx,upperY+2);x0.lineTo(tx,upperY+toothH);x0.stroke();
+      x0.beginPath();x0.moveTo(tx,lowerY-2);x0.lineTo(tx,lowerY-toothH*0.7);x0.stroke();
+    }
+    // Corner creases
+    x0.strokeStyle=rgba(nG,0.5);x0.lineWidth=1.5;
+    for(const side of [-1,1]){
+      x0.beginPath();
+      x0.moveTo(rfcx+side*rfr*0.4,rfcy+rfr*0.32);
+      x0.bezierCurveTo(rfcx+side*rfr*0.45,rfcy+rfr*0.28,rfcx+side*rfr*0.48,rfcy+rfr*0.22,rfcx+side*rfr*0.46,rfcy+rfr*0.18);
+      x0.stroke();
+    }
+
+    // ── Cheekbone highlights ──
+    x0.strokeStyle=rgba(nG,0.25);x0.lineWidth=1;x0.shadowBlur=4;
+    for(const side of [-1,1]){
+      x0.beginPath();
+      x0.moveTo(rfcx+side*rfr*0.52,rfcy+rfr*0.08);
+      x0.bezierCurveTo(rfcx+side*rfr*0.45,rfcy+rfr*0.15,rfcx+side*rfr*0.35,rfcy+rfr*0.2,rfcx+side*rfr*0.25,rfcy+rfr*0.22);
+      x0.stroke();
+    }
+
+    // ── Brow furrows — angry expression ──
+    x0.strokeStyle=rgba(nG,0.6);x0.lineWidth=2;x0.shadowBlur=10;x0.shadowColor=nG;
+    for(const side of [-1,1]){
+      x0.beginPath();
+      x0.moveTo(rfcx+side*rfr*0.08,rfcy-rfr*0.38);
+      x0.bezierCurveTo(rfcx+side*rfr*0.15,rfcy-rfr*0.42,rfcx+side*rfr*0.25,rfcy-rfr*0.38,rfcx+side*rfr*0.35,rfcy-rfr*0.33);
+      x0.stroke();
     }
 
     x0.shadowBlur=0;x0.restore();
@@ -4147,16 +4307,18 @@ function drawDayOfDead(t){
       // Floating background candles
       bgCandles:Array.from({length:22},(_,i)=>({
         x:Math.random()*w, y:Math.random()*h,
-        vx:(Math.random()-0.5)*0.3, vy:-(0.1+Math.random()*0.2),
+        vx:(Math.random()-0.5)*0.7, vy:-(0.15+Math.random()*0.35),
         sz:12+Math.random()*22, ph:Math.random()*Math.PI*2,
         ci:i%4, flicker:Math.random()*Math.PI*2,
+        drift:Math.random()*Math.PI*2, driftSpeed:0.006+Math.random()*0.008,
       })),
       // Floating sugar masks in background
       bgMasks:Array.from({length:8},(_,i)=>({
         x:Math.random()*w, y:Math.random()*h,
-        vx:(Math.random()-0.5)*0.25, vy:(Math.random()-0.5)*0.15,
+        vx:(Math.random()-0.5)*0.8, vy:(Math.random()-0.5)*0.6,
+        wanderPh:Math.random()*Math.PI*2, wanderSpeed:0.008+Math.random()*0.01,
         sz:28+Math.random()*42, rot:Math.random()*Math.PI*2,
-        rotSpeed:(Math.random()-0.5)*0.006, ph:Math.random()*Math.PI*2,
+        rotSpeed:(Math.random()-0.5)*0.012, ph:Math.random()*Math.PI*2,
         ci:i%4, alpha:0.45+Math.random()*0.3,
       })),
       // Main mask spin state
@@ -4172,9 +4334,10 @@ function drawDayOfDead(t){
       // Marigold petals
       petals:Array.from({length:50},()=>({
         x:Math.random()*w, y:Math.random()*h*0.5+h*0.5,
-        vx:(Math.random()-0.5)*0.6, vy:-(0.2+Math.random()*0.4),
+        vx:(Math.random()-0.5)*1.2, vy:-(0.3+Math.random()*0.6),
         sz:4+Math.random()*6, rot:Math.random()*Math.PI*2,
-        rotSpeed:(Math.random()-0.5)*0.04, ci:1, alpha:0.5+Math.random()*0.4,
+        rotSpeed:(Math.random()-0.5)*0.06, ci:1, alpha:0.5+Math.random()*0.4,
+        drift:Math.random()*Math.PI*2, driftSpeed:0.01+Math.random()*0.015,
       })),
     };
   }
@@ -4190,7 +4353,8 @@ function drawDayOfDead(t){
 
   // ── Floating background candles — bright and vibrant ──
   for(const c of D.bgCandles){
-    c.x+=c.vx;c.y+=c.vy;c.ph+=0.04;c.flicker+=0.12+Math.random()*0.05;
+    c.drift+=c.driftSpeed;
+    c.x+=c.vx+Math.sin(c.drift)*0.5;c.y+=c.vy+Math.cos(c.drift*0.6)*0.3;c.ph+=0.04;c.flicker+=0.12+Math.random()*0.05;
     if(c.y<-30)c.y=h+30;if(c.x<-30)c.x=w+30;if(c.x>w+30)c.x=-30;
     const flk=0.7+Math.sin(c.flicker)*0.3+Math.random()*0.1;
     const alpha=(0.6+Math.sin(c.ph)*0.15)*flk;
@@ -4217,7 +4381,10 @@ function drawDayOfDead(t){
 
   // ── Floating background sugar masks — brighter ─────────
   for(const m of D.bgMasks){
-    m.x+=m.vx;m.y+=m.vy;m.rot+=m.rotSpeed;m.ph+=0.015;
+    m.wanderPh+=m.wanderSpeed;
+    m.x+=m.vx+Math.sin(m.wanderPh)*0.8;
+    m.y+=m.vy+Math.cos(m.wanderPh*0.7)*0.6;
+    m.rot+=m.rotSpeed;m.ph+=0.015;
     if(m.x<-80)m.x=w+80;if(m.x>w+80)m.x=-80;
     if(m.y<-80)m.y=h+80;if(m.y>h+80)m.y=-80;
     const alpha=m.alpha*(1.0+Math.sin(m.ph)*0.3);
@@ -4230,8 +4397,9 @@ function drawDayOfDead(t){
 
   // ── Marigold petals ───────────────────────────────────
   for(const p of D.petals){
-    p.x+=p.vx;p.y+=p.vy;p.rot+=p.rotSpeed;
-    if(p.y<-20)p.y=h+20;
+    p.drift+=p.driftSpeed;
+    p.x+=p.vx+Math.sin(p.drift)*0.7;p.y+=p.vy+Math.cos(p.drift*0.8)*0.4;p.rot+=p.rotSpeed;
+    if(p.y<-20){p.y=h+20;p.x=Math.random()*w;}
     x0.save();x0.translate(p.x,p.y);x0.rotate(p.rot);
     x0.fillStyle=rgba(pc(1),p.alpha*(0.75+beat*0.25));
     x0.beginPath();x0.ellipse(0,0,p.sz*0.4,p.sz,0,0,Math.PI*2);x0.fill();
@@ -4349,13 +4517,16 @@ function drawDayOfDead(t){
     for(let ld=1;ld<4;ld++){
       x0.beginPath();x0.moveTo(tx+tw*0.05,ty+th*ld*0.25);x0.lineTo(tx+tw*0.95,ty+th*ld*0.25);x0.stroke();
     }
-    // Embedded skulls across each tier
+    // Embedded skulls across each tier — alternating strobe to beat
     const skullCount=Math.floor(tw/(h*0.055));
     for(let sk=0;sk<skullCount;sk++){
       const skX=tx+tw*(sk+0.5)/skullCount;
       const skY=ty+th*0.5;
       const skSz=h*0.022;
-      x0.save();x0.globalAlpha=0.75+beat*0.25;
+      // Alternate: even skulls bright on beat, odd skulls dim (and vice versa)
+      const isEven=(sk+tier)%2===0;
+      const strobeAlpha=isEven?(0.4+beat*0.6):(0.9-beat*0.5);
+      x0.save();x0.globalAlpha=Math.max(0.15,Math.min(1,strobeAlpha));
       drawMiniSkull(x0,skX,skY,skSz,sk%4,t);
       x0.restore();
     }
@@ -4392,77 +4563,6 @@ function drawDayOfDead(t){
   x0.fillStyle='rgba(8,3,14,0.9)';x0.fillRect(0,altY+altH,w,h);
   x0.strokeStyle=rgba(pc(2),0.25);x0.lineWidth=2;
   x0.beginPath();x0.moveTo(0,altY+altH);x0.lineTo(w,altY+altH);x0.stroke();
-}
-
-
-// ═══ SCENE: chineseDragon ═══
-
-function drawChineseDragon(t){
-  const w=W(),h=H(),cx=w/2,cy=h/2;
-  x0.fillStyle=THEME.bgColor;x0.fillRect(0,0,w,h);
-  // Fog banks
-  if(!SD.fog){SD.fog=Array.from({length:8},(_,i)=>({x:Math.random()*w,y:h*(0.3+Math.random()*0.5),r:150+Math.random()*200,ph:Math.random()*Math.PI*2,speed:0.003+Math.random()*0.003}));}
-  for(const fg of SD.fog){fg.ph+=fg.speed;const fx=fg.x+Math.sin(fg.ph)*60,fy=fg.y+Math.cos(fg.ph*0.7)*30;const gr=x0.createRadialGradient(fx,fy,0,fx,fy,fg.r);const gc=h2r(pc(1));gr.addColorStop(0,`rgba(${gc.r},${gc.g},${gc.b},0.07)`);gr.addColorStop(1,'transparent');x0.fillStyle=gr;x0.fillRect(0,0,w,h);}
-  // Pearl — the centerpiece glowing orb the dragon chases
-  if(!SD.pearl){SD.pearl={x:w*0.3,y:h*0.4,vx:1.5,vy:0.5,ph:0};}
-  const pearl=SD.pearl;
-  // Pearl moves in figure-8 pattern
-  pearl.ph+=0.012*(1+SM.energy*0.2);
-  pearl.x=cx+Math.sin(pearl.ph)*w*0.3;
-  pearl.y=cy+Math.sin(pearl.ph*2)*h*0.2;
-  // Draw pearl as centerpiece
-  const pearlSz=Math.min(w,h)*(0.09+SM.beatPulse*0.04);
-  const pg=x0.createRadialGradient(pearl.x,pearl.y,0,pearl.x,pearl.y,pearlSz*1.5);
-  pg.addColorStop(0,rgba(pc(0),0.3*(1+SM.beatPulse*0.3)));pg.addColorStop(1,'transparent');
-  x0.fillStyle=pg;x0.fillRect(0,0,w,h);
-  cpPh+=0.013;cpRot+=0.04*(1+SM.energy*0.2);
-  x0.shadowBlur=pearlSz*0.9;x0.shadowColor=rgba(pc(0),0.9);
-  drawCPMini(x0,THEME.centerpiece,pearl.x,pearl.y,pearlSz,cpRot);
-  x0.shadowBlur=0;
-  // Dragon body — sinuous segments chasing the pearl
-  SD.dragonEmerge=Math.min(1,(SD.dragonEmerge||0)+0.004*(1+SM.energy*0.2));
-  const emerge=SD.dragonEmerge;
-  if(!SD.dragonPath){SD.dragonPath=Array.from({length:30},()=>({x:cx,y:cy}));}
-  // Head moves toward pearl
-  const head=SD.dragonPath[0];
-  const dx=pearl.x-head.x,dy=pearl.y-head.y;
-  const dist=Math.hypot(dx,dy)||1;
-  head.x+=dx/dist*2.5*(1+SM.energy*0.4);
-  head.y+=dy/dist*2.5*(1+SM.energy*0.4);
-  // Body follows head
-  for(let s=1;s<SD.dragonPath.length;s++){
-    const prev=SD.dragonPath[s-1],curr=SD.dragonPath[s];
-    const ddx=curr.x-prev.x,ddy=curr.y-prev.y;
-    const dd=Math.hypot(ddx,ddy)||1;
-    if(dd>22){curr.x=prev.x+ddx/dd*22;curr.y=prev.y+ddy/dd*22;}
-  }
-  // Draw body
-  x0.save();x0.globalAlpha=emerge;
-  for(let s=SD.dragonPath.length-1;s>=0;s--){
-    const seg=SD.dragonPath[s];
-    const segR=(28-s*0.7)*(1-s/(SD.dragonPath.length*1.5))*emerge;
-    if(segR<1)continue;
-    x0.beginPath();x0.arc(seg.x,seg.y,segR,0,Math.PI*2);
-    x0.fillStyle=rgba(pc(s%4),(0.65-s*0.015)*Math.min(1,emerge*2));
-    x0.shadowBlur=8;x0.shadowColor=pc(s%4);
-    x0.fill();x0.shadowBlur=0;
-    // Scales glint
-    if(s%3===0){x0.fillStyle=rgba(pc((s+2)%4),0.25);x0.beginPath();x0.arc(seg.x,seg.y,segR*0.6,0,Math.PI*2);x0.fill();}
-  }
-  // Dragon head
-  const dh=SD.dragonPath[0];
-  const headDir=Math.atan2(SD.dragonPath[0].y-SD.dragonPath[1].y,SD.dragonPath[0].x-SD.dragonPath[1].x);
-  x0.save();x0.translate(dh.x,dh.y);x0.rotate(headDir);
-  x0.fillStyle=rgba(pc(0),0.92);x0.shadowBlur=30;x0.shadowColor=pc(0);
-  x0.beginPath();x0.ellipse(0,0,38,26,0,0,Math.PI*2);x0.fill();
-  // Jaw/snout
-  x0.beginPath();x0.moveTo(20,8*(1+SM.beatPulse*0.3));x0.lineTo(55,5*(1+SM.beatPulse*0.3));x0.lineTo(55,14*(1+SM.beatPulse*0.3));x0.lineTo(20,16*(1+SM.beatPulse*0.3));x0.fill();
-  // Eye
-  x0.fillStyle=rgba(pc(1),0.95);x0.shadowBlur=15;x0.shadowColor=pc(1);
-  x0.beginPath();x0.arc(20,-10,8,0,Math.PI*2);x0.fill();x0.fillStyle='rgba(0,0,0,0.9)';x0.beginPath();x0.arc(22,-10,4,0,Math.PI*2);x0.fill();
-  // Horn
-  x0.fillStyle=rgba(pc(2),0.85);x0.beginPath();x0.moveTo(5,-26);x0.lineTo(18,-50);x0.lineTo(22,-26);x0.closePath();x0.fill();
-  x0.restore();x0.restore();
 }
 
 
@@ -4598,63 +4698,6 @@ function drawMountOlympus(t){
   }
   // Centerpiece
   if(THEME.centerpiece){cpRot+=0.01*(1+energy*0.15);cpPh+=0.013;const gs=Math.min(w,h)*(0.12+beat*0.04);x0.globalAlpha=0.85+beat*0.15;x0.shadowBlur=15+beat*12;x0.shadowColor=pc(0);drawCPMini(x0,THEME.centerpiece,cx,h*0.5,gs,cpRot);x0.globalAlpha=1;x0.shadowBlur=0;}
-}
-
-
-// ═══ SCENE: superMario ═══
-
-function drawSuperMario(t){
-  const w=W(),h=H();
-  // Sky
-  x0.fillStyle='#1a1a2e';x0.fillRect(0,0,w,h);
-  // Stars
-  if(!SD.marioStars){SD.marioStars=Array.from({length:80},()=>({x:Math.random()*w,y:Math.random()*h*0.5,b:Math.random()}));}
-  for(const s of SD.marioStars){x0.fillStyle=`rgba(255,255,255,${0.3+Math.abs(Math.sin(t*0.001+s.b*10))*0.5})`;x0.fillRect(s.x,s.y,s.b>0.8?2:1,s.b>0.8?2:1);}
-  // Scrolling background
-  SD.scrollX=(SD.scrollX||0)+THEME.sceneSpeed*(1+SM.energy*0.3)*(1+beatFX.speedBoost*0.5);
-  // Neon ground
-  x0.fillStyle=rgba(pc(2),0.85);x0.fillRect(0,h*0.78,w,h*0.06);
-  x0.fillStyle=rgba(pc(0),0.6);x0.fillRect(0,h*0.84,w,h*0.16);
-  // Ground pattern
-  x0.strokeStyle=rgba(pc(2),0.15);x0.lineWidth=1;
-  for(let gx=0;gx<w;gx+=40){x0.beginPath();x0.moveTo((gx-SD.scrollX*0.3)%w,h*0.78);x0.lineTo((gx-SD.scrollX*0.3)%w,h);x0.stroke();}
-  // Clouds
-  for(let c=0;c<4;c++){const cx2=((c*w/3+t*0.018)%w+w)%w,cy2=h*0.12+c*h*0.05;x0.fillStyle='rgba(30,25,60,0.9)';x0.shadowBlur=8;x0.shadowColor=rgba(pc(2),0.3);x0.beginPath();x0.arc(cx2,cy2,35,0,Math.PI*2);x0.arc(cx2+28,cy2-8,25,0,Math.PI*2);x0.arc(cx2+55,cy2,35,0,Math.PI*2);x0.fill();x0.shadowBlur=0;}
-  // Pipes
-  if(!SD.pipes){SD.pipes=Array.from({length:4},(_,i)=>({x:i*(w/3)+w*0.2,h:h*0.12+Math.random()*h*0.1}));}
-  for(const pipe of SD.pipes){const px=((pipe.x-SD.scrollX%w+w*2)%w);x0.fillStyle=rgba(pc(2),0.8);x0.fillRect(px-18,h*0.78-pipe.h,36,pipe.h);x0.fillRect(px-23,h*0.78-pipe.h,46,18);x0.strokeStyle=rgba(pc(2),0.4);x0.lineWidth=1;x0.strokeRect(px-23,h*0.78-pipe.h,46,18);}
-  // Platforms
-  if(!SD.platforms){SD.platforms=Array.from({length:5},(_,i)=>({x:i*(w/4)+Math.random()*w*0.1,y:h*(0.42+Math.random()*0.2),w:60+Math.random()*80}));}
-  for(const p of SD.platforms){const px=((p.x-SD.scrollX*0.5+w*2)%w);x0.fillStyle=rgba(pc(0),0.85);x0.shadowBlur=8;x0.shadowColor=pc(0);x0.fillRect(px,p.y,p.w,14);x0.shadowBlur=0;}
-  // Question blocks — centerpiece IS the spinning collectible block
-  const cpBlockX=((w*0.5-SD.scrollX*0.7+w*2)%w);
-  const cpBlockY=h*0.45+Math.sin(t*0.002)*8;
-  const blkSz=36*(1+SM.beatPulse*0.12);
-  if(THEME.centerpiece){
-    cpPh+=0.013;cpRot+=0.025;
-    // Block frame
-    x0.fillStyle=rgba(pc(1),0.9);x0.shadowBlur=20;x0.shadowColor=pc(1);
-    x0.fillRect(cpBlockX-blkSz/2,cpBlockY-blkSz/2,blkSz,blkSz);
-    x0.strokeStyle='rgba(0,0,0,0.5)';x0.lineWidth=2;x0.strokeRect(cpBlockX-blkSz/2,cpBlockY-blkSz/2,blkSz,blkSz);
-    x0.shadowBlur=0;
-    // Centerpiece inside the block (spinning)
-    x0.save();x0.beginPath();x0.rect(cpBlockX-blkSz/2,cpBlockY-blkSz/2,blkSz,blkSz);x0.clip();
-    drawCPMini(x0,THEME.centerpiece,cpBlockX,cpBlockY,blkSz*0.45,cpRot);
-    x0.restore();
-    // "?" label when not hit
-    x0.fillStyle='rgba(0,0,0,0.6)';x0.font=`bold ${blkSz*0.5}px monospace`;x0.textAlign='center';
-    x0.fillText('?',cpBlockX,cpBlockY+blkSz*0.18);x0.textAlign='left';
-  }
-  // Goombas
-  if(!SD.goombas){SD.goombas=Array.from({length:4},(_,i)=>({x:w*0.2+i*w*0.22,y:h*0.745,vx:0.6+Math.random()*0.4,ph:Math.random()*Math.PI*2}));}
-  for(const g of SD.goombas){g.x+=g.vx*(1+SM.energy*0.2);if(g.x<-30||g.x>w+30)g.vx*=-1;g.ph+=0.05;const walkanim=Math.sin(g.ph)*g.vx*0.3;x0.fillStyle=rgba(pc(2),0.9);x0.shadowBlur=6;x0.shadowColor=pc(2);x0.beginPath();x0.arc(g.x,g.y,16,Math.PI,0);x0.fill();x0.beginPath();x0.ellipse(g.x,g.y+4,18,10,0,0,Math.PI*2);x0.fill();x0.fillStyle='rgba(0,0,0,0.8)';x0.beginPath();x0.arc(g.x-6,g.y-2,4,0,Math.PI*2);x0.arc(g.x+6,g.y-2,4,0,Math.PI*2);x0.fill();x0.shadowBlur=0;}
-  // Mario character
-  const my=h*0.705;const mx=w*0.25;
-  x0.fillStyle=rgba(pc(0),0.95);x0.shadowBlur=10;x0.shadowColor=pc(0);
-  x0.fillRect(mx-10,my-38,22,38);x0.beginPath();x0.arc(mx,my-40,13,0,Math.PI*2);x0.fill();
-  x0.fillRect(mx-14,my-54,30,12);x0.fillRect(mx-8,my-68,18,15);
-  x0.fillStyle='rgba(200,160,120,0.9)';x0.beginPath();x0.arc(mx,my-40,9,0,Math.PI*2);x0.fill();
-  x0.shadowBlur=0;
 }
 
 
@@ -7200,8 +7243,8 @@ else if(sc==='NEON_CATHEDRAL'){
       // Laser Overload — multiply, brighten, erratic sweeping 30s
       sequence([[0,()=>{if(SD.ef){SD.ef.laserOverload=true;SD.ef.laserOverloadTimer=30000;}flash(rgba(pc(0),0.6),300);}],[500,()=>{flash(rgba(pc(1),0.5),200);}],[2000,()=>{flash(rgba(pc(2),0.5),200);}]]);
     } else if(variant===1){
-      // Neon Monkey Swarm — ~12 monkeys swinging from trees 30s
-      sequence([[0,()=>{if(SD.ef){SD.ef.monkeySwarm=true;SD.ef.monkeySwarmTimer=30000;SD.ef.monkeys=[];}flash(rgba(pc(1),0.5),300);}],[500,()=>{flash(rgba(pc(0),0.4),200);}],[2000,()=>{flash(rgba(pc(3),0.4),200);}]]);
+      // Mushroom Bloom — mushrooms grow massive, strobe to beat 30s
+      sequence([[0,()=>{if(SD.ef){SD.ef.mushroomBloom=true;SD.ef.mushroomBloomTimer=30000;}flash(rgba(pc(1),0.5),300);}],[500,()=>{flash(rgba(pc(0),0.4),200);}],[2000,()=>{flash(rgba(pc(3),0.4),200);}]]);
     } else {
       // Windstorm — trees sway/bend, particles blow, centerpiece pulses harder 30s
       sequence([[0,()=>{if(SD.ef){SD.ef.windstorm=true;SD.ef.windstormTimer=30000;SD.ef.trees.forEach(t2=>t2.glowMult=3);}flash('rgba(200,220,255,0.5)',400);}],[2000,()=>{flash(rgba(pc(2),0.4),200);}],[5000,()=>{if(SD.ef)SD.ef.trees.forEach(t2=>t2.glowMult=2);}]]);
@@ -7282,17 +7325,6 @@ else if(sc==='OMNIA_NIGHTCLUB'){
           }
         }],
       ]);
-    }
-  }
-  else if(sc==='PIRATE_SHIP'){
-    if(variant===0){
-      // Kraken attack — tentacles from water
-      sequence([[0,()=>{flash(rgba(pc(0),0.6),400);if(SD.creatures)for(let i=0;i<4;i++)setTimeout(()=>{SD.creatures&&SD.creatures.push({...mkDeepCreature(W(),H()),sz:150+i*30,vx:1.2+i*0.3,y:H()*(0.55+i*0.08)});},i*300);}],[2000,()=>{flash(rgba(pc(1),0.5),500);}],[4000,()=>{for(let i=0;i<5;i++)setTimeout(()=>SD.cannonballs&&SD.cannonballs.push(mkCannonball()),i*120);}],[7000,()=>{}]]);
-    } else if(variant===1){
-      // Cannonball broadside
-      sequence([[0,()=>{for(let i=0;i<8;i++)setTimeout(()=>{SD.cannonballs&&SD.cannonballs.push(mkCannonball());flash('rgba(255,150,0,0.4)',150);},i*180);}],[2000,()=>{flash(rgba(pc(0),0.6),300);}],[3000,()=>{for(let i=0;i<6;i++)setTimeout(()=>{SD.cannonballs&&SD.cannonballs.push(mkCannonball());},i*200);}],[6000,()=>{}]]);
-    } else {
-      sequence([[0,()=>{flash(rgba(pc(0),0.7),300);}],[500,()=>{for(let i=0;i<5;i++)setTimeout(()=>SD.cannonballs&&SD.cannonballs.push(mkCannonball()),i*150);}],[2000,()=>{if(SD.creatures)for(let i=0;i<3;i++)SD.creatures.push({...mkDeepCreature(W(),H()),sz:180,vx:1.5,y:H()*(0.6+i*0.08)});}],[4000,()=>{flash(rgba(pc(1),0.5),400);}],[7000,()=>{}]]);
     }
   }
   else if(sc==='JUNKYARD'){
@@ -7422,18 +7454,7 @@ else if(sc==='DAY_OF_DEAD'){
       ]);
     }
   }
-  else if(sc==='CHINESE_DRAGON'){
-    if(variant===0){
-      // Dragon breathes fire — giant flash + centerpiece pearl surges
-      sequence([[0,()=>{flash(rgba(pc(0),0.8),300);}],[400,()=>{flash('rgba(255,150,0,0.7)',200);}],[800,()=>{if(SD.dragonPath)SD.dragonPath.forEach(p=>{p.vx=p.vx*3||6;});flash('rgba(255,200,50,0.5)',400);}],[2000,()=>{flash(rgba(pc(0),0.5),500);}],[5000,()=>{}]]);
-    } else if(variant===1){
-      // Second dragon appears — pearl whips wildly
-      sequence([[0,()=>{if(SD.pearl){SD.pearl.ph+=Math.PI;};flash(rgba(pc(1),0.6),400);}],[1000,()=>{flash(rgba(pc(0),0.7),300);}],[2000,()=>{if(SD.fog)SD.fog.forEach(f=>f.speed*=5);}],[4000,()=>{if(SD.fog)SD.fog.forEach(f=>f.speed/=5);}],[6000,()=>{}]]);
-    } else {
-      sequence([[0,()=>{flash(rgba(pc(0),0.9),200);}],[300,()=>{if(SD.pearl)SD.pearl.ph+=Math.PI*0.5;}],[500,()=>{flash('rgba(255,180,0,0.6)',300);}],[1500,()=>{if(SD.fog)SD.fog.forEach(f=>f.speed*=3);flash(rgba(pc(1),0.5),400);}],[4000,()=>{if(SD.fog)SD.fog.forEach(f=>f.speed/=3);}]]);
-    }
-  }
-else if(sc==='MOUNT_OLYMPUS'){
+  else if(sc==='MOUNT_OLYMPUS'){
     if(variant===0){
       // A: Thunderstorm — sky fills with rapid bolts, Zeus goes berserk
       sequence([
@@ -7539,18 +7560,7 @@ else if(sc==='MOUNT_OLYMPUS'){
       ]);
     }
   }
-  else if(sc==='SUPER_MARIO'){
-    if(variant===0){
-      // Star power — rainbow flash, everything glows
-      sequence([[0,()=>{for(let i=0;i<6;i++)setTimeout(()=>{flash(rgba(pc(i%4),0.6),100);},i*100);}],[700,()=>{beatFX.speedBoost=2;}],[1000,()=>{if(SD.goombas)SD.goombas.forEach(g=>g.vx*=3);}],[3000,()=>{if(SD.goombas)SD.goombas.forEach(g=>g.vx/=3);beatFX.speedBoost=0;}],[5000,()=>{for(let i=0;i<4;i++)setTimeout(()=>{flash(rgba(pc(i%4),0.5),100);},i*100);}]]);
-    } else if(variant===1){
-      // Bowser stomps in from right side
-      sequence([[0,()=>{flash(rgba(pc(0),0.7),300);}],[400,()=>{for(let i=0;i<4;i++)setTimeout(()=>{beatFX.slamS=1.3;setTimeout(()=>beatFX.slamS=1,200);flash(rgba(pc(2),0.5),100);},i*600);}],[3000,()=>{flash('rgba(255,100,0,0.5)',400);}],[6000,()=>{}]]);
-    } else {
-      sequence([[0,()=>{for(let i=0;i<5;i++)setTimeout(()=>{flash(rgba(pc(i%4),0.5),80);},i*80);}],[500,()=>{beatFX.speedBoost=3;if(SD.coins)SD.coins.forEach(c=>c.ph+=Math.PI);}],[2000,()=>{beatFX.speedBoost=1;}],[4000,()=>{beatFX.speedBoost=0;flash(rgba(pc(1),0.5),400);}]]);
-    }
-  }
-else if(sc==='ATLANTIS'){
+  else if(sc==='ATLANTIS'){
     if(variant===0){
       // A: Giant neon whirlpool forms and sucks in fish
       sequence([
@@ -7755,7 +7765,6 @@ function triggerBeat() {
     case 'bass_slam': beatFX.slamS = 1 + 0.12 * intensity; break;
     case 'strobe_cut': beatFX.invertA = THEME.energy > 0.6 ? 0.8 * intensity : 0.3; break;
     case 'creature_surge': if (SD.creatures) SD.creatures.push(mkDeepCreature(W(), H())); break;
-    case 'cannon_fire': if (SD.cannonballs) SD.cannonballs.push(mkCannonball()); break;
     case 'lightning_strike': if (SD.lightnings != null) SD.lightnings.push(mkLightning()); break;
     case 'gravity_wave': beatFX.gravityWave = 1; break;
     case 'petal_burst': if (SD.petals) SD.petals.forEach(p => { p.vx = (Math.random() - 0.5) * 5; p.vy = -(Math.random() * 4 + 2); }); break;
@@ -7766,7 +7775,6 @@ function triggerBeat() {
   if (sc === 'LAVA_WORLD' && Math.random() < 0.4 && SD.eruptions) SD.eruptions.push(mkEruption());
   if (sc === 'STORM_CHASER' && SD.lightnings != null) SD.lightnings.push(mkLightning());
   if ((sc === 'MOUNT_OLYMPUS') && SD.boltsComing && Math.random() < 0.5) SD.boltsComing.push(mkBolt());
-  if (sc === 'PIRATE_SHIP' && SD.cannonballs && Math.random() < 0.3) SD.cannonballs.push(mkCannonball());
   if (sc === 'JUNKYARD' && SD.sparks) for (let i = 0; i < 8; i++) SD.sparks.push(mkSpark(false));
   if (sc === 'CARNIVAL' && SD.ferrisRot != null) SD.ferrisRot += 0.15;
   if (sc === 'OMNIA_NIGHTCLUB' && SD.chandelierY != null) SD.chandelierY = Math.max(H() * 0.05, SD.chandelierY - 20 * (1 + progMult));
@@ -8572,10 +8580,10 @@ function render(t){
     case 'DISCO_DIMENSION':drawDiscoDimension(t);break;case 'ACID_TRIP':drawAcidTrip(t);break;
     case 'SPACE_STATION':drawSpaceStation(t);break;case 'NEON_CATHEDRAL':drawNeonCathedral(t);break;
     case 'CLASSIC_ARCADE':drawClassicArcade(t);break;case 'ELECTRIC_FOREST':drawElectricForest(t);break;
-    case 'OMNIA_NIGHTCLUB':drawOmniaNightclub(t);break;case 'PIRATE_SHIP':drawPirateShip(t);break;
+    case 'OMNIA_NIGHTCLUB':drawOmniaNightclub(t);break;
     case 'JUNKYARD':drawJunkyard(t);break;case 'GOTHAM':drawSuperhero(t);break;
-    case 'DAY_OF_DEAD':drawDayOfDead(t);break;case 'CHINESE_DRAGON':drawChineseDragon(t);break;
-    case 'MOUNT_OLYMPUS':drawMountOlympus(t);break;case 'SUPER_MARIO':drawSuperMario(t);break;
+    case 'DAY_OF_DEAD':drawDayOfDead(t);break;
+    case 'MOUNT_OLYMPUS':drawMountOlympus(t);break;
     case 'ATLANTIS':drawAtlantis(t);break;case 'CARNIVAL':drawCarnival(t);break;
     case 'EGYPTIAN_TOMB':drawEgyptianTomb(t);break;default:drawWarpSpeed(t);
   }
