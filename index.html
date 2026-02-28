@@ -8560,6 +8560,8 @@ function getArtistCtx(name){const k=name.toLowerCase();for(const[n,v]of Object.e
 function extractKW(title){const stop=new Set(['a','an','the','in','of','to','and','or','i','my','me','you','is','it','by','on','for','with','as','be','was']);return title.toLowerCase().replace(/[^\w\s]/g,'').split(/\s+/).filter(w=>w.length>2&&!stop.has(w)).slice(0,6);}
 
 async function loadTheme(tid,name,artist,artistIds,isExplicit,durationMs){
+  // Skip if this exact theme is already active (prevents re-splashing same song)
+  if(aiCache[tid] && tid === lastTid && !inTrans){return;}
   if(aiCache[tid]){applyTheme(name,artist,aiCache[tid]);return;}
   // Use provider-agnostic genre fetch
   let genres=[];
@@ -8862,6 +8864,11 @@ MusicProviders.local = {
         this._source = this._audioCtx.createMediaStreamSource(stream);
         this._source.connect(this._analyser);
         this._startTime = Date.now();
+        // Fixed mid-point progress so scenes render at reasonable intensity
+        songProg = 0.45;
+        progMult = 0.55 + songProg * 0.7;
+        // Hide progress bar — meaningless for mic/system modes
+        document.getElementById('pgWrap').style.display = 'none';
         // If ACRCloud is enabled, hide track info initially — recognition will populate it
         // If not, show generic label
         if (SONG_RECOGNITION.acrEnabled) {
@@ -8894,6 +8901,11 @@ MusicProviders.local = {
         this._source = this._audioCtx.createMediaStreamSource(stream);
         this._source.connect(this._analyser);
         this._startTime = Date.now();
+        // Fixed mid-point progress so scenes render at reasonable intensity
+        songProg = 0.45;
+        progMult = 0.55 + songProg * 0.7;
+        // Hide progress bar — meaningless for mic/system modes
+        document.getElementById('pgWrap').style.display = 'none';
         // If ACRCloud is enabled, hide track info initially — recognition will populate it
         if (SONG_RECOGNITION.acrEnabled) {
           setTrackInfo('Listening...', '', true);
@@ -9182,12 +9194,11 @@ MusicProviders.local = {
       MS.duration = this._duration || 180000;
       MS.analysisStart = Date.now() - MS.progress;
     } else {
-      // Mic/system mode — synthetic progress (cycles every 5 minutes)
-      const elapsed = Date.now() - this._startTime;
-      const cycleDur = 300000;
-      MS.progress = elapsed % cycleDur;
-      MS.duration = cycleDur;
-      MS.analysisStart = Date.now() - MS.progress;
+      // Mic/system mode — no song progress tracking
+      // Set fixed mid-point values so scenes render at a reasonable intensity
+      // but progress-based surprises and climax detection don't fire on fake timers
+      MS.progress = 0;
+      MS.duration = 0;  // duration=0 prevents songProg from updating in render loop
     }
 
     // ── Local audio intelligence ──
@@ -9357,7 +9368,8 @@ MusicProviders.local = {
     SONG_RECOGNITION.prevSpectrum = null;
     SONG_RECOGNITION.acrLastResult = null;
     SONG_RECOGNITION._currentAcrid = '';
-    // Restore track info visibility for next provider
+    // Restore track info visibility and progress bar for next provider
+    document.getElementById('pgWrap').style.display = '';
     document.getElementById('trackName').style.display = '';
     document.getElementById('artistName').style.display = '';
     document.getElementById('albumArt').style.display = '';
