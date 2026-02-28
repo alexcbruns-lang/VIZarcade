@@ -8964,35 +8964,44 @@ MusicProviders.local = {
     }, 5000);
   },
 
-  // Transition to a new scene, with optional song recognition.
-  // ALWAYS transitions — recognition is additive, never blocks the scene change.
-  // If ACRCloud identifies the song, uses the full AI theme flow (like Spotify).
-  // If not, falls back to skipToNextScene() (random scene swap).
+  // Transition to a new scene, with song recognition determining the theme.
+  // The current scene continues playing while recognition happens in the background.
+  // Once recognition completes (or fails), a single clean transition occurs.
   _transitionWithRecognition() {
     if (!SONG_RECOGNITION.acrEnabled || !this._analyser || !this._audioCtx) {
-      // No recognition available — just do immediate random scene swap
+      // No recognition available — immediate random scene swap
       skipToNextScene();
       return;
     }
-    // Wait 3s for new song audio to stabilize, then try to recognize
+
+    // Current scene keeps playing — recognition happens in background
+    console.log('[local] transition triggered — recognizing new song (current scene continues)...');
     const self = this;
+
+    // Wait 5s for new song to be clearly playing (past any crossfade overlap)
     setTimeout(() => {
-      if (!self._analyser || !self._audioCtx) { skipToNextScene(); return; }
+      if (!self._analyser || !self._audioCtx) {
+        skipToNextScene();
+        return;
+      }
+      // Clear ACR cooldown to ensure a fresh API call
+      SONG_RECOGNITION.acrLastCall = 0;
       recognizeSong(self._analyser, self._audioCtx).then(result => {
         if (result && result.title) {
-          console.log('[local] song recognized after transition:', result.title, '—', result.artist);
-          // Full AI theme flow — same as Spotify
+          console.log('[local] new song identified:', result.title, '—', result.artist);
+          // Full AI theme transition — single clean transition with song info
           const tid = 'acr_' + (result.acrid || Date.now());
           lastTid = tid;
           loadTheme(tid, result.title, result.artist, [], false, 180000);
         } else {
-          console.log('[local] recognition failed — using random scene');
+          console.log('[local] could not identify song — random scene');
           skipToNextScene();
         }
-      }).catch(() => {
+      }).catch(e => {
+        console.warn('[local] recognition error:', e);
         skipToNextScene();
       });
-    }, 3000);
+    }, 5000);
   },
 
   _showModeSelector() {
