@@ -469,8 +469,17 @@ const SongRecognizer = {
     if (!result || !result.title) return false;
     const currentTitle = document.getElementById('trackName').textContent || '';
     const newAcrid = result.acrid || '';
+
+    // Same ACR ID → definitely same song
     if (newAcrid && newAcrid === this.currentAcrid) return false;
-    if (!newAcrid && result.title === currentTitle) return false;
+
+    // Same title (case-insensitive) → same song even if ACR ID differs
+    // ACRCloud can return different acrids for the same song depending on fingerprint match
+    if (result.title.toLowerCase().trim() === currentTitle.toLowerCase().trim() && currentTitle) return false;
+
+    // Genuinely different — log details for debugging
+    console.log('[acr] song comparison: current="' + currentTitle + '" (acrid:' + this.currentAcrid + ')',
+      'vs new="' + result.title + '" (acrid:' + newAcrid + ')');
     return true;
   },
 
@@ -485,6 +494,8 @@ const SongRecognizer = {
     const tid = 'acr_' + (newAcrid || Date.now());
     lastTid = tid;
     SpectralAnalyzer.reset();
+    // Recalibrate surprise detection for the new song's energy profile
+    TransitionDetector.startSurpriseCalibration();
     loadTheme(tid, result.title, result.artist, [], false, 180000);
   },
 
@@ -524,13 +535,45 @@ const TransitionDetector = {
   // Computed thresholds (set after calibration)
   thresholds: null,
 
+  // Surprise calibration state — resets per song for adaptive surprise detection
+  surpriseCalibrating: true,
+  surpriseCalStart: 0,
+  surpriseCalDuration: 12000,  // 12s to calibrate surprise range per song
+  surpriseFloor: 1,
+  surpriseCeiling: 0,
+  surpriseThresholds: null,
+
   startCalibration() {
     this.calibrating = true;
     this.calibrationStart = Date.now();
     this.energyFloor = 1;
     this.energyCeiling = 0;
     this.thresholds = null;
+    this.startSurpriseCalibration();
     console.log('[detect] calibrating energy range for 15s...');
+  },
+
+  // Called after each song transition to recalibrate surprise detection
+  startSurpriseCalibration() {
+    this.surpriseCalibrating = true;
+    this.surpriseCalStart = Date.now();
+    this.surpriseFloor = 1;
+    this.surpriseCeiling = 0;
+    this.surpriseThresholds = null;
+    this.surpriseCooldown = 60000; // Don't fire surprises for 60s after new song
+    console.log('[detect] surprise calibrating for new song...');
+  },
+
+  _computeSurpriseThresholds() {
+    const range = this.surpriseCeiling - this.surpriseFloor;
+    const floor = this.surpriseFloor;
+    const th = {
+      // Surprise at 70% of this song's dynamic range (responsive to quieter songs)
+      surpriseEnergy: floor + range * 0.70,
+      surpriseAbove: Math.max(range * 0.12, 0.02),
+    };
+    console.log(`[detect] surprise calibrated — floor=${floor.toFixed(3)} ceil=${this.surpriseCeiling.toFixed(3)} range=${range.toFixed(3)} threshold=${th.surpriseEnergy.toFixed(3)}`);
+    return th;
   },
 
   // Compute adaptive thresholds from observed energy range
@@ -573,7 +616,7 @@ const TransitionDetector = {
   // Feed energy sample from the poll loop
   // Returns { surprise: bool, crossfade: bool, hardCut: bool }
   update(energy, mode) {
-    // ── Calibration phase ──
+    // ── Transition calibration phase ──
     if (this.calibrating) {
       if (energy < this.energyFloor) this.energyFloor = energy;
       if (energy > this.energyCeiling) this.energyCeiling = energy;
@@ -581,24 +624,43 @@ const TransitionDetector = {
 
       if (Date.now() - this.calibrationStart >= this.calibrationDuration) {
         this.calibrating = false;
-        // Ensure we have a minimum range to work with
         if (this.dynamicRange < 0.02) {
-          console.log('[detect] calibration saw too little dynamic range — using mode defaults');
+          console.log('[detect] calibration saw too little range — using mode defaults');
           this.thresholds = this._modeDefaults(mode);
         } else {
           this.thresholds = this._computeThresholds(mode);
         }
       }
-      // Still track energy during calibration but don't detect transitions
       this.energyWindow.push(energy);
       if (this.energyWindow.length > 80) this.energyWindow.shift();
-      return { surprise: false, crossfade: false, hardCut: false };
     }
 
-    // Continue adapting floor/ceiling slowly after calibration (rolling adaptation)
+    // ── Surprise calibration phase (per song, can overlap with post-transition) ──
+    if (this.surpriseCalibrating) {
+      if (energy < this.surpriseFloor) this.surpriseFloor = energy;
+      if (energy > this.surpriseCeiling) this.surpriseCeiling = energy;
+      if (Date.now() - this.surpriseCalStart >= this.surpriseCalDuration) {
+        this.surpriseCalibrating = false;
+        const sRange = this.surpriseCeiling - this.surpriseFloor;
+        if (sRange < 0.02) {
+          this.surpriseThresholds = this.thresholds || this._modeDefaults(mode);
+        } else {
+          this.surpriseThresholds = this._computeSurpriseThresholds();
+        }
+      }
+    } else {
+      // Slowly adapt surprise range after calibration
+      if (energy < this.surpriseFloor) this.surpriseFloor = energy;
+      if (energy > this.surpriseCeiling) this.surpriseCeiling = energy;
+      else this.surpriseCeiling = this.surpriseCeiling * 0.9998 + energy * 0.0002;
+    }
+
+    if (this.calibrating) return { surprise: false, crossfade: false, hardCut: false };
+
+    // Continue adapting transition floor/ceiling slowly after calibration
     if (energy < this.energyFloor) this.energyFloor = energy;
     if (energy > this.energyCeiling) this.energyCeiling = energy;
-    else this.energyCeiling = this.energyCeiling * 0.9999 + energy * 0.0001; // very slow decay
+    else this.energyCeiling = this.energyCeiling * 0.9999 + energy * 0.0001;
     this.dynamicRange = this.energyCeiling - this.energyFloor;
 
     // ── Window management ──
@@ -630,9 +692,10 @@ const TransitionDetector = {
     const olderAvg = older.length > 0 ? older.reduce((a, b) => a + b, 0) / older.length : recentAvg;
     const TH = this.thresholds;
 
-    // ── Surprise ──
-    if (this.surpriseCooldown <= 0 && !surpriseFired) {
-      const isIntense = recentAvg > TH.surpriseEnergy && recentAvg > olderAvg + TH.surpriseAbove;
+    // ── Surprise (uses per-song calibrated thresholds) ──
+    const STH = this.surpriseThresholds || TH;
+    if (this.surpriseCooldown <= 0 && !surpriseFired && !this.surpriseCalibrating) {
+      const isIntense = recentAvg > STH.surpriseEnergy && recentAvg > olderAvg + STH.surpriseAbove;
       if (isIntense && recentAvg > this.rollingPeak * 0.8) {
         result.surprise = true;
         this.surpriseCooldown = 30000;
@@ -715,6 +778,10 @@ const TransitionDetector = {
     this.energyCeiling = 0;
     this.dynamicRange = 0;
     this.thresholds = null;
+    this.surpriseCalibrating = true;
+    this.surpriseFloor = 1;
+    this.surpriseCeiling = 0;
+    this.surpriseThresholds = null;
   }
 };
 
@@ -8723,7 +8790,12 @@ async function transition(name,artist,theme){
   wash.style.transition='opacity 1.1s ease';wash.style.opacity='1';
   await delay(1200);
   Object.assign(THEME,theme);
-  MS.energy=theme.energy||0.5;songProg=0;progMult=0.55;
+  MS.energy=theme.energy||0.5;
+  // For local mic/system modes, maintain fixed progress values (no song arc)
+  // For Spotify/file, reset to 0 so progress tracks normally
+  const isLocalLive = activeProvider === MusicProviders.local && (MusicProviders.local._mode === 'mic' || MusicProviders.local._mode === 'system');
+  if (isLocalLive) { songProg=0.45;progMult=0.55+0.45*0.7; }
+  else { songProg=0;progMult=0.55; }
   initScene();
   document.getElementById('cur').style.background=theme.palette[0];
   document.getElementById('trackName').style.color=theme.palette[0];document.getElementById('trackName').style.textShadow=`0 0 20px ${theme.palette[0]},0 2px 4px rgba(0,0,0,0.95)`;
