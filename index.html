@@ -282,28 +282,463 @@ const CP_INTEGRATED_SCENES = new Set(['WARP_SPEED', 'DEEP_SEA', 'STORM_CHASER', 
 // ═══ SONG RECOGNITION — ID3 tags, spectral fingerprinting, ACRCloud ═══
 
 // ── Configuration ──
+// ═══════════════════════════════════════════════════════════
+// ── LOCAL AUDIO INTELLIGENCE — Three focused subsystems ──
+// ═══════════════════════════════════════════════════════════
+
+// ── 1. SPECTRAL ANALYZER ──
+// Computes spectral features from FFT data. Used for:
+// - Pre-filtering ACRCloud calls (save API budget)
+// - Detecting tonal changes that suggest a new song
+const SpectralAnalyzer = {
+  centroid: 0,           // Current spectral centroid (weighted avg frequency)
+  centroidSmooth: 0,     // Smoothed centroid for comparison
+  flatness: 0,           // How "noisy" vs "tonal" the signal is (0=tonal, 1=noise)
+  flux: 0,               // Frame-to-frame spectral change magnitude
+  prevSpectrum: null,     // Previous frame's frequency bins (for flux)
+  window: [],            // Rolling centroid values (~5s at 100ms poll)
+  maxWindowSize: 50,
+
+  // Feed new FFT frame
+  update(freqData) {
+    const bins = freqData;
+    const len = bins.length;
+    if (len === 0) return;
+
+    let weightedSum = 0, totalMag = 0, logSum = 0, ariSum = 0;
+    for (let i = 0; i < len; i++) {
+      const mag = bins[i] / 255;
+      weightedSum += i * mag;
+      totalMag += mag;
+      ariSum += mag;
+      logSum += mag > 0.001 ? Math.log(mag) : Math.log(0.001);
+    }
+
+    this.centroid = totalMag > 0 ? weightedSum / totalMag : len / 2;
+    this.centroidSmooth = this.centroidSmooth * 0.85 + this.centroid * 0.15;
+    this.flatness = ariSum > 0.001 ? Math.min(1, Math.exp(logSum / len) / (ariSum / len)) : 0;
+
+    if (this.prevSpectrum) {
+      let f = 0;
+      for (let i = 0; i < len; i++) {
+        const d = (bins[i] / 255) - (this.prevSpectrum[i] / 255);
+        if (d > 0) f += d * d;
+      }
+      this.flux = Math.sqrt(f / len);
+    } else {
+      this.flux = 0;
+    }
+    this.prevSpectrum = new Uint8Array(bins);
+
+    this.window.push(this.centroidSmooth);
+    if (this.window.length > this.maxWindowSize) this.window.shift();
+  },
+
+  // Compare recent vs older spectral profiles → 0-1 divergence score
+  getDivergence() {
+    if (this.window.length < 30) return 0;
+    const recent = this.window.slice(-10);
+    const older = this.window.slice(-30, -15);
+    if (older.length < 5) return 0;
+    const rAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+    const oAvg = older.reduce((a, b) => a + b, 0) / older.length;
+    const rVar = recent.reduce((s, v) => s + (v - rAvg) ** 2, 0) / recent.length;
+    const oVar = older.reduce((s, v) => s + (v - oAvg) ** 2, 0) / older.length;
+    const maxC = this.window.length > 0 ? Math.max(...this.window, 1) : 1;
+    return Math.min(1, Math.abs(rAvg - oAvg) / maxC * 2 + Math.abs(Math.sqrt(rVar) - Math.sqrt(oVar)) / maxC);
+  },
+
+  reset() {
+    this.window = [];
+    this.prevSpectrum = null;
+    this.centroid = 0;
+    this.centroidSmooth = 0;
+    this.flatness = 0;
+    this.flux = 0;
+  }
+};
+
+// ── 2. SONG RECOGNIZER ──
+// Manages ACRCloud integration: audio capture, API calls, same-song detection
+const SongRecognizer = {
+  enabled: false,
+  proxyUrl: '',           // e.g. '/api/acr-identify'
+  cooldown: 15000,        // Min 15s between API calls
+  lastCall: 0,
+  lastResult: null,       // { title, artist, album, acrid, timestamp }
+  currentAcrid: '',       // ACR ID of currently playing song
+
+  // Capture audio snippet as base64 from the active audio source
+  async captureSnippet(audioCtx, analyserNode, durationSec) {
+    try {
+      const provider = MusicProviders.local;
+      const rawStream = provider && provider._stream;
+      let stream, destNode = null;
+
+      if (rawStream && rawStream.active && rawStream.getAudioTracks().length > 0) {
+        stream = rawStream;
+      } else {
+        destNode = audioCtx.createMediaStreamDestination();
+        analyserNode.connect(destNode);
+        stream = destNode.stream;
+      }
+
+      if (typeof MediaRecorder === 'undefined') {
+        if (destNode) analyserNode.disconnect(destNode);
+        return null;
+      }
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
+
+      if (!mimeType) { if (destNode) analyserNode.disconnect(destNode); return null; }
+
+      const recorder = new MediaRecorder(stream, { mimeType });
+      const chunks = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+      const done = new Promise(resolve => {
+        recorder.onstop = () => {
+          if (destNode) { try { analyserNode.disconnect(destNode); } catch (e) {} }
+          if (!chunks.length) { resolve(null); return; }
+          const blob = new Blob(chunks, { type: mimeType });
+          if (blob.size < 100) { resolve(null); return; }
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(blob);
+        };
+      });
+
+      recorder.start();
+      await delay(durationSec * 1000);
+      if (recorder.state === 'recording') recorder.stop();
+      const result = await done;
+      console.log('[acr] captured:', result ? (result.length / 1024).toFixed(1) + 'KB' : 'failed');
+      return result;
+    } catch (e) {
+      console.warn('[acr] capture failed:', e);
+      return null;
+    }
+  },
+
+  // Recognize the currently playing song via ACRCloud
+  async recognize(analyserNode, audioCtx) {
+    if (!this.enabled || !this.proxyUrl) return null;
+    if (Date.now() - this.lastCall < this.cooldown) return this.lastResult;
+
+    try {
+      const snippet = await this.captureSnippet(audioCtx, analyserNode, 3);
+      if (!snippet) return null;
+
+      this.lastCall = Date.now();
+      const response = await fetch(this.proxyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio: snippet })
+      });
+
+      if (!response.ok) {
+        console.warn('[acr] proxy HTTP', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      if (data.status && data.status.code === 0 && data.metadata && data.metadata.music && data.metadata.music.length > 0) {
+        const m = data.metadata.music[0];
+        this.lastResult = {
+          title: m.title || '', artist: (m.artists || []).map(a => a.name).join(', ') || '',
+          album: m.album ? m.album.name : '', acrid: m.acrid || '', timestamp: Date.now()
+        };
+        console.log('[acr] ✓', this.lastResult.title, '—', this.lastResult.artist);
+        return this.lastResult;
+      } else {
+        console.log('[acr] ✗ no match');
+        return null;
+      }
+    } catch (e) {
+      console.warn('[acr] failed:', e.message || e);
+      return null;
+    }
+  },
+
+  // Check if a recognition result is a different song than what's currently playing
+  isNewSong(result) {
+    if (!result || !result.title) return false;
+    const currentTitle = document.getElementById('trackName').textContent || '';
+    const newAcrid = result.acrid || '';
+    if (newAcrid && newAcrid === this.currentAcrid) return false;
+    if (!newAcrid && result.title === currentTitle) return false;
+    return true;
+  },
+
+  // Commit a new song: update display, store ACR ID, trigger AI theme
+  commitNewSong(result) {
+    const newAcrid = result.acrid || '';
+    console.log('[acr] committing new song:', result.title, '—', result.artist);
+    this.currentAcrid = newAcrid;
+    setTrackInfo(result.title, result.artist, true);
+    document.getElementById('trackName').style.display = '';
+    document.getElementById('artistName').style.display = '';
+    const tid = 'acr_' + (newAcrid || Date.now());
+    lastTid = tid;
+    SpectralAnalyzer.reset();
+    loadTheme(tid, result.title, result.artist, [], false, 180000);
+  },
+
+  reset() {
+    this.lastResult = null;
+    this.lastCall = 0;
+    this.currentAcrid = '';
+  }
+};
+
+// ── 3. TRANSITION DETECTOR ──
+// Detects song transitions via energy analysis with adaptive calibration.
+// The first 15 seconds of audio calibrate the energy floor/ceiling,
+// then thresholds are set as percentages of the observed dynamic range.
+const TransitionDetector = {
+  // Calibration state
+  calibrating: true,
+  calibrationStart: 0,
+  calibrationDuration: 15000, // 15s calibration window
+  energyFloor: 1,             // Lowest energy seen (starts high, decreases)
+  energyCeiling: 0,           // Highest energy seen (starts low, increases)
+  dynamicRange: 0,            // ceiling - floor
+
+  // Detection state
+  energyWindow: [],
+  surpriseCooldown: 0,
+  transitionCooldown: 0,
+  rollingPeak: 0,
+  dipDetected: false,
+  dipEnergy: 0,
+  preDipEnergy: 0,
+  dipTime: 0,
+  hardCutState: 0,  // 0=watching, 1=silence detected
+  hardCutTime: 0,
+  diagTimer: 0,
+
+  // Computed thresholds (set after calibration)
+  thresholds: null,
+
+  startCalibration() {
+    this.calibrating = true;
+    this.calibrationStart = Date.now();
+    this.energyFloor = 1;
+    this.energyCeiling = 0;
+    this.thresholds = null;
+    console.log('[detect] calibrating energy range for 15s...');
+  },
+
+  // Compute adaptive thresholds from observed energy range
+  _computeThresholds(mode) {
+    const range = this.dynamicRange;
+    const floor = this.energyFloor;
+    const ceil = this.energyCeiling;
+    const mid = floor + range * 0.5;
+
+    // Thresholds as percentages of observed dynamic range
+    // This adapts to any mic/speaker setup automatically
+    const th = {
+      // Surprise: needs high energy relative to what we've observed
+      surpriseEnergy: floor + range * 0.75,
+      surpriseAbove: range * 0.15,
+      // Crossfade: drop must be significant portion of the range
+      crossfadeDrop: range * 0.30,
+      crossfadeBaseline: floor + range * 0.25,
+      crossfadeRise: range * 0.20,
+      crossfadeRiseAbove: range * 0.12,
+      // Hard cut: silence must be near floor, baseline must be above floor
+      hardCutSilence: floor + range * 0.05,
+      hardCutBaseline: floor + range * 0.20,
+      hardCutRecovery: floor + range * 0.15,
+    };
+
+    // Apply minimum floor values to prevent zero-range edge cases
+    th.crossfadeDrop = Math.max(th.crossfadeDrop, 0.03);
+    th.crossfadeRise = Math.max(th.crossfadeRise, 0.02);
+    th.crossfadeBaseline = Math.max(th.crossfadeBaseline, 0.05);
+
+    console.log(`[detect] calibrated — floor=${floor.toFixed(3)} ceil=${ceil.toFixed(3)} range=${range.toFixed(3)} mode=${mode}`);
+    console.log('[detect] thresholds:', JSON.stringify(Object.fromEntries(
+      Object.entries(th).map(([k,v]) => [k, +v.toFixed(3)])
+    )));
+
+    return th;
+  },
+
+  // Feed energy sample from the poll loop
+  // Returns { surprise: bool, crossfade: bool, hardCut: bool }
+  update(energy, mode) {
+    // ── Calibration phase ──
+    if (this.calibrating) {
+      if (energy < this.energyFloor) this.energyFloor = energy;
+      if (energy > this.energyCeiling) this.energyCeiling = energy;
+      this.dynamicRange = this.energyCeiling - this.energyFloor;
+
+      if (Date.now() - this.calibrationStart >= this.calibrationDuration) {
+        this.calibrating = false;
+        // Ensure we have a minimum range to work with
+        if (this.dynamicRange < 0.02) {
+          console.log('[detect] calibration saw too little dynamic range — using mode defaults');
+          this.thresholds = this._modeDefaults(mode);
+        } else {
+          this.thresholds = this._computeThresholds(mode);
+        }
+      }
+      // Still track energy during calibration but don't detect transitions
+      this.energyWindow.push(energy);
+      if (this.energyWindow.length > 80) this.energyWindow.shift();
+      return { surprise: false, crossfade: false, hardCut: false };
+    }
+
+    // Continue adapting floor/ceiling slowly after calibration (rolling adaptation)
+    if (energy < this.energyFloor) this.energyFloor = energy;
+    if (energy > this.energyCeiling) this.energyCeiling = energy;
+    else this.energyCeiling = this.energyCeiling * 0.9999 + energy * 0.0001; // very slow decay
+    this.dynamicRange = this.energyCeiling - this.energyFloor;
+
+    // ── Window management ──
+    this.energyWindow.push(energy);
+    if (this.energyWindow.length > 80) this.energyWindow.shift();
+    this.surpriseCooldown = Math.max(0, this.surpriseCooldown - 100);
+    this.transitionCooldown = Math.max(0, this.transitionCooldown - 100);
+
+    if (energy > this.rollingPeak) this.rollingPeak = energy;
+    else this.rollingPeak *= 0.999;
+
+    // Diagnostic every 10s
+    this.diagTimer += 100;
+    if (this.diagTimer >= 10000) {
+      this.diagTimer = 0;
+      const r6 = this.energyWindow.slice(-6);
+      const o20 = this.energyWindow.slice(-30, -10);
+      const rA = r6.length ? (r6.reduce((a,b)=>a+b,0)/r6.length).toFixed(3) : '?';
+      const oA = o20.length ? (o20.reduce((a,b)=>a+b,0)/o20.length).toFixed(3) : '?';
+      console.log(`[detect] mode=${mode} e=${energy.toFixed(3)} recent=${rA} older=${oA} cool=${Math.round(this.transitionCooldown/1000)}s dip=${this.dipDetected} hc=${this.hardCutState} floor=${this.energyFloor.toFixed(3)} ceil=${this.energyCeiling.toFixed(3)}`);
+    }
+
+    const result = { surprise: false, crossfade: false, hardCut: false };
+    if (this.energyWindow.length < 20 || !this.thresholds) return result;
+
+    const recent = this.energyWindow.slice(-6);
+    const older = this.energyWindow.slice(-30, -10);
+    const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+    const olderAvg = older.length > 0 ? older.reduce((a, b) => a + b, 0) / older.length : recentAvg;
+    const TH = this.thresholds;
+
+    // ── Surprise ──
+    if (this.surpriseCooldown <= 0 && !surpriseFired) {
+      const isIntense = recentAvg > TH.surpriseEnergy && recentAvg > olderAvg + TH.surpriseAbove;
+      if (isIntense && recentAvg > this.rollingPeak * 0.8) {
+        result.surprise = true;
+        this.surpriseCooldown = 30000;
+      }
+    }
+
+    // ── DJ Crossfade ──
+    if (!this.dipDetected && this.transitionCooldown <= 0) {
+      const drop = olderAvg - recentAvg;
+      if (drop > TH.crossfadeDrop && olderAvg > TH.crossfadeBaseline) {
+        this.dipDetected = true;
+        this.dipEnergy = recentAvg;
+        this.preDipEnergy = olderAvg;
+        this.dipTime = Date.now();
+        console.log('[detect] dip — drop:', drop.toFixed(3), 'from:', olderAvg.toFixed(3));
+      }
+    }
+    if (this.dipDetected) {
+      const elapsed = Date.now() - this.dipTime;
+      const rise = recentAvg - this.dipEnergy;
+      if (rise > TH.crossfadeRise && recentAvg > this.dipEnergy + TH.crossfadeRiseAbove && elapsed > 1750) {
+        console.log('[detect] crossfade:', this.preDipEnergy.toFixed(2), '→', this.dipEnergy.toFixed(2), '→', recentAvg.toFixed(2));
+        this.dipDetected = false;
+        this.transitionCooldown = 45000;
+        this.rollingPeak = recentAvg;
+        result.crossfade = true;
+      }
+      if (elapsed > 15000) this.dipDetected = false;
+    }
+
+    // ── Hard Cut ──
+    if (this.transitionCooldown <= 0) {
+      const vr = this.energyWindow.slice(-3);
+      const vrAvg = vr.reduce((a, b) => a + b, 0) / vr.length;
+      if (this.hardCutState === 0) {
+        if (vrAvg < TH.hardCutSilence && olderAvg > TH.hardCutBaseline) {
+          this.hardCutState = 1;
+          this.hardCutTime = Date.now();
+        }
+      } else if (this.hardCutState === 1) {
+        if (vrAvg > TH.hardCutRecovery) {
+          console.log('[detect] hard cut — silence then recovery');
+          this.hardCutState = 0;
+          this.transitionCooldown = 45000;
+          this.dipDetected = false;
+          this.rollingPeak = vrAvg;
+          result.hardCut = true;
+        }
+        if (Date.now() - this.hardCutTime > 8000) this.hardCutState = 0;
+      }
+    }
+
+    return result;
+  },
+
+  // Fallback mode-specific defaults (if calibration has too little range)
+  _modeDefaults(mode) {
+    if (mode === 'mic') return {
+      surpriseEnergy: 0.35, surpriseAbove: 0.06,
+      crossfadeDrop: 0.10, crossfadeBaseline: 0.18, crossfadeRise: 0.08, crossfadeRiseAbove: 0.05,
+      hardCutSilence: 0.02, hardCutBaseline: 0.12, hardCutRecovery: 0.08,
+    };
+    return {
+      surpriseEnergy: 0.55, surpriseAbove: 0.12,
+      crossfadeDrop: 0.22, crossfadeBaseline: 0.35, crossfadeRise: 0.15, crossfadeRiseAbove: 0.12,
+      hardCutSilence: 0.04, hardCutBaseline: 0.28, hardCutRecovery: 0.18,
+    };
+  },
+
+  reset() {
+    this.energyWindow = [];
+    this.surpriseCooldown = 0;
+    this.transitionCooldown = 0;
+    this.rollingPeak = 0;
+    this.dipDetected = false;
+    this.hardCutState = 0;
+    this.diagTimer = 0;
+    this.calibrating = true;
+    this.energyFloor = 1;
+    this.energyCeiling = 0;
+    this.dynamicRange = 0;
+    this.thresholds = null;
+  }
+};
+
+// ── Legacy compatibility shim ──
+// Some code still references SONG_RECOGNITION — this bridges to the new objects
 const SONG_RECOGNITION = {
-  // ACRCloud config — set these via /api/acr-config or hardcode for testing
-  acrEnabled: false,
-  acrProxyUrl: '',  // e.g. '/api/acr-identify' — Vercel serverless function
-  acrCooldown: 15000,        // Min 15s between API calls
-  acrLastCall: 0,
-  acrLastResult: null,       // { title, artist, album, acrid, timestamp }
-
-  // Spectral fingerprint state (managed by local audio poll)
-  spectralCentroid: 0,       // Current spectral centroid (weighted avg frequency)
-  spectralCentroidSmooth: 0, // Smoothed centroid for comparison
-  spectralCentroidPrev: 0,   // Previous window's centroid (for divergence)
-  spectralFlatness: 0,       // How "noisy" vs "tonal" the signal is
-  spectralFlux: 0,           // Frame-to-frame spectral change
-  spectralWindow: [],        // Rolling window of centroid values (~5s)
-  prevSpectrum: null,        // Previous frame's frequency bins (for flux)
-
-  // Transition confirmation state
+  get acrEnabled() { return SongRecognizer.enabled; },
+  set acrEnabled(v) { SongRecognizer.enabled = v; },
+  get acrProxyUrl() { return SongRecognizer.proxyUrl; },
+  set acrProxyUrl(v) { SongRecognizer.proxyUrl = v; },
+  get _currentAcrid() { return SongRecognizer.currentAcrid; },
+  set _currentAcrid(v) { SongRecognizer.currentAcrid = v; },
+  get spectralWindow() { return SpectralAnalyzer.window; },
+  set spectralWindow(v) { SpectralAnalyzer.window = v; },
+  get prevSpectrum() { return SpectralAnalyzer.prevSpectrum; },
+  set prevSpectrum(v) { SpectralAnalyzer.prevSpectrum = v; },
+  get acrLastResult() { return SongRecognizer.lastResult; },
+  set acrLastResult(v) { SongRecognizer.lastResult = v; },
+  get acrLastCall() { return SongRecognizer.lastCall; },
+  set acrLastCall(v) { SongRecognizer.lastCall = v; },
+  acrCooldown: 15000,
   pendingTransition: false,
   pendingTransitionTime: 0,
   confirmedNewTrack: false,
-  _currentAcrid: '',  // ACR ID of the currently playing song (for same-song detection)
 };
 
 // ── ID3 Tag Parser (lightweight, no dependencies) ──
@@ -411,265 +846,26 @@ function parseID3Tags(arrayBuffer) {
   return result;
 }
 
-// ── Spectral Analysis Helpers (called from local audio poll) ──
-// These compute spectral features from the FFT frequency data already being captured
+// ── Spectral Analysis Helpers — delegate to SpectralAnalyzer ──
 
-function computeSpectralFeatures(freqData, sr) {
-  // sr = sample rate (typically from sr.acrEnabled, here just for reference)
-  const bins = freqData;
-  const len = bins.length;
-  if (len === 0) return;
-
-  let weightedSum = 0, totalMagnitude = 0;
-  let logSum = 0, arithmeticSum = 0;
-  const SR = SONG_RECOGNITION;
-
-  for (let i = 0; i < len; i++) {
-    const mag = bins[i] / 255;
-    weightedSum += i * mag;
-    totalMagnitude += mag;
-    arithmeticSum += mag;
-    if (mag > 0.001) logSum += Math.log(mag);
-    else logSum += Math.log(0.001);
-  }
-
-  // Spectral Centroid: weighted average of frequency bin indices
-  // Higher = brighter/more treble, Lower = darker/more bass
-  SR.spectralCentroid = totalMagnitude > 0 ? weightedSum / totalMagnitude : len / 2;
-  SR.spectralCentroidSmooth = SR.spectralCentroidSmooth * 0.85 + SR.spectralCentroid * 0.15;
-
-  // Spectral Flatness: geometric mean / arithmetic mean (0 = tonal, 1 = noise)
-  const geoMean = Math.exp(logSum / len);
-  const ariMean = arithmeticSum / len;
-  SR.spectralFlatness = ariMean > 0.001 ? Math.min(1, geoMean / ariMean) : 0;
-
-  // Spectral Flux: sum of squared differences from previous frame
-  if (SR.prevSpectrum) {
-    let flux = 0;
-    for (let i = 0; i < len; i++) {
-      const diff = (bins[i] / 255) - (SR.prevSpectrum[i] / 255);
-      if (diff > 0) flux += diff * diff; // Only positive flux (onsets)
-    }
-    SR.spectralFlux = Math.sqrt(flux / len);
-  } else {
-    SR.spectralFlux = 0;
-  }
-  SR.prevSpectrum = new Uint8Array(bins);
-
-  // Track centroid in rolling window (~5s at 100ms poll rate)
-  SR.spectralWindow.push(SR.spectralCentroidSmooth);
-  if (SR.spectralWindow.length > 50) SR.spectralWindow.shift();
+function computeSpectralFeatures(freqData) {
+  SpectralAnalyzer.update(freqData);
 }
 
-// Compare spectral profiles between two time windows
-// Returns 0-1 divergence score (>0.3 suggests different song/section)
 function getSpectralDivergence() {
-  const win = SONG_RECOGNITION.spectralWindow;
-  if (win.length < 30) return 0; // Not enough data yet
-
-  const recent = win.slice(-10);
-  const older = win.slice(-30, -15);
-  if (older.length < 5) return 0;
-
-  const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
-  const olderAvg = older.reduce((a, b) => a + b, 0) / older.length;
-
-  // Variance of each window
-  const recentVar = recent.reduce((s, v) => s + (v - recentAvg) ** 2, 0) / recent.length;
-  const olderVar = older.reduce((s, v) => s + (v - olderAvg) ** 2, 0) / older.length;
-
-  // Divergence = normalized centroid shift + variance difference
-  const maxCentroid = SONG_RECOGNITION.spectralWindow.length > 0
-    ? Math.max(...SONG_RECOGNITION.spectralWindow, 1)
-    : 1;
-  const centroidShift = Math.abs(recentAvg - olderAvg) / maxCentroid;
-  const varianceShift = Math.abs(Math.sqrt(recentVar) - Math.sqrt(olderVar)) / maxCentroid;
-
-  return Math.min(1, centroidShift * 2 + varianceShift);
+  return SpectralAnalyzer.getDivergence();
 }
 
-// ── ACRCloud Song Recognition (requires serverless proxy) ──
-// The proxy at acrProxyUrl should accept POST { audio: base64 } and return ACRCloud results
-// This keeps the ACRCloud API key server-side
+// ── ACRCloud Song Recognition — delegates to SongRecognizer ──
 
 async function recognizeSong(analyserNode, audioCtx) {
-  const SR = SONG_RECOGNITION;
-  if (!SR.acrEnabled || !SR.acrProxyUrl) {
-    console.log('[acr] skipped — not enabled or no proxy URL');
-    return null;
-  }
-  if (Date.now() - SR.acrLastCall < SR.acrCooldown) {
-    console.log('[acr] skipped — cooldown active, returning cached result');
-    return SR.acrLastResult;
-  }
-
-  try {
-    console.log('[acr] capturing 3s audio snippet...');
-    const snippet = await captureAudioSnippet(audioCtx, analyserNode, 3);
-    if (!snippet) {
-      console.warn('[acr] audio capture returned empty — cannot identify');
-      return null;
-    }
-
-    SR.acrLastCall = Date.now();
-    console.log('[acr] sending to proxy:', SR.acrProxyUrl);
-
-    const response = await fetch(SR.acrProxyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ audio: snippet })
-    });
-
-    if (!response.ok) {
-      console.warn('[acr] proxy returned HTTP', response.status);
-      try { const errBody = await response.text(); console.warn('[acr] response:', errBody.slice(0, 200)); } catch (e2) {}
-      return null;
-    }
-
-    const data = await response.json();
-    console.log('[acr] response status:', data.status ? data.status.msg : 'unknown');
-
-    if (data.status && data.status.code === 0 && data.metadata && data.metadata.music && data.metadata.music.length > 0) {
-      const match = data.metadata.music[0];
-      SR.acrLastResult = {
-        title: match.title || '',
-        artist: (match.artists || []).map(a => a.name).join(', ') || '',
-        album: match.album ? match.album.name : '',
-        acrid: match.acrid || '',
-        timestamp: Date.now()
-      };
-      console.log('[acr] ✓ recognized:', SR.acrLastResult.title, '—', SR.acrLastResult.artist);
-      return SR.acrLastResult;
-    } else {
-      console.log('[acr] ✗ no match found (code:', data.status ? data.status.code : '?', ')');
-      return null;
-    }
-  } catch (e) {
-    console.warn('[acr] recognition failed:', e.message || e);
-    return null;
-  }
+  return SongRecognizer.recognize(analyserNode, audioCtx);
 }
 
-// Capture a short audio snippet as base64 using MediaRecorder
-// Uses the provider's raw stream when available (mic/system), falls back to Web Audio tap
 async function captureAudioSnippet(audioCtx, analyserNode, durationSec) {
-  try {
-    // Prefer the original MediaStream if available (more reliable for mic/system)
-    const provider = MusicProviders.local;
-    const rawStream = provider && provider._stream;
-
-    let stream;
-    let destNode = null;
-    if (rawStream && rawStream.active && rawStream.getAudioTracks().length > 0) {
-      stream = rawStream;
-    } else {
-      // Fallback: tap the Web Audio graph via MediaStreamDestination
-      destNode = audioCtx.createMediaStreamDestination();
-      analyserNode.connect(destNode);
-      stream = destNode.stream;
-    }
-
-    // Check for MediaRecorder support
-    if (typeof MediaRecorder === 'undefined') {
-      console.warn('[acr] MediaRecorder not available');
-      if (destNode) analyserNode.disconnect(destNode);
-      return null;
-    }
-
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-      ? 'audio/webm;codecs=opus'
-      : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm'
-      : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
-
-    if (!mimeType) {
-      console.warn('[acr] no supported audio MIME type for MediaRecorder');
-      if (destNode) analyserNode.disconnect(destNode);
-      return null;
-    }
-
-    const recorder = new MediaRecorder(stream, { mimeType });
-    const chunks = [];
-    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-
-    const done = new Promise(resolve => {
-      recorder.onstop = async () => {
-        if (destNode) {
-          try { analyserNode.disconnect(destNode); } catch (e) { /* ok */ }
-        }
-        if (chunks.length === 0) { resolve(null); return; }
-        const blob = new Blob(chunks, { type: mimeType });
-        if (blob.size < 100) { resolve(null); return; } // Too small to be useful
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(blob);
-      };
-    });
-
-    recorder.start();
-    await delay(durationSec * 1000);
-    if (recorder.state === 'recording') recorder.stop();
-
-    const result = await done;
-    console.log('[acr] captured audio snippet:', result ? (result.length / 1024).toFixed(1) + 'KB' : 'failed');
-    return result;
-  } catch (e) {
-    console.warn('[acr] audio capture failed:', e);
-    return null;
-  }
+  return SongRecognizer.captureSnippet(audioCtx, analyserNode, durationSec);
 }
 
-// ── Transition Confirmation Flow ──
-// Called when local audio intelligence suspects a transition.
-// Uses spectral divergence as primary gate, ACRCloud as optional confirmation.
-async function confirmTransition(provider) {
-  const SR = SONG_RECOGNITION;
-  const divergence = getSpectralDivergence();
-
-  console.log('[transition] checking — spectral divergence:', divergence.toFixed(3),
-    'window:', SR.spectralWindow.length);
-
-  // If not enough spectral data yet, allow the transition
-  // (better to allow than to silently block all transitions)
-  if (SR.spectralWindow.length < 20) {
-    console.log('[transition] insufficient spectral data — allowing transition');
-    return true;
-  }
-
-  // Gate 1: Spectral divergence very low — likely same song section, suppress
-  if (divergence < 0.08) {
-    console.log('[transition] spectral divergence too low — probably same song, suppressing');
-    return false;
-  }
-
-  // Gate 2: If divergence is high, confirm immediately (clear song change)
-  if (divergence > 0.25) {
-    console.log('[transition] high spectral divergence — confirming transition');
-    return true;
-  }
-
-  // Gate 3: Moderate divergence — use ACRCloud to confirm if available
-  if (SR.acrEnabled && provider && provider._analyser && provider._audioCtx) {
-    console.log('[transition] moderate divergence — checking ACRCloud...');
-    const result = await recognizeSong(provider._analyser, provider._audioCtx);
-    if (result && result.title) {
-      const prevTitle = document.getElementById('trackName').textContent || '';
-      const isNew = result.title !== prevTitle;
-      if (isNew) {
-        console.log('[transition] ACRCloud confirms new song:', result.title);
-        return true;
-      } else {
-        console.log('[transition] ACRCloud says same song — suppressing transition');
-        return false;
-      }
-    }
-    // ACRCloud couldn't identify — fall through
-  }
-
-  // Fallback: moderate divergence — allow transition
-  console.log('[transition] moderate divergence — allowing transition');
-  return true;
-}
 
 
 // ══ MODULE: auth.js ══
@@ -8864,11 +9060,12 @@ MusicProviders.local = {
         this._source = this._audioCtx.createMediaStreamSource(stream);
         this._source.connect(this._analyser);
         this._startTime = Date.now();
-        // Fixed mid-point progress so scenes render at reasonable intensity
         songProg = 0.45;
         progMult = 0.55 + songProg * 0.7;
-        // Hide progress bar — meaningless for mic/system modes
         document.getElementById('pgWrap').style.display = 'none';
+        // Start adaptive threshold calibration
+        TransitionDetector.reset();
+        TransitionDetector.startCalibration();
         // If ACRCloud is enabled, hide track info initially — recognition will populate it
         // If not, show generic label
         if (SONG_RECOGNITION.acrEnabled) {
@@ -8901,11 +9098,12 @@ MusicProviders.local = {
         this._source = this._audioCtx.createMediaStreamSource(stream);
         this._source.connect(this._analyser);
         this._startTime = Date.now();
-        // Fixed mid-point progress so scenes render at reasonable intensity
         songProg = 0.45;
         progMult = 0.55 + songProg * 0.7;
-        // Hide progress bar — meaningless for mic/system modes
         document.getElementById('pgWrap').style.display = 'none';
+        // Start adaptive threshold calibration
+        TransitionDetector.reset();
+        TransitionDetector.startCalibration();
         // If ACRCloud is enabled, hide track info initially — recognition will populate it
         if (SONG_RECOGNITION.acrEnabled) {
           setTrackInfo('Listening...', '', true);
@@ -8952,49 +9150,26 @@ MusicProviders.local = {
     }
   },
 
-  // ── Song recognition (ACRCloud) for mic/system modes ──
-  // Two-layer detection:
-  //   1. Periodic polling every 45s — reliable backbone, catches every song change
-  //   2. Energy detection — can trigger faster catches between polls
-  // Spectral pre-filter prevents wasted API calls when the song hasn't changed.
+  // ── Song recognition — periodic polling + energy-triggered ──
   _acrInterval: null,
   _startPeriodicRecognition() {
     const self = this;
 
-    // Helper: recognize and handle result (used by both initial and periodic checks)
+    // Helper: recognize and handle result
     function checkAndTransition(label) {
-      if (!self._analyser || !self._audioCtx || !SONG_RECOGNITION.acrEnabled) return;
-      if (inTrans) { console.log('[' + label + '] skipped — transition in progress'); return; }
+      if (!self._analyser || !self._audioCtx || !SongRecognizer.enabled) return;
+      if (inTrans) return;
 
-      SONG_RECOGNITION.acrLastCall = 0;
-      recognizeSong(self._analyser, self._audioCtx).then(result => {
-        if (!result || !result.title) {
-          console.log('[' + label + '] no match');
-          return;
-        }
-
-        const currentAcrid = SONG_RECOGNITION._currentAcrid || '';
-        const currentTitle = document.getElementById('trackName').textContent || '';
-        const newAcrid = result.acrid || '';
-        const isSameSong = (newAcrid && newAcrid === currentAcrid) ||
-          (!newAcrid && result.title === currentTitle);
-
-        if (isSameSong) {
+      SongRecognizer.lastCall = 0;
+      SongRecognizer.recognize(self._analyser, self._audioCtx).then(result => {
+        if (!result || !result.title) { console.log('[' + label + '] no match'); return; }
+        if (!SongRecognizer.isNewSong(result)) {
           console.log('[' + label + '] same song:', result.title);
           return;
         }
-
-        // New song detected — full AI theme transition
         console.log('[' + label + '] NEW song:', result.title, '—', result.artist);
-        SONG_RECOGNITION._currentAcrid = newAcrid;
-        setTrackInfo(result.title, result.artist, true);
-        document.getElementById('trackName').style.display = '';
-        document.getElementById('artistName').style.display = '';
-        const tid = 'acr_' + (newAcrid || Date.now());
-        lastTid = tid;
-        self._transitionCooldown = 45000;
-        SONG_RECOGNITION.spectralWindow = [];
-        loadTheme(tid, result.title, result.artist, [], false, 180000);
+        TransitionDetector.transitionCooldown = 45000;
+        SongRecognizer.commitNewSong(result);
       });
     }
 
@@ -9003,9 +9178,8 @@ MusicProviders.local = {
 
     // Periodic check every 45s — the reliable backbone
     this._acrInterval = setInterval(() => {
-      // Spectral pre-filter: skip if audio hasn't changed
-      const div = getSpectralDivergence();
-      if (div < 0.06 && SONG_RECOGNITION.spectralWindow.length >= 20) {
+      const div = SpectralAnalyzer.getDivergence();
+      if (div < 0.06 && SpectralAnalyzer.window.length >= 20) {
         console.log('[acr-poll] low divergence (' + div.toFixed(3) + ') — skipping');
         return;
       }
@@ -9013,70 +9187,43 @@ MusicProviders.local = {
     }, 45000);
   },
 
-  // Transition to a new scene, with song recognition determining the theme.
-  // The current scene continues playing while recognition happens in the background.
-  // Once recognition completes: new song → AI-themed transition. Same song → do nothing.
-  // Recognition failure → do nothing (stay on current scene, don't disrupt).
+  // Energy-triggered transition — uses ACRCloud to confirm before transitioning
   _transitionWithRecognition() {
-    if (!SONG_RECOGNITION.acrEnabled || !this._analyser || !this._audioCtx) {
-      // No recognition available — immediate random scene swap
+    if (!SongRecognizer.enabled || !this._analyser || !this._audioCtx) {
       skipToNextScene();
       return;
     }
 
-    // Current scene keeps playing — recognition happens in background
-    console.log('[local] transition triggered — recognizing song (current scene continues)...');
+    console.log('[local] energy trigger — recognizing song...');
     const self = this;
 
-    // Wait 5s for new song to be clearly playing (past any crossfade overlap)
+    // Wait 5s for new song to stabilize past crossfade overlap
     setTimeout(() => {
       if (!self._analyser || !self._audioCtx) return;
 
-      // Pre-filter: check spectral divergence before spending an API call
-      // If the audio sounds the same as before, skip the ACRCloud call entirely
-      const divergence = getSpectralDivergence();
-      console.log('[local] spectral divergence:', divergence.toFixed(3));
-      if (divergence < 0.06 && SONG_RECOGNITION.spectralWindow.length >= 20) {
-        console.log('[local] low spectral divergence — likely same song, skipping API call');
-        return; // Stay on current scene, no API call wasted
+      // Pre-filter: spectral divergence check before spending API call
+      const div = SpectralAnalyzer.getDivergence();
+      console.log('[local] spectral divergence:', div.toFixed(3));
+      if (div < 0.06 && SpectralAnalyzer.window.length >= 20) {
+        console.log('[local] low divergence — skipping API call');
+        return;
       }
 
-      // Clear ACR cooldown to ensure a fresh API call
-      SONG_RECOGNITION.acrLastCall = 0;
-      recognizeSong(self._analyser, self._audioCtx).then(result => {
-        if (result && result.title) {
-          // Check if this is actually a different song than what's currently displayed
-          const currentTitle = document.getElementById('trackName').textContent || '';
-          const currentAcrid = SONG_RECOGNITION._currentAcrid || '';
-          const newAcrid = result.acrid || '';
-
-          // Compare by ACR ID first (most reliable), fall back to title comparison
-          const isSameSong = (newAcrid && newAcrid === currentAcrid) ||
-            (!newAcrid && result.title === currentTitle);
-
-          if (isSameSong) {
-            console.log('[local] same song still playing:', result.title, '— no transition');
-            return; // Do nothing — current scene continues
-          }
-
-          console.log('[local] NEW song confirmed:', result.title, '—', result.artist);
-          // Store the new song's ACR ID for future comparisons
-          SONG_RECOGNITION._currentAcrid = newAcrid;
-          // Update the persistent bottom-left track display
-          setTrackInfo(result.title, result.artist, true);
-          document.getElementById('trackName').style.display = '';
-          document.getElementById('artistName').style.display = '';
-          // Full AI theme transition — single clean transition with song info
-          const tid = 'acr_' + (newAcrid || Date.now());
-          lastTid = tid;
-          loadTheme(tid, result.title, result.artist, [], false, 180000);
-        } else {
-          // Could not identify — stay on current scene, don't disrupt
-          console.log('[local] could not identify song — staying on current scene');
+      SongRecognizer.lastCall = 0;
+      SongRecognizer.recognize(self._analyser, self._audioCtx).then(result => {
+        if (!result || !result.title) {
+          console.log('[local] could not identify — staying on current scene');
+          return;
         }
+        if (!SongRecognizer.isNewSong(result)) {
+          console.log('[local] same song:', result.title, '— no transition');
+          return;
+        }
+        console.log('[local] NEW song confirmed:', result.title, '—', result.artist);
+        TransitionDetector.transitionCooldown = 45000;
+        SongRecognizer.commitNewSong(result);
       }).catch(e => {
         console.warn('[local] recognition error:', e);
-        // Don't disrupt — stay on current scene
       });
     }, 5000);
   },
@@ -9236,143 +9383,24 @@ MusicProviders.local = {
     }
 
     // ── Local audio intelligence ──
-    // Compute spectral features for smarter transition detection
     if (this._freqData) {
       computeSpectralFeatures(this._freqData);
     }
 
-    // Track rolling energy for surprise + transition detection
-    if (!this._energyWindow) this._energyWindow = [];
-    if (!this._surpriseCooldown) this._surpriseCooldown = 0;
-    if (!this._transitionCooldown) this._transitionCooldown = 0;
-    if (!this._rollingPeak) this._rollingPeak = 0;
-    if (!this._dipDetected) this._dipDetected = false;
-    if (!this._dipEnergy) this._dipEnergy = 0;
-    if (!this._preDipEnergy) this._preDipEnergy = 0;
-    if (!this._hardCutState) this._hardCutState = 0; // 0=watching, 1=silence detected
+    // ── Transition detection via TransitionDetector ──
+    const detection = TransitionDetector.update(energy, this._mode);
 
-    this._energyWindow.push(energy);
-    if (this._energyWindow.length > 80) this._energyWindow.shift(); // ~8 sec window at 100ms
-    this._surpriseCooldown = Math.max(0, this._surpriseCooldown - 100);
-    this._transitionCooldown = Math.max(0, this._transitionCooldown - 100);
-
-    // Diagnostic logging every 10s
-    if (!this._diagTimer) this._diagTimer = 0;
-    this._diagTimer += 100;
-    if (this._diagTimer >= 10000) {
-      this._diagTimer = 0;
-      const recent6 = this._energyWindow.slice(-6);
-      const older20 = this._energyWindow.slice(-30, -10);
-      const rAvg = recent6.length ? (recent6.reduce((a,b)=>a+b,0)/recent6.length).toFixed(3) : '?';
-      const oAvg = older20.length ? (older20.reduce((a,b)=>a+b,0)/older20.length).toFixed(3) : '?';
-      console.log(`[local-diag] mode=${this._mode} energy=${energy.toFixed(3)} recent=${rAvg} older=${oAvg} tCooldown=${Math.round(this._transitionCooldown/1000)}s dipDetected=${this._dipDetected} hardCut=${this._hardCutState} window=${this._energyWindow.length}`);
+    if (detection.surprise) {
+      setTimeout(fireSurprise, 200);
+      surpriseFired = true;
     }
 
-    // Update rolling peak (decays slowly)
-    if (energy > this._rollingPeak) this._rollingPeak = energy;
-    else this._rollingPeak *= 0.999;
-
-    if (this._energyWindow.length >= 20) {
-      const recent = this._energyWindow.slice(-6);
-      const older = this._energyWindow.slice(-30, -10);
-      const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
-      const olderAvg = older.length > 0 ? older.reduce((a, b) => a + b, 0) / older.length : recentAvg;
-
-      // ── Mode-aware thresholds ──
-      // Mic mode has much less dynamic range (speaker → air → mic compression)
-      // so thresholds must be significantly lower
-      const isMic = this._mode === 'mic';
-      const TH = isMic ? {
-        // Mic thresholds (lower energy, compressed dynamics)
-        surpriseEnergy: 0.35,    // vs 0.55 for direct
-        surpriseAbove: 0.06,     // vs 0.12
-        crossfadeDrop: 0.10,     // vs 0.22
-        crossfadeBaseline: 0.18, // vs 0.35
-        crossfadeRise: 0.08,     // vs 0.15
-        crossfadeRiseAbove: 0.05,// vs 0.12
-        hardCutSilence: 0.02,    // vs 0.04
-        hardCutBaseline: 0.12,   // vs 0.28
-        hardCutRecovery: 0.08,   // vs 0.18
-      } : {
-        // Direct audio thresholds (system audio / file — full dynamic range)
-        surpriseEnergy: 0.55,
-        surpriseAbove: 0.12,
-        crossfadeDrop: 0.22,
-        crossfadeBaseline: 0.35,
-        crossfadeRise: 0.15,
-        crossfadeRiseAbove: 0.12,
-        hardCutSilence: 0.04,
-        hardCutBaseline: 0.28,
-        hardCutRecovery: 0.18,
-      };
-
-      // ── SURPRISE: fire during intense peaks ──
-      if (this._surpriseCooldown <= 0 && !surpriseFired) {
-        const isIntense = recentAvg > TH.surpriseEnergy && recentAvg > olderAvg + TH.surpriseAbove;
-        const nearPeak = recentAvg > this._rollingPeak * 0.8;
-        if (isIntense && nearPeak) {
-          setTimeout(fireSurprise, 200);
-          surpriseFired = true;
-          this._surpriseCooldown = 30000; // 30s cooldown
-        }
-      }
-
-      // ── DJ CROSSFADE TRANSITION: detect energy dip-and-rise pattern ──
-      if (!this._dipDetected && this._transitionCooldown <= 0) {
-        const dropAmount = olderAvg - recentAvg;
-        if (dropAmount > TH.crossfadeDrop && olderAvg > TH.crossfadeBaseline) {
-          this._dipDetected = true;
-          this._dipEnergy = recentAvg;
-          this._preDipEnergy = olderAvg;
-          this._dipTime = Date.now();
-          console.log('[local] dip detected — drop:', dropAmount.toFixed(3),
-            'from baseline:', olderAvg.toFixed(3), '(mode:', this._mode, ')');
-        }
-      }
-      if (this._dipDetected) {
-        const timeSinceDip = Date.now() - (this._dipTime || 0);
-        const riseAmount = recentAvg - this._dipEnergy;
-        if (riseAmount > TH.crossfadeRise && recentAvg > this._dipEnergy + TH.crossfadeRiseAbove && timeSinceDip > 1750) {
-          console.log('[local] DJ crossfade detected — dip:', this._preDipEnergy.toFixed(2),
-            '→', this._dipEnergy.toFixed(2), '→ rise:', recentAvg.toFixed(2));
-          this._dipDetected = false;
-          this._transitionCooldown = 45000; // 45s cooldown
-          surpriseFired = false;
-          this._rollingPeak = recentAvg;
-          SONG_RECOGNITION.spectralWindow = [];
-          this._transitionWithRecognition();
-        }
-        if (timeSinceDip > 15000) {
-          this._dipDetected = false;
-        }
-      }
-
-      // ── HARD CUT: detect abrupt silence then new audio (skip/next track) ──
-      if (this._transitionCooldown <= 0) {
-        const veryRecent = this._energyWindow.slice(-3);
-        const veryRecentAvg = veryRecent.reduce((a, b) => a + b, 0) / veryRecent.length;
-        if (this._hardCutState === 0) {
-          if (veryRecentAvg < TH.hardCutSilence && olderAvg > TH.hardCutBaseline) {
-            this._hardCutState = 1;
-            this._hardCutTime = Date.now();
-          }
-        } else if (this._hardCutState === 1) {
-          const timeSinceCut = Date.now() - (this._hardCutTime || 0);
-          if (veryRecentAvg > TH.hardCutRecovery) {
-            console.log('[local] hard cut detected — silence then new audio');
-            this._hardCutState = 0;
-            this._transitionCooldown = 45000;
-            this._dipDetected = false;
-            surpriseFired = false;
-            this._rollingPeak = veryRecentAvg;
-            SONG_RECOGNITION.spectralWindow = [];
-            this._transitionWithRecognition();
-          }
-          if (timeSinceCut > 8000) {
-            this._hardCutState = 0;
-          }
-        }
-      }
+    if (detection.crossfade || detection.hardCut) {
+      const type = detection.crossfade ? 'crossfade' : 'hard-cut';
+      console.log('[local]', type, 'detected — triggering recognition flow');
+      surpriseFired = false;
+      SpectralAnalyzer.reset();
+      this._transitionWithRecognition();
     }
   },
 
@@ -9397,12 +9425,11 @@ MusicProviders.local = {
     if (this._acrInterval) { clearInterval(this._acrInterval); this._acrInterval = null; }
     this._cleanup();
     this._mode = null;
-    // Reset spectral analysis state
-    SONG_RECOGNITION.spectralWindow = [];
-    SONG_RECOGNITION.prevSpectrum = null;
-    SONG_RECOGNITION.acrLastResult = null;
-    SONG_RECOGNITION._currentAcrid = '';
-    // Restore track info visibility and progress bar for next provider
+    // Reset all subsystems
+    SpectralAnalyzer.reset();
+    SongRecognizer.reset();
+    TransitionDetector.reset();
+    // Restore UI for next provider
     document.getElementById('pgWrap').style.display = '';
     document.getElementById('trackName').style.display = '';
     document.getElementById('artistName').style.display = '';
