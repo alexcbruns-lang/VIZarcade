@@ -8953,30 +8953,64 @@ MusicProviders.local = {
   },
 
   // ── Song recognition (ACRCloud) for mic/system modes ──
-  // Hybrid approach: recognize once on session start, then only after confirmed transitions.
-  // This minimizes API calls while still showing "now playing" when it matters.
+  // Two-layer detection:
+  //   1. Periodic polling every 45s — reliable backbone, catches every song change
+  //   2. Energy detection — can trigger faster catches between polls
+  // Spectral pre-filter prevents wasted API calls when the song hasn't changed.
   _acrInterval: null,
   _startPeriodicRecognition() {
     const self = this;
-    // Initial recognition after 5s (give audio time to stabilize)
-    setTimeout(() => {
-      if (!self._analyser || !self._audioCtx) return;
-      if (!SONG_RECOGNITION.acrEnabled) return;
+
+    // Helper: recognize and handle result (used by both initial and periodic checks)
+    function checkAndTransition(label) {
+      if (!self._analyser || !self._audioCtx || !SONG_RECOGNITION.acrEnabled) return;
+      if (inTrans) { console.log('[' + label + '] skipped — transition in progress'); return; }
+
+      SONG_RECOGNITION.acrLastCall = 0;
       recognizeSong(self._analyser, self._audioCtx).then(result => {
-        if (result && result.title) {
-          setTrackInfo(result.title, result.artist, true);
-          document.getElementById('trackName').style.display = '';
-          document.getElementById('artistName').style.display = '';
-          console.log('[acr] initial recognition:', result.title, '—', result.artist);
-          // Store ACR ID for same-song detection on future transitions
-          SONG_RECOGNITION._currentAcrid = result.acrid || '';
-          // Also trigger AI theme for the initial song
-          const tid = 'acr_' + (result.acrid || Date.now());
-          lastTid = tid;
-          loadTheme(tid, result.title, result.artist, [], false, 180000);
+        if (!result || !result.title) {
+          console.log('[' + label + '] no match');
+          return;
         }
+
+        const currentAcrid = SONG_RECOGNITION._currentAcrid || '';
+        const currentTitle = document.getElementById('trackName').textContent || '';
+        const newAcrid = result.acrid || '';
+        const isSameSong = (newAcrid && newAcrid === currentAcrid) ||
+          (!newAcrid && result.title === currentTitle);
+
+        if (isSameSong) {
+          console.log('[' + label + '] same song:', result.title);
+          return;
+        }
+
+        // New song detected — full AI theme transition
+        console.log('[' + label + '] NEW song:', result.title, '—', result.artist);
+        SONG_RECOGNITION._currentAcrid = newAcrid;
+        setTrackInfo(result.title, result.artist, true);
+        document.getElementById('trackName').style.display = '';
+        document.getElementById('artistName').style.display = '';
+        const tid = 'acr_' + (newAcrid || Date.now());
+        lastTid = tid;
+        self._transitionCooldown = 45000;
+        SONG_RECOGNITION.spectralWindow = [];
+        loadTheme(tid, result.title, result.artist, [], false, 180000);
       });
-    }, 5000);
+    }
+
+    // Initial recognition after 5s
+    setTimeout(() => checkAndTransition('acr-init'), 5000);
+
+    // Periodic check every 45s — the reliable backbone
+    this._acrInterval = setInterval(() => {
+      // Spectral pre-filter: skip if audio hasn't changed
+      const div = getSpectralDivergence();
+      if (div < 0.06 && SONG_RECOGNITION.spectralWindow.length >= 20) {
+        console.log('[acr-poll] low divergence (' + div.toFixed(3) + ') — skipping');
+        return;
+      }
+      checkAndTransition('acr-poll');
+    }, 45000);
   },
 
   // Transition to a new scene, with song recognition determining the theme.
