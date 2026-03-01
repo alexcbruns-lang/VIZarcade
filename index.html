@@ -8929,6 +8929,9 @@ MusicProviders.spotify = {
   _nextTrack: null,       // {id, name, artists, explicit, duration_ms, albumArt} — next track from queue
   _preloadingTid: null,   // tid currently being preloaded (prevents duplicate fetches)
   _preloadPromise: null,  // promise for in-flight preload
+  _rapidMode: false,      // true when polling at 1s near song end
+  _rapidTimeout: null,    // setTimeout for scheduling rapid mode start
+  _pollBusy: false,       // prevents overlapping poll calls
 
   async init() {
     // Check for OAuth callback
@@ -8953,38 +8956,61 @@ MusicProviders.spotify = {
       return false; // Page will redirect, init doesn't complete
     }
 
-    // Start polling
+    // Start polling — adaptive rate (normal 5s, rapid 1s near song end)
     this.poll();
-    this._interval = setInterval(() => this.poll(), 5000);
+    this._interval = setInterval(() => this.poll(), 1000);
     return true;
   },
 
   async poll() {
-    const d = await spGet('me/player/currently-playing');
-    if (!d || !d.item) return;
-    const tr = d.item, tid = tr.id;
-    MS.progress = d.progress_ms || 0;
-    MS.duration = tr.duration_ms || 180000;
-    MS.analysisStart = Date.now() - MS.progress;
-    MS.beatInterval = 500;
-    MS.energy = d.is_playing ? 0.6 : 0.3;
-    if (tid !== lastTid) {
-      lastTid = tid;
-      // Clear preload state — current song changed, next-track info is stale
-      this._nextTrack = null;
-      this._preloadingTid = null;
-      this._preloadPromise = null;
-      setTrackInfo(tr.name, tr.artists.map(a => a.name).join(', '), true);
-      const art = tr.album && tr.album.images && tr.album.images[0] ? tr.album.images[0].url : null;
-      if (art) { document.getElementById('albumArt').src = art; document.getElementById('albumArt').style.display = ''; }
-      loadTheme(tid, tr.name, tr.artists.map(a => a.name).join(', '),
-        tr.artists.map(a => a.id), tr.explicit, tr.duration_ms);
+    // Skip if previous poll still in flight (prevents pile-up)
+    if (this._pollBusy) return;
+    // In normal mode, only poll every 5s (the interval fires every 1s for rapid mode)
+    const now = Date.now();
+    if (!this._rapidMode) {
+      if (this._lastPoll && now - this._lastPoll < 4500) return;
     }
+    this._pollBusy = true;
+    this._lastPoll = now;
+    try {
+      const d = await spGet('me/player/currently-playing');
+      if (!d || !d.item) { this._pollBusy = false; return; }
+      const tr = d.item, tid = tr.id;
+      MS.progress = d.progress_ms || 0;
+      MS.duration = tr.duration_ms || 180000;
+      MS.analysisStart = Date.now() - MS.progress;
+      MS.beatInterval = 500;
+      MS.energy = d.is_playing ? 0.6 : 0.3;
+      if (tid !== lastTid) {
+        lastTid = tid;
+        // Song changed — exit rapid mode, clear preload state
+        this._rapidMode = false;
+        this._nextTrack = null;
+        this._preloadingTid = null;
+        this._preloadPromise = null;
+        if (this._rapidTimeout) { clearTimeout(this._rapidTimeout); this._rapidTimeout = null; }
+        setTrackInfo(tr.name, tr.artists.map(a => a.name).join(', '), true);
+        const art = tr.album && tr.album.images && tr.album.images[0] ? tr.album.images[0].url : null;
+        if (art) { document.getElementById('albumArt').src = art; document.getElementById('albumArt').style.display = ''; }
+        loadTheme(tid, tr.name, tr.artists.map(a => a.name).join(', '),
+          tr.artists.map(a => a.id), tr.explicit, tr.duration_ms);
+      }
 
-    // ── Pre-load next track theme when approaching end of current song ──
-    // Trigger at 75% through song (gives ~60s on a 4min track for AI to generate)
-    if (d.is_playing && songProg > 0.75 && !this._preloadingTid) {
-      this._preloadNextTheme();
+      // ── Preload + rapid poll scheduling ──
+      if (d.is_playing && MS.duration > 0) {
+        const remaining = MS.duration - MS.progress;
+        // Start preloading next theme at 75% through song
+        if (songProg > 0.75 && !this._preloadingTid) {
+          this._preloadNextTheme();
+        }
+        // Enter rapid polling mode in last 6 seconds of song
+        if (remaining < 6000 && remaining > 0 && !this._rapidMode) {
+          this._rapidMode = true;
+          console.log('[spotify] rapid polling — song ends in', Math.round(remaining/1000), 's');
+        }
+      }
+    } finally {
+      this._pollBusy = false;
     }
   },
 
@@ -9034,9 +9060,12 @@ MusicProviders.spotify = {
 
   destroy() {
     if (this._interval) { clearInterval(this._interval); this._interval = null; }
+    if (this._rapidTimeout) { clearTimeout(this._rapidTimeout); this._rapidTimeout = null; }
     this._nextTrack = null;
     this._preloadingTid = null;
     this._preloadPromise = null;
+    this._rapidMode = false;
+    this._pollBusy = false;
   }
 };
 
