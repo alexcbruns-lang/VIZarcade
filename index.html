@@ -8830,7 +8830,15 @@ function extractKW(title){const stop=new Set(['a','an','the','in','of','to','and
 async function loadTheme(tid,name,artist,artistIds,isExplicit,durationMs){
   // Skip if this exact theme is already active (prevents re-splashing same song)
   if(aiCache[tid] && tid === lastTid && !inTrans){return;}
-  if(aiCache[tid]){applyTheme(name,artist,aiCache[tid]);return;}
+  // If cached and this IS the current song, apply immediately (instant transition)
+  if(aiCache[tid] && tid === lastTid){
+    const cached=aiCache[tid];
+    recordScene(cached.scene);recordCP(cached.centerpiece);
+    applyTheme(name,artist,cached);
+    return;
+  }
+  // If cached but NOT the current song, this is a preloaded theme — nothing to do yet
+  if(aiCache[tid] && tid !== lastTid){return;}
   // Use provider-agnostic genre fetch
   let genres=[];
   try{genres=await getProviderGenres(artistIds);}catch{}
@@ -8849,8 +8857,16 @@ async function loadTheme(tid,name,artist,artistIds,isExplicit,durationMs){
     const cpX=Math.min(0.9,Math.max(0.1,parseFloat(raw.centerpieceX)||0.5));
     const cpY=Math.min(0.9,Math.max(0.1,parseFloat(raw.centerpieceY)||0.5));
     const theme={scene,label:raw.label||'',splashDesc:raw.splashDesc||'',palette:Array.isArray(raw.palette)&&raw.palette.length===4?raw.palette:['#ff006e','#8338ec','#06ffd8','#ffbe0b'],bgColor:raw.bgColor||'#000010',centerpiece:cp,centerpieceScale:Math.min(1.5,Math.max(0,parseFloat(raw.centerpieceScale)||0.5)),centerpieceX:cpX,centerpieceY:cpY,centerpieceBehavior:VALID_BEH.includes(raw.centerpieceBehavior)?raw.centerpieceBehavior:'rotate',beatReactions:reactions.length?reactions:['shockwave'],sceneSpeed:Math.min(3,Math.max(0.3,parseFloat(raw.sceneSpeed)||1)),sceneIntensity:Math.min(1,Math.max(0,parseFloat(raw.sceneIntensity)||0.7)),energy:Math.min(1,Math.max(0,parseFloat(raw.energy)||0.5)),chaos:Math.min(1,Math.max(0,parseFloat(raw.chaos)||0.4))};
-    recordScene(scene);recordCP(cp);
-    aiCache[tid]=theme;applyTheme(name,artist,theme);
+    // Cache the theme
+    aiCache[tid]=theme;
+    // Only apply (transition + record) if this is the currently playing song
+    // If tid !== lastTid, this is a preload — just cache it for later
+    if(tid === lastTid){
+      recordScene(scene);recordCP(cp);
+      applyTheme(name,artist,theme);
+    } else {
+      console.log('[preload] theme cached for:', name, '→', scene);
+    }
   }catch(e){console.error('[AI]',e);}
 }
 
@@ -8908,6 +8924,9 @@ function setTrackInfo(track, artist, showInfo) {
 MusicProviders.spotify = {
   name: 'Spotify',
   _interval: null,
+  _nextTrack: null,       // {id, name, artists, explicit, duration_ms, albumArt} — next track from queue
+  _preloadingTid: null,   // tid currently being preloaded (prevents duplicate fetches)
+  _preloadPromise: null,  // promise for in-flight preload
 
   async init() {
     // Check for OAuth callback
@@ -8949,11 +8968,57 @@ MusicProviders.spotify = {
     MS.energy = d.is_playing ? 0.6 : 0.3;
     if (tid !== lastTid) {
       lastTid = tid;
+      // Clear preload state — current song changed, next-track info is stale
+      this._nextTrack = null;
+      this._preloadingTid = null;
+      this._preloadPromise = null;
       setTrackInfo(tr.name, tr.artists.map(a => a.name).join(', '), true);
       const art = tr.album && tr.album.images && tr.album.images[0] ? tr.album.images[0].url : null;
       if (art) { document.getElementById('albumArt').src = art; document.getElementById('albumArt').style.display = ''; }
       loadTheme(tid, tr.name, tr.artists.map(a => a.name).join(', '),
         tr.artists.map(a => a.id), tr.explicit, tr.duration_ms);
+    }
+
+    // ── Pre-load next track theme when approaching end of current song ──
+    // Trigger at 75% through song (gives ~60s on a 4min track for AI to generate)
+    if (d.is_playing && songProg > 0.75 && !this._preloadingTid) {
+      this._preloadNextTheme();
+    }
+  },
+
+  // Fetch the Spotify queue and pre-generate AI theme for the next track
+  async _preloadNextTheme() {
+    try {
+      const q = await spGet('me/player/queue');
+      if (!q || !q.queue || q.queue.length === 0) return;
+      const next = q.queue[0];
+      if (!next || !next.id || next.id === lastTid) return;
+      // Already cached — nothing to do
+      if (aiCache[next.id]) {
+        console.log('[preload] next track already cached:', next.name);
+        return;
+      }
+      // Store next track info for instant display on switch
+      this._nextTrack = {
+        id: next.id,
+        name: next.name,
+        artists: next.artists || [],
+        explicit: next.explicit,
+        duration_ms: next.duration_ms,
+        albumArt: (next.album && next.album.images && next.album.images[0]) ? next.album.images[0].url : null
+      };
+      // Mark as preloading so we don't re-fetch
+      this._preloadingTid = next.id;
+      console.log('[preload] generating theme for next track:', next.name, 'by', (next.artists||[]).map(a=>a.name).join(', '));
+      // Fire and forget — loadTheme will cache the result in aiCache
+      this._preloadPromise = loadTheme(
+        next.id, next.name,
+        (next.artists || []).map(a => a.name).join(', '),
+        (next.artists || []).map(a => a.id),
+        next.explicit, next.duration_ms
+      );
+    } catch (e) {
+      console.warn('[preload] queue fetch failed:', e);
     }
   },
 
@@ -8967,6 +9032,9 @@ MusicProviders.spotify = {
 
   destroy() {
     if (this._interval) { clearInterval(this._interval); this._interval = null; }
+    this._nextTrack = null;
+    this._preloadingTid = null;
+    this._preloadPromise = null;
   }
 };
 
