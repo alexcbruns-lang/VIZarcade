@@ -280,6 +280,7 @@ let cpBounceVY = 0.5 + (Math.random() - 0.5) * 0.3;
 let cpDriftX = 0, cpDriftY = 0;
 let beatReactionIdx = 0, beatCount = 0;
 let energyHist = [], surpriseFired = false, surpriseArmed = false, midShifted = false;
+let _songStartTime = 0; // timestamp when current song transition completed — surprises blocked for 60s after
 let energyPeak = 0, climaxArmed = false;
 let gridGlitch = false;
 let devSurpriseLock = false;
@@ -720,7 +721,7 @@ const TransitionDetector = {
 
     // ── Surprise (uses per-song calibrated thresholds) ──
     const STH = this.surpriseThresholds || TH;
-    if (this.surpriseCooldown <= 0 && !surpriseFired && !this.surpriseCalibrating) {
+    if (this.surpriseCooldown <= 0 && !surpriseFired && !this.surpriseCalibrating && (Date.now() - _songStartTime) >= 60000) {
       const isIntense = recentAvg > STH.surpriseEnergy && recentAvg > olderAvg + STH.surpriseAbove;
       if (isIntense && recentAvg > this.rollingPeak * 0.8) {
         result.surprise = true;
@@ -8830,12 +8831,13 @@ function triggerBeat() {
   if (sc === 'CARNIVAL' && SD.ferrisRot != null) SD.ferrisRot += 0.15;
   if (sc === 'OMNIA_NIGHTCLUB' && SD.chandelierY != null) SD.chandelierY = Math.max(H() * 0.05, SD.chandelierY - 20 * (1 + progMult));
 
-  // Surprise detection
+  // Surprise detection — blocked for 60s after song transition
   pushEnergy(SM.energy);
-  if (!devSurpriseLock && !surpriseFired && songProg > 0.55) {
+  const _surpriseCooldownActive = (Date.now() - _songStartTime) < 60000;
+  if (!devSurpriseLock && !surpriseFired && !_surpriseCooldownActive && songProg > 0.55) {
     if (spikeDetected()) { setTimeout(fireSurprise, 200); surpriseFired = true; }
   }
-  if (!devSurpriseLock && !surpriseFired && songProg > 0.88) { setTimeout(fireSurprise, 0); surpriseFired = true; }
+  if (!devSurpriseLock && !surpriseFired && !_surpriseCooldownActive && songProg > 0.88) { setTimeout(fireSurprise, 0); surpriseFired = true; }
 }
 
 
@@ -8904,6 +8906,7 @@ async function transition(name,artist,theme){
   splash.style.transition='opacity 0.8s ease';splash.style.opacity='0';
   await delay(900);
   splash.classList.remove('show');splash.style.opacity='';splash.style.transition='';
+  _songStartTime = Date.now(); // block surprises for 60s after song transition
   inTrans=false;
 }
 
