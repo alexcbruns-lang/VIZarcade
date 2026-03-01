@@ -130,7 +130,8 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
   <div class="dp-monitor" id="dpMonitor">
     Scene: <span id="dpCurScene">—</span> &nbsp;│&nbsp; CP: <span id="dpCurCP">—</span><br>
     Energy: <span id="dpEnergy">0</span> &nbsp;│&nbsp; BPM: <span id="dpBPM">0</span> &nbsp;│&nbsp; Beat: <span id="dpBeatCt">0</span><br>
-    Prog: <span id="dpProg">0%</span> &nbsp;│&nbsp; Surprise: <span id="dpSurprise">—</span>
+    Prog: <span id="dpProg">0%</span> &nbsp;│&nbsp; Surprise: <span id="dpSurprise">—</span><br>
+    DJ Sig: <span id="dpDJSig">—</span>
   </div>
   <div class="dp-section">
     <h3>▸ Jump to Scene</h3>
@@ -147,6 +148,14 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
     </div>
     <div style="margin-top:6px">
       <button class="dp-btn fire" id="dpFireRandom" style="width:100%">🎲 Random Surprise</button>
+    </div>
+  </div>
+  <div class="dp-section">
+    <h3>▸ DJ Signature</h3>
+    <div class="dp-grid-3">
+      <button class="dp-btn fire" id="dpDJSigTest">🎧 Test DJ Sig</button>
+      <button class="dp-btn fire" id="dpDJSigCycle">🔄 Cycle DJ</button>
+      <button class="dp-btn fire" id="dpDJSigStop">⏹ Stop</button>
     </div>
   </div>
   <div class="dp-section">
@@ -302,7 +311,649 @@ const ALL_CPS = ['skull', 'flaming_skull', 'skull_crossbones', 'smiley', 'demon_
 
 const CP_INTEGRATED_SCENES = new Set(['WARP_SPEED', 'DEEP_SEA', 'STORM_CHASER', 'CARNIVAL', 'JUNKYARD', 'EGYPTIAN_TOMB', 'ELECTRIC_FOREST', 'ACID_TRIP', 'NEON_CATHEDRAL', 'SPACE_STATION', 'LAVA_WORLD', 'DISCO_DIMENSION', 'CLASSIC_ARCADE', 'GOTHAM', 'DAY_OF_DEAD', 'MOUNT_OLYMPUS', 'ATLANTIS', 'JUNGLE_RAVE', 'CYBER_GRID', 'OMNIA_NIGHTCLUB']);
 
+// ══ DJ SIGNATURE SYSTEM ══
+// When a recognized DJ's track is playing, their stylized name morphs in
+// to replace the centerpiece during energy peaks — scene-themed rendering.
 
+// ── Scenes where DJ signature should NOT appear (deeply integrated centerpieces) ──
+const DJ_SIG_EXCLUDED_SCENES = new Set(['JUNKYARD', 'CLASSIC_ARCADE', 'CARNIVAL']);
+
+// ── DJ database: lowercase artist name → { display: stylized name, style: rendering hint } ──
+// Styles: 'angular' (sharp/geometric), 'fluid' (wavy/organic), 'glitch' (digital/fragmented),
+//         'bold' (heavy/impactful), 'neon' (luminous/electric), 'elegant' (refined/flowing)
+const DJ_DATABASE = {
+  'tiësto': { display: 'TIËSTO', style: 'bold' },
+  'tiesto': { display: 'TIËSTO', style: 'bold' },
+  'david guetta': { display: 'GUETTA', style: 'bold' },
+  'calvin harris': { display: 'CALVIN HARRIS', style: 'neon' },
+  'martin garrix': { display: 'GARRIX', style: 'angular' },
+  'marshmello': { display: 'MARSHMELLO', style: 'fluid' },
+  'skrillex': { display: 'SKRILLEX', style: 'glitch' },
+  'deadmau5': { display: 'deadmau5', style: 'glitch' },
+  'armin van buuren': { display: 'ARMIN', style: 'elegant' },
+  'avicii': { display: 'AVICII', style: 'elegant' },
+  'zedd': { display: 'ZEDD', style: 'neon' },
+  'diplo': { display: 'DIPLO', style: 'bold' },
+  'kygo': { display: 'KYGO', style: 'fluid' },
+  'illenium': { display: 'ILLENIUM', style: 'elegant' },
+  'alesso': { display: 'ALESSO', style: 'neon' },
+  'afrojack': { display: 'AFROJACK', style: 'bold' },
+  'steve aoki': { display: 'AOKI', style: 'bold' },
+  'above & beyond': { display: 'A&B', style: 'elegant' },
+  'above and beyond': { display: 'A&B', style: 'elegant' },
+  'eric prydz': { display: 'PRYDZ', style: 'angular' },
+  'carl cox': { display: 'CARL COX', style: 'bold' },
+  'fisher': { display: 'FISHER', style: 'bold' },
+  'dom dolla': { display: 'DOM DOLLA', style: 'angular' },
+  'fred again..': { display: 'FRED AGAIN', style: 'fluid' },
+  'fred again': { display: 'FRED AGAIN', style: 'fluid' },
+  'four tet': { display: 'FOUR TET', style: 'glitch' },
+  'jamie xx': { display: 'JAMIE XX', style: 'glitch' },
+  'disclosure': { display: 'DISCLOSURE', style: 'angular' },
+  'flume': { display: 'FLUME', style: 'fluid' },
+  'odesza': { display: 'ODESZA', style: 'elegant' },
+  'rufus du sol': { display: 'RÜFÜS', style: 'elegant' },
+  'rüfüs du sol': { display: 'RÜFÜS', style: 'elegant' },
+  'swedish house mafia': { display: 'SHM', style: 'bold' },
+  'the chainsmokers': { display: 'CHAINSMOKERS', style: 'neon' },
+  'chainsmokers': { display: 'CHAINSMOKERS', style: 'neon' },
+  'major lazer': { display: 'MAJOR LAZER', style: 'bold' },
+  'dj snake': { display: 'DJ SNAKE', style: 'angular' },
+  'excision': { display: 'EXCISION', style: 'glitch' },
+  'bassnectar': { display: 'BASSNECTAR', style: 'glitch' },
+  'porter robinson': { display: 'PORTER', style: 'elegant' },
+  'madeon': { display: 'MADEON', style: 'neon' },
+  'san holo': { display: 'SAN HOLO', style: 'fluid' },
+  'griz': { display: 'GRiZ', style: 'fluid' },
+  'seven lions': { display: 'SEVEN LIONS', style: 'elegant' },
+  'kaskade': { display: 'KASKADE', style: 'elegant' },
+  'alison wonderland': { display: 'ALISON', style: 'fluid' },
+  'rezz': { display: 'REZZ', style: 'glitch' },
+  'zeds dead': { display: "ZEDS DEAD", style: 'glitch' },
+  'what so not': { display: 'WHAT SO NOT', style: 'angular' },
+  'getter': { display: 'GETTER', style: 'glitch' },
+  'slander': { display: 'SLANDER', style: 'bold' },
+  'nghtmre': { display: 'NGHTMRE', style: 'glitch' },
+  'jauz': { display: 'JAUZ', style: 'angular' },
+  'borgore': { display: 'BORGORE', style: 'glitch' },
+  'knife party': { display: 'KNIFE PARTY', style: 'angular' },
+  'pendulum': { display: 'PENDULUM', style: 'angular' },
+  'noisia': { display: 'NOISIA', style: 'glitch' },
+  'sub focus': { display: 'SUB FOCUS', style: 'angular' },
+  'chase & status': { display: 'CHASE & STATUS', style: 'bold' },
+  'netsky': { display: 'NETSKY', style: 'fluid' },
+  'andy c': { display: 'ANDY C', style: 'bold' },
+  'dimension': { display: 'DIMENSION', style: 'angular' },
+  'bicep': { display: 'BICEP', style: 'angular' },
+  'lane 8': { display: 'LANE 8', style: 'elegant' },
+  'bonobo': { display: 'BONOBO', style: 'fluid' },
+  'caribou': { display: 'CARIBOU', style: 'fluid' },
+  'jon hopkins': { display: 'JON HOPKINS', style: 'elegant' },
+  'floating points': { display: 'FLOATING POINTS', style: 'fluid' },
+  'aphex twin': { display: 'APHEX TWIN', style: 'glitch' },
+  'amon tobin': { display: 'AMON TOBIN', style: 'glitch' },
+  'the chemical brothers': { display: 'CHEMICAL BROTHERS', style: 'glitch' },
+  'the prodigy': { display: 'PRODIGY', style: 'bold' },
+  'fatboy slim': { display: 'FATBOY SLIM', style: 'bold' },
+  'underworld': { display: 'UNDERWORLD', style: 'elegant' },
+  'paul oakenfold': { display: 'OAKENFOLD', style: 'elegant' },
+  'paul van dyk': { display: 'PVD', style: 'elegant' },
+  'ferry corsten': { display: 'CORSTEN', style: 'elegant' },
+  'markus schulz': { display: 'SCHULZ', style: 'elegant' },
+  'aly & fila': { display: 'ALY & FILA', style: 'elegant' },
+  'gareth emery': { display: 'GARETH EMERY', style: 'elegant' },
+  'cosmic gate': { display: 'COSMIC GATE', style: 'elegant' },
+  'andrew bayer': { display: 'BAYER', style: 'elegant' },
+  'giuseppe ottaviani': { display: 'OTTAVIANI', style: 'elegant' },
+  'john digweed': { display: 'DIGWEED', style: 'angular' },
+  'sasha': { display: 'SASHA', style: 'elegant' },
+  'richie hawtin': { display: 'HAWTIN', style: 'angular' },
+  'adam beyer': { display: 'ADAM BEYER', style: 'angular' },
+  'charlotte de witte': { display: 'CHARLOTTE', style: 'angular' },
+  'amelie lens': { display: 'AMELIE LENS', style: 'angular' },
+  'nina kraviz': { display: 'KRAVIZ', style: 'angular' },
+  'boris brejcha': { display: 'BREJCHA', style: 'angular' },
+  'tale of us': { display: 'TALE OF US', style: 'elegant' },
+  'artbat': { display: 'ARTBAT', style: 'angular' },
+  'anyma': { display: 'ANYMA', style: 'elegant' },
+  'mind against': { display: 'MIND AGAINST', style: 'angular' },
+  'maceo plex': { display: 'MACEO PLEX', style: 'angular' },
+  'solomun': { display: 'SOLOMUN', style: 'fluid' },
+  'dixon': { display: 'DIXON', style: 'elegant' },
+  'peggy gou': { display: 'PEGGY GOU', style: 'neon' },
+  'black coffee': { display: 'BLACK COFFEE', style: 'elegant' },
+  'hot since 82': { display: 'HOT SINCE 82', style: 'angular' },
+  'camelphat': { display: 'CAMELPHAT', style: 'angular' },
+  'cristoph': { display: 'CRISTOPH', style: 'angular' },
+  'ben böhmer': { display: 'BEN BÖHMER', style: 'fluid' },
+  'ben bohmer': { display: 'BEN BÖHMER', style: 'fluid' },
+  'eli & fur': { display: 'ELI & FUR', style: 'fluid' },
+  'yotto': { display: 'YOTTO', style: 'elegant' },
+  'tinlicker': { display: 'TINLICKER', style: 'elegant' },
+  'marsh': { display: 'MARSH', style: 'fluid' },
+  'nora en pure': { display: 'NORA EN PURE', style: 'fluid' },
+  'joris voorn': { display: 'JORIS VOORN', style: 'elegant' },
+  'kölsch': { display: 'KÖLSCH', style: 'elegant' },
+  'kolsch': { display: 'KÖLSCH', style: 'elegant' },
+  'oliver heldens': { display: 'HELDENS', style: 'neon' },
+  'don diablo': { display: 'DON DIABLO', style: 'neon' },
+  'nicky romero': { display: 'NICKY ROMERO', style: 'bold' },
+  'hardwell': { display: 'HARDWELL', style: 'bold' },
+  'r3hab': { display: 'R3HAB', style: 'neon' },
+  'timmy trumpet': { display: 'TIMMY TRUMPET', style: 'bold' },
+  'blasterjaxx': { display: 'BLASTERJAXX', style: 'bold' },
+  'w&w': { display: 'W&W', style: 'bold' },
+  'nervo': { display: 'NERVO', style: 'neon' },
+  'krewella': { display: 'KREWELLA', style: 'neon' },
+  'galantis': { display: 'GALANTIS', style: 'neon' },
+  'clean bandit': { display: 'CLEAN BANDIT', style: 'elegant' },
+  'robin schulz': { display: 'ROBIN SCHULZ', style: 'fluid' },
+  'lost frequencies': { display: 'LOST FREQ', style: 'fluid' },
+  'felix jaehn': { display: 'FELIX JAEHN', style: 'fluid' },
+  'kungs': { display: 'KUNGS', style: 'fluid' },
+  'meduza': { display: 'MEDUZA', style: 'neon' },
+  'john summit': { display: 'JOHN SUMMIT', style: 'bold' },
+  'chris lake': { display: 'CHRIS LAKE', style: 'angular' },
+  'green velvet': { display: 'GREEN VELVET', style: 'angular' },
+  'claude vonstroke': { display: 'VONSTROKE', style: 'angular' },
+  'lee foss': { display: 'LEE FOSS', style: 'angular' },
+  'patrick topping': { display: 'TOPPING', style: 'angular' },
+  'jamie jones': { display: 'JAMIE JONES', style: 'fluid' },
+  'the martinez brothers': { display: 'MARTINEZ BROS', style: 'bold' },
+  'joseph capriati': { display: 'CAPRIATI', style: 'angular' },
+  'loco dice': { display: 'LOCO DICE', style: 'bold' },
+  'marco carola': { display: 'CAROLA', style: 'angular' },
+  'seth troxler': { display: 'TROXLER', style: 'fluid' },
+  'dubfire': { display: 'DUBFIRE', style: 'angular' },
+  'nicole moudaber': { display: 'MOUDABER', style: 'angular' },
+  'anna': { display: 'ANNA', style: 'angular' },
+  'deborah de luca': { display: 'DEBORAH', style: 'angular' },
+  'i_o': { display: 'I_O', style: 'angular' },
+  'deadmau5': { display: 'deadmau5', style: 'glitch' },
+  'grimes': { display: 'GRIMES', style: 'glitch' },
+  'rl grime': { display: 'RL GRIME', style: 'glitch' },
+  'baauer': { display: 'BAAUER', style: 'glitch' },
+  'hudson mohawke': { display: 'HUDMO', style: 'glitch' },
+  'rustie': { display: 'RUSTIE', style: 'glitch' },
+  'kaytranada': { display: 'KAYTRA', style: 'fluid' },
+  'tokimonsta': { display: 'TOKiMONSTA', style: 'fluid' },
+  'flying lotus': { display: 'FLYLO', style: 'glitch' },
+  'justice': { display: 'JUSTICE', style: 'bold' },
+  'daft punk': { display: 'DAFT PUNK', style: 'neon' },
+  'gesaffelstein': { display: 'GESAFFELSTEIN', style: 'angular' },
+  'boys noize': { display: 'BOYS NOIZE', style: 'glitch' },
+  'tiga': { display: 'TIGA', style: 'angular' },
+  'sven väth': { display: 'SVEN VÄTH', style: 'angular' },
+  'sven vath': { display: 'SVEN VÄTH', style: 'angular' },
+  'jeff mills': { display: 'JEFF MILLS', style: 'angular' },
+  'derrick may': { display: 'DERRICK MAY', style: 'angular' },
+  'kevin saunderson': { display: 'SAUNDERSON', style: 'bold' },
+  'carl craig': { display: 'CARL CRAIG', style: 'elegant' },
+  'laurent garnier': { display: 'GARNIER', style: 'elegant' },
+  'the blessed madonna': { display: 'BLESSED MADONNA', style: 'bold' },
+  'honey dijon': { display: 'HONEY DIJON', style: 'elegant' },
+  'ben nicky': { display: 'BEN NICKY', style: 'bold' },
+  'vini vici': { display: 'VINI VICI', style: 'bold' },
+  'infected mushroom': { display: 'INFECTED', style: 'glitch' },
+  'astrix': { display: 'ASTRIX', style: 'bold' },
+  'ace ventura': { display: 'ACE VENTURA', style: 'bold' },
+  'neelix': { display: 'NEELIX', style: 'bold' },
+  'liquid soul': { display: 'LIQUID SOUL', style: 'fluid' },
+  'arty': { display: 'ARTY', style: 'elegant' },
+  'audien': { display: 'AUDIEN', style: 'neon' },
+  'andrew rayel': { display: 'RAYEL', style: 'elegant' },
+  'tritonal': { display: 'TRITONAL', style: 'elegant' },
+  'ilan bluestone': { display: 'BLUESTONE', style: 'elegant' },
+  'jason ross': { display: 'JASON ROSS', style: 'elegant' },
+  'grum': { display: 'GRUM', style: 'elegant' },
+  'spencer brown': { display: 'SPENCER BROWN', style: 'elegant' },
+  'durant': { display: 'DURANT', style: 'angular' },
+  'wooli': { display: 'WOOLI', style: 'glitch' },
+  'subtronics': { display: 'SUBTRONICS', style: 'glitch' },
+  'svdden death': { display: 'SVDDEN DEATH', style: 'glitch' },
+  'sullivan king': { display: 'SULLIVAN KING', style: 'glitch' },
+  'kai wachi': { display: 'KAI WACHI', style: 'glitch' },
+  'virtual riot': { display: 'VIRTUAL RIOT', style: 'glitch' },
+  'barely alive': { display: 'BARELY ALIVE', style: 'glitch' },
+  'eptic': { display: 'EPTIC', style: 'glitch' },
+  'must die!': { display: 'MUST DIE!', style: 'glitch' },
+  'zomboy': { display: 'ZOMBOY', style: 'glitch' },
+  'flux pavilion': { display: 'FLUX', style: 'glitch' },
+  'doctor p': { display: 'DOCTOR P', style: 'glitch' },
+  'nero': { display: 'NERO', style: 'angular' },
+  'feed me': { display: 'FEED ME', style: 'glitch' },
+  'kill the noise': { display: 'KTN', style: 'glitch' },
+  'twelve\'th hour': { display: "12TH HOUR", style: 'glitch' },
+  'said the sky': { display: 'SAID THE SKY', style: 'elegant' },
+  'dabin': { display: 'DABIN', style: 'elegant' },
+  'trivecta': { display: 'TRIVECTA', style: 'elegant' },
+  'last heroes': { display: 'LAST HEROES', style: 'elegant' },
+  'crystal skies': { display: 'CRYSTAL SKIES', style: 'elegant' },
+  'mitis': { display: 'MitiS', style: 'elegant' },
+  'william black': { display: 'WILLIAM BLACK', style: 'elegant' },
+  'nurko': { display: 'NURKO', style: 'elegant' },
+  'blanke': { display: 'BLANKE', style: 'bold' },
+  'au5': { display: 'AU5', style: 'neon' },
+  'kill paris': { display: 'KILL PARIS', style: 'fluid' },
+  'Big Wild': { display: 'BIG WILD', style: 'fluid' },
+  'big wild': { display: 'BIG WILD', style: 'fluid' },
+  'jai wolf': { display: 'JAI WOLF', style: 'fluid' },
+  'kasbo': { display: 'KASBO', style: 'fluid' },
+  'petit biscuit': { display: 'PETIT BISCUIT', style: 'fluid' },
+  'thomas jack': { display: 'THOMAS JACK', style: 'fluid' },
+  'bob moses': { display: 'BOB MOSES', style: 'elegant' },
+  'tale of us': { display: 'TALE OF US', style: 'elegant' },
+  'adriatique': { display: 'ADRIATIQUE', style: 'elegant' },
+  'stephan bodzin': { display: 'BODZIN', style: 'elegant' },
+  'recondite': { display: 'RECONDITE', style: 'elegant' },
+  'moderat': { display: 'MODERAT', style: 'glitch' },
+  'monolink': { display: 'MONOLINK', style: 'elegant' },
+  'wankelmut': { display: 'WANKELMUT', style: 'fluid' },
+  'claptone': { display: 'CLAPTONE', style: 'elegant' },
+  'purple disco machine': { display: 'PDM', style: 'neon' },
+  'duke dumont': { display: 'DUKE DUMONT', style: 'angular' },
+  'gorgon city': { display: 'GORGON CITY', style: 'angular' },
+  'elderbrook': { display: 'ELDERBROOK', style: 'fluid' },
+  'rüfüs': { display: 'RÜFÜS', style: 'elegant' },
+  'rufus': { display: 'RÜFÜS', style: 'elegant' },
+  'lp giobbi': { display: 'LP GIOBBI', style: 'neon' },
+  'aluna': { display: 'ALUNA', style: 'neon' },
+  'hannah wants': { display: 'HANNAH WANTS', style: 'angular' },
+  'solardo': { display: 'SOLARDO', style: 'angular' },
+  'mason maynard': { display: 'MAYNARD', style: 'angular' },
+  'alan walker': { display: 'WALKER', style: 'neon' },
+  'san holo': { display: 'SAN HOLO', style: 'fluid' },
+  'droeloe': { display: 'DROELOE', style: 'fluid' },
+  'elephante': { display: 'ELEPHANTE', style: 'neon' },
+  'gryffin': { display: 'GRYFFIN', style: 'neon' },
+  'two friends': { display: 'TWO FRIENDS', style: 'neon' },
+  'louis the child': { display: 'LOUIS THE CHILD', style: 'fluid' },
+  'whethan': { display: 'WHETHAN', style: 'fluid' },
+  'ookay': { display: 'OOKAY', style: 'fluid' },
+  'ekali': { display: 'EKALI', style: 'fluid' },
+  'drake': { display: 'DRAKE', style: 'bold' },
+  'kanye west': { display: 'KANYE', style: 'bold' },
+  'ye': { display: 'YE', style: 'bold' },
+  'travis scott': { display: 'TRAVIS', style: 'glitch' },
+  'metro boomin': { display: 'METRO', style: 'glitch' },
+  'the weeknd': { display: 'THE WEEKND', style: 'neon' },
+};
+
+// ── DJ Signature state ──
+let djSig = {
+  active: false,        // true when a recognized DJ is playing
+  artist: null,         // matched DJ_DATABASE entry {display, style}
+  morph: 0,             // 0 = full centerpiece, 1 = full DJ signature
+  phase: 'idle',        // 'idle' | 'morphIn' | 'hold' | 'morphOut'
+  holdTimer: 0,         // timestamp when hold phase started
+  holdDuration: 7000,   // 5-8s sustained presence (randomized per trigger)
+  triggered: false,     // has signature fired this song? (one per song)
+  particles: [],        // scene-specific effect particles (lava drips, sparks, etc.)
+  glitchOffset: 0,      // for glitch-style rendering
+  phaseAnim: 0,         // general animation phase
+};
+
+// ── Match current artist against DJ database ──
+function matchDJArtist(artistStr) {
+  if (!artistStr) return null;
+  // Split on commas and check each artist (primary first)
+  const artists = artistStr.split(',').map(a => a.trim().toLowerCase());
+  for (const name of artists) {
+    if (DJ_DATABASE[name]) return DJ_DATABASE[name];
+  }
+  return null;
+}
+
+// ── Called on song change to set up DJ signature for new track ──
+function setupDJSignature(artistStr) {
+  const match = matchDJArtist(artistStr);
+  djSig.active = !!match;
+  djSig.artist = match;
+  djSig.morph = 0;
+  djSig.phase = 'idle';
+  djSig.holdTimer = 0;
+  djSig.triggered = false;
+  djSig.particles = [];
+  djSig.glitchOffset = 0;
+  djSig.phaseAnim = 0;
+}
+
+// ── Check if DJ signature should trigger (called from triggerBeat) ──
+function checkDJSigTrigger() {
+  if (!djSig.active || djSig.triggered || djSig.phase !== 'idle') return;
+  if (DJ_SIG_EXCLUDED_SCENES.has(THEME.scene)) return;
+  // Only trigger between 40% and 85% of song, with energy peak
+  if (songProg < 0.40 || songProg > 0.85) return;
+  // Need sustained high energy — use same spikeDetected logic
+  if (energyHist.length < 20) return;
+  const recent = energyHist.slice(-4).reduce((a, b) => a + b, 0) / 4;
+  const base = energyHist.slice(-25, -8).reduce((a, b) => a + b, 0) / Math.max(1, energyHist.slice(-25, -8).length);
+  const isClimax = recent > base + 0.12 && recent > 0.45;
+  if (!isClimax) return;
+  // Fire the signature!
+  djSig.phase = 'morphIn';
+  djSig.triggered = true;
+  djSig.holdDuration = 5000 + Math.random() * 3000; // 5-8s
+  djSig.particles = [];
+}
+
+// ── Update morph state each frame ──
+function updateDJSigMorph() {
+  if (!djSig.active || djSig.phase === 'idle') return;
+  djSig.phaseAnim += 0.02;
+  const morphSpeed = 0.035; // ~0.5s morph at 60fps
+
+  switch (djSig.phase) {
+    case 'morphIn':
+      djSig.morph = Math.min(1, djSig.morph + morphSpeed);
+      if (djSig.morph >= 1) {
+        djSig.phase = 'hold';
+        djSig.holdTimer = Date.now();
+      }
+      break;
+    case 'hold':
+      djSig.morph = 1;
+      if (Date.now() - djSig.holdTimer > djSig.holdDuration) {
+        djSig.phase = 'morphOut';
+      }
+      break;
+    case 'morphOut':
+      djSig.morph = Math.max(0, djSig.morph - morphSpeed);
+      if (djSig.morph <= 0) {
+        djSig.phase = 'idle';
+        djSig.particles = [];
+      }
+      break;
+  }
+}
+
+// ── Scene-specific DJ signature rendering ──
+// Returns true if signature was drawn (caller should skip centerpiece proportionally)
+function drawDJSignature(ctx, x, y, sz, scene) {
+  if (!djSig.active || djSig.morph <= 0 || !djSig.artist) return false;
+  const dj = djSig.artist;
+  const alpha = djSig.morph;
+  const e = SM.energy, bp = SM.beatPulse;
+  const t = djSig.phaseAnim;
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Scale pulse with beat
+  const beatScale = 1 + bp * 0.15 + e * 0.05;
+  ctx.scale(beatScale, beatScale);
+
+  // Choose scene-specific renderer
+  const renderer = DJ_SIG_SCENE_STYLES[scene] || _djSigDefault;
+  renderer(ctx, dj, sz, alpha, e, bp, t);
+
+  ctx.restore();
+
+  // Update particles
+  _updateDJSigParticles(ctx, x, y, sz, scene);
+
+  return true;
+}
+
+// ── Scene style registry ──
+const DJ_SIG_SCENE_STYLES = {};
+
+// ── Cyber Grid: electric/glitch text ──
+DJ_SIG_SCENE_STYLES['CYBER_GRID'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.55;
+  ctx.font = `900 ${fontSize}px 'Courier New', monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Glitch offset layers
+  const glitchAmt = bp * 8 + Math.sin(t * 12) * 2;
+  const scanY = (Math.sin(t * 3) * sz * 0.4);
+
+  // Shadow/echo layers with RGB split
+  ctx.globalAlpha = alpha * 0.4;
+  ctx.fillStyle = '#ff0040';
+  ctx.fillText(dj.display, -glitchAmt, glitchAmt * 0.5);
+  ctx.fillStyle = '#00ffff';
+  ctx.fillText(dj.display, glitchAmt, -glitchAmt * 0.5);
+
+  // Main text
+  ctx.globalAlpha = alpha * 0.95;
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowBlur = 20 + bp * 30;
+  ctx.shadowColor = pc(0);
+  ctx.fillText(dj.display, 0, 0);
+  ctx.shadowBlur = 0;
+
+  // Scan line effect
+  ctx.globalAlpha = alpha * 0.3;
+  ctx.fillStyle = pc(1);
+  ctx.fillRect(-sz * 0.6, scanY, sz * 1.2, 2);
+
+  // Electric arcs from text edges (on beat)
+  if (bp > 0.4) {
+    const tw = ctx.measureText(dj.display).width;
+    ctx.strokeStyle = rgba(pc(0), alpha * bp);
+    ctx.lineWidth = 1.5;
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = pc(0);
+    for (let i = 0; i < 3; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      ctx.beginPath();
+      ctx.moveTo(side * tw * 0.5, (Math.random() - 0.5) * fontSize * 0.6);
+      let ex = side * (tw * 0.5 + 20 + Math.random() * 30);
+      let ey = (Math.random() - 0.5) * fontSize;
+      ctx.lineTo(side * tw * 0.5 + (ex - side * tw * 0.5) * 0.5, ey * 0.3 + (Math.random() - 0.5) * 15);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+  }
+  ctx.globalAlpha = 1;
+};
+
+// ── Lava World: fiery text with heat shimmer and dripping particles ──
+DJ_SIG_SCENE_STYLES['LAVA_WORLD'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.55;
+  ctx.font = `900 ${fontSize}px 'Impact', 'Arial Black', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Heat shimmer offset
+  const shimX = Math.sin(t * 5) * 2 * e;
+  const shimY = Math.cos(t * 7) * 1.5 * e;
+
+  // Molten glow under text
+  ctx.globalAlpha = alpha * 0.5;
+  const glow = ctx.createRadialGradient(0, fontSize * 0.2, 0, 0, fontSize * 0.2, sz * 0.7);
+  glow.addColorStop(0, 'rgba(255,100,0,0.6)');
+  glow.addColorStop(0.5, 'rgba(255,40,0,0.2)');
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.fillRect(-sz * 0.7, -sz * 0.5, sz * 1.4, sz * 1.0);
+
+  // Main text — hot white/yellow core
+  ctx.globalAlpha = alpha * 0.95;
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowBlur = 25 + bp * 20;
+  ctx.shadowColor = '#ff4400';
+  ctx.fillText(dj.display, shimX, shimY);
+
+  // Orange outline layer
+  ctx.globalAlpha = alpha * 0.7;
+  ctx.fillStyle = '#ff6600';
+  ctx.shadowBlur = 40;
+  ctx.shadowColor = '#ff2200';
+  ctx.fillText(dj.display, shimX + 1, shimY + 1);
+  ctx.shadowBlur = 0;
+
+  // Spawn lava drip particles from text bottom
+  if (Math.random() < 0.3 + bp * 0.4) {
+    const tw = ctx.measureText(dj.display).width;
+    djSig.particles.push({
+      x: (Math.random() - 0.5) * tw * 0.8,
+      y: fontSize * 0.3,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: 0.5 + Math.random() * 1.5,
+      life: 1,
+      sz: 2 + Math.random() * 4,
+      ci: Math.random() < 0.5 ? '#ff4400' : '#ffaa00'
+    });
+  }
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Neon Cathedral: ethereal glow with stained glass color cycling ──
+DJ_SIG_SCENE_STYLES['NEON_CATHEDRAL'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.5;
+  ctx.font = `300 ${fontSize}px 'Georgia', serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Stained glass color cycling halo
+  ctx.globalAlpha = alpha * 0.3;
+  const haloR = sz * 0.65;
+  for (let i = 0; i < 5; i++) {
+    const angle = t * 0.5 + i * Math.PI * 2 / 5;
+    const hx = Math.cos(angle) * haloR * 0.15;
+    const hy = Math.sin(angle) * haloR * 0.1;
+    const hg = ctx.createRadialGradient(hx, hy, 0, hx, hy, haloR * (0.6 + bp * 0.2));
+    hg.addColorStop(0, rgba(pc(i % 4), 0.4));
+    hg.addColorStop(1, 'transparent');
+    ctx.fillStyle = hg;
+    ctx.fillRect(-sz, -sz * 0.6, sz * 2, sz * 1.2);
+  }
+
+  // Light rays emanating upward on beat
+  if (bp > 0.2) {
+    ctx.globalAlpha = alpha * bp * 0.25;
+    for (let r = 0; r < 7; r++) {
+      const rayX = (r - 3) * fontSize * 0.15;
+      const rayW = 2 + Math.random() * 3;
+      ctx.fillStyle = rgba(pc(r % 4), 0.5);
+      ctx.fillRect(rayX - rayW / 2, -sz * 0.5 - bp * sz * 0.3, rayW, sz * 0.4 + bp * sz * 0.2);
+    }
+  }
+
+  // Ethereal text with multi-layered glow
+  ctx.globalAlpha = alpha * 0.5;
+  ctx.fillStyle = pc(0);
+  ctx.shadowBlur = 40 + bp * 20;
+  ctx.shadowColor = pc(0);
+  ctx.fillText(dj.display, 0, 0);
+
+  ctx.globalAlpha = alpha * 0.9;
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowBlur = 15;
+  ctx.shadowColor = pc(1);
+  ctx.fillText(dj.display, 0, 0);
+  ctx.shadowBlur = 0;
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Warp Speed: streak/motion trail text ──
+DJ_SIG_SCENE_STYLES['WARP_SPEED'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.55;
+  ctx.font = `900 ${fontSize}px 'Arial Black', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Motion trail — draw fading copies behind
+  const trails = 6;
+  for (let i = trails; i >= 1; i--) {
+    const trailAlpha = alpha * (1 - i / trails) * 0.3;
+    const trailZ = i * (5 + e * 8 + bp * 12);
+    const trailScale = 1 - i * 0.04;
+    ctx.globalAlpha = trailAlpha;
+    ctx.fillStyle = rgba(pc(i % 4), 0.7);
+    ctx.save();
+    ctx.scale(trailScale, trailScale);
+    ctx.fillText(dj.display, 0, trailZ);
+    ctx.restore();
+  }
+
+  // Speed lines from text edges
+  if (bp > 0.3) {
+    const tw = ctx.measureText(dj.display).width;
+    ctx.strokeStyle = rgba(pc(0), alpha * bp * 0.6);
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+      const sy = (Math.random() - 0.5) * fontSize * 0.8;
+      const side = Math.random() < 0.5 ? -1 : 1;
+      ctx.beginPath();
+      ctx.moveTo(side * tw * 0.55, sy);
+      ctx.lineTo(side * (tw * 0.55 + 15 + Math.random() * 40), sy);
+      ctx.stroke();
+    }
+  }
+
+  // Main text — bright core
+  ctx.globalAlpha = alpha * 0.95;
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowBlur = 20 + bp * 15;
+  ctx.shadowColor = pc(0);
+  ctx.fillText(dj.display, 0, 0);
+  ctx.shadowBlur = 0;
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Default: generic beat-pulsing glow ──
+function _djSigDefault(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.5;
+  ctx.font = `800 ${fontSize}px 'Arial Black', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Glow halo
+  ctx.globalAlpha = alpha * 0.4;
+  const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, sz * 0.7);
+  glow.addColorStop(0, rgba(pc(0), 0.5));
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.fillRect(-sz * 0.8, -sz * 0.5, sz * 1.6, sz * 1.0);
+
+  // Palette-colored shadow
+  ctx.globalAlpha = alpha * 0.6;
+  ctx.fillStyle = pc(0);
+  ctx.shadowBlur = 30 + bp * 25;
+  ctx.shadowColor = pc(0);
+  ctx.fillText(dj.display, 0, 0);
+
+  // White core text
+  ctx.globalAlpha = alpha * 0.95;
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowBlur = 12 + bp * 10;
+  ctx.shadowColor = pc(1);
+  ctx.fillText(dj.display, 0, 0);
+  ctx.shadowBlur = 0;
+
+  ctx.globalAlpha = 1;
+}
+
+// ── Update & draw scene-specific particles (lava drips, sparks, etc.) ──
+function _updateDJSigParticles(ctx, cx, cy, sz, scene) {
+  if (djSig.particles.length === 0) return;
+  ctx.save();
+  ctx.translate(cx, cy);
+  for (let i = djSig.particles.length - 1; i >= 0; i--) {
+    const p = djSig.particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.08; // gravity
+    p.life -= 0.015;
+    if (p.life <= 0) { djSig.particles.splice(i, 1); continue; }
+    ctx.globalAlpha = p.life * djSig.morph;
+    ctx.fillStyle = p.ci || pc(0);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.sz * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+  // Cap particle count
+  if (djSig.particles.length > 60) djSig.particles.splice(0, djSig.particles.length - 60);
+}
 
 
 // ══ MODULE: songRecognition.js ══
@@ -1209,6 +1860,8 @@ function initScene(){
   if(sc==='EGYPTIAN_TOMB'){SD.hieroglyphs=Array.from({length:40},()=>({x:Math.random()*w,y:Math.random()*h,char:Math.floor(Math.random()*12),ci:Math.floor(Math.random()*4),alpha:Math.random()*0.5+0.2}));SD.torches=Array.from({length:6},(_,i)=>({x:(i/5)*0.9+0.05,ph:Math.random()*Math.PI*2}));SD.tunnelZ=0;SD.traps=[];}
   beatFX={shockwaveR:0,shockwaveA:0,crackLines:[],invertA:0,slamS:1,speedBoost:0,gravityWave:0};
   energyHist=[];surpriseFired=false;surpriseArmed=false;midShifted=false;energyPeak=0;climaxArmed=false;beatReactionIdx=0;beatCount=0;cpRot=0;cpPh=0;cpOrbit=0;cpBounceX=0;cpBounceY=0;cpBounceVX=0.7+(Math.random()-0.5)*0.4;cpBounceVY=0.5+(Math.random()-0.5)*0.3;cpDriftX=0;cpDriftY=0;
+  // Reset DJ signature morph on scene change (artist match persists per song)
+  if (djSig.phase !== 'idle') { djSig.morph = 0; djSig.phase = 'idle'; djSig.particles = []; }
 }
 
 
@@ -8057,6 +8710,34 @@ function drawCPWithBehavior(ctx, t) {
 
 // ── Mini version for scene integrations ────────────────
 function drawCPMini(ctx, name, x, y, sz, rotation) {
+  const morphActive = djSig.active && djSig.morph > 0 && !DJ_SIG_EXCLUDED_SCENES.has(THEME.scene);
+
+  if (morphActive && djSig.morph >= 1) {
+    // Full DJ signature — no centerpiece
+    drawDJSignature(ctx, x, y, sz, THEME.scene);
+    return;
+  }
+
+  if (morphActive && djSig.morph > 0) {
+    // Blending: scale down centerpiece, scale up signature
+    const cpAlpha = 1 - djSig.morph;
+    const cpScale = 0.4 + 0.6 * cpAlpha; // shrinks to 40% at morph=1
+
+    // Draw scaled-down centerpiece
+    ctx.save();
+    ctx.globalAlpha = cpAlpha;
+    ctx.translate(x, y);
+    ctx.rotate(rotation || 0);
+    ctx.scale(cpScale, cpScale);
+    drawCP(ctx, name, sz, cpPh * 100);
+    ctx.restore();
+
+    // Draw DJ signature on top
+    drawDJSignature(ctx, x, y, sz * (0.4 + 0.6 * djSig.morph), THEME.scene);
+    return;
+  }
+
+  // Normal centerpiece (no morph active)
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(rotation || 0);
@@ -8838,6 +9519,9 @@ function triggerBeat() {
     if (spikeDetected()) { setTimeout(fireSurprise, 200); surpriseFired = true; }
   }
   if (!devSurpriseLock && !surpriseFired && !_surpriseCooldownActive && songProg > 0.88) { setTimeout(fireSurprise, 0); surpriseFired = true; }
+
+  // DJ Signature trigger — check for energy peak to morph centerpiece into DJ name
+  checkDJSigTrigger();
 }
 
 
@@ -8967,6 +9651,7 @@ async function loadTheme(tid,name,artist,artistIds,isExplicit,durationMs){
 
 function applyTheme(name, artist, theme) {
   document.getElementById("sceneTag").textContent = (theme.scene || "—").replace(/_/g, " ") + " — " + (theme.label || "");
+  setupDJSignature(artist); // Check if artist is a recognized DJ
   transition(name, artist, theme);
 }
 
@@ -9874,6 +10559,7 @@ function render(t){
   const w=W(),h=H();
   SM.energy+=(MS.energy-SM.energy)*0.05;
   SM.beatPulse*=0.87;
+  updateDJSigMorph(); // Update DJ signature morph animation state
   if(t-MS.lastBeat>MS.beatInterval){MS.lastBeat=t;triggerBeat();}
   if(MS.duration>0){songProg=Math.min(1,(Date.now()-MS.analysisStart)/MS.duration);progMult=0.55+songProg*0.7;}
   document.getElementById('pgBar').style.width=(songProg*100)+'%';
@@ -10069,6 +10755,44 @@ function initDevPanel(){
     console.log('[dev] fired surprise variant',variant,'for scene',THEME.scene);
   }
 
+  // ── DJ Signature dev controls ──
+  const _djTestNames = Object.keys(DJ_DATABASE);
+  let _djTestIdx = 0;
+  document.getElementById('dpDJSigTest').addEventListener('click', () => {
+    // Pick a random DJ and trigger the signature morph
+    const name = _djTestNames[Math.floor(Math.random() * _djTestNames.length)];
+    const entry = DJ_DATABASE[name];
+    djSig.active = true;
+    djSig.artist = entry;
+    djSig.morph = 0;
+    djSig.phase = 'morphIn';
+    djSig.triggered = true;
+    djSig.holdDuration = 7000;
+    djSig.particles = [];
+    console.log('[dev] DJ sig test:', entry.display, '(' + entry.style + ')');
+  });
+  document.getElementById('dpDJSigCycle').addEventListener('click', () => {
+    // Cycle through DJs one by one
+    const name = _djTestNames[_djTestIdx % _djTestNames.length];
+    _djTestIdx++;
+    const entry = DJ_DATABASE[name];
+    djSig.active = true;
+    djSig.artist = entry;
+    djSig.morph = 0;
+    djSig.phase = 'morphIn';
+    djSig.triggered = true;
+    djSig.holdDuration = 5000;
+    djSig.particles = [];
+    console.log('[dev] DJ sig cycle:', entry.display, '(' + entry.style + ') from key:', name);
+  });
+  document.getElementById('dpDJSigStop').addEventListener('click', () => {
+    if (djSig.phase === 'hold' || djSig.phase === 'morphIn') {
+      djSig.phase = 'morphOut';
+    } else {
+      djSig.morph = 0; djSig.phase = 'idle'; djSig.particles = [];
+    }
+  });
+
   // ── Sim audio controls ──
   const simEnergySlider=document.getElementById('dpSimEnergy');
   const simBPMSlider=document.getElementById('dpSimBPM');
@@ -10152,6 +10876,7 @@ function initDevPanel(){
       document.getElementById('dpBeatCt').textContent=beatCount;
       document.getElementById('dpProg').textContent=Math.round(songProg*100)+'%';
       document.getElementById('dpSurprise').textContent=activeSurpriseVariant!==null?('V'+activeSurpriseVariant+' ACTIVE'):(surpriseFired?'FIRED':'armed');
+      document.getElementById('dpDJSig').textContent=djSig.active?(djSig.artist.display+' ['+djSig.phase+(djSig.morph>0?' '+Math.round(djSig.morph*100)+'%':'')+']'):'—';
       // Highlight active scene button
       const btns=document.getElementById('dpSceneGrid').children;
       for(let i=0;i<btns.length;i++){
