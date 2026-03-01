@@ -219,6 +219,32 @@ function h2r(h) {
 function rgba(h, a = 1) { const { r, g, b } = h2r(h); return `rgba(${r},${g},${b},${+a.toFixed(3)})`; }
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
+// ── Performance: soft glow circle (replaces expensive shadowBlur for particles) ──
+// Draws a larger, translucent circle behind the element to simulate glow
+// ~20x faster than shadowBlur for the same visual effect
+function softGlow(ctx, x, y, r, color, alpha) {
+  ctx.fillStyle = rgba(color, alpha * 0.3);
+  ctx.beginPath(); ctx.arc(x, y, r * 2.2, 0, Math.PI * 2); ctx.fill();
+}
+
+// ── OffscreenCanvas cache for static scene elements ──
+// Pre-renders elements that don't change frame-to-frame (buildings, maze, ground, etc.)
+// Call _cacheStatic(key, w, h, drawFn) in initScene, blit with _blitStatic(ctx, key)
+const _staticCache = {};
+function _cacheStatic(key, w, h, drawFn) {
+  const oc = document.createElement('canvas');
+  oc.width = w; oc.height = h;
+  const octx = oc.getContext('2d');
+  drawFn(octx, w, h);
+  _staticCache[key] = oc;
+}
+function _blitStatic(ctx, key) {
+  if (_staticCache[key]) ctx.drawImage(_staticCache[key], 0, 0);
+}
+function _clearStaticCache() {
+  Object.keys(_staticCache).forEach(k => delete _staticCache[k]);
+}
+
 // ── LocalStorage shortcuts ──
 const ls = (k, v) => localStorage.setItem(k, v);
 const lg = k => localStorage.getItem(k);
@@ -1141,6 +1167,7 @@ function resetHistory() {
 
 function initScene(){
   Object.keys(SD).forEach(k => delete SD[k]);
+  _clearStaticCache();
   const w=W(),h=H(),sc=THEME.scene;
   if(sc==='WARP_SPEED'||sc==='SPACE_STATION')SD.stars=Array.from({length:500},()=>({x:(Math.random()-0.5)*2,y:(Math.random()-0.5)*2,z:Math.random(),ci:Math.floor(Math.random()*4),trail:[]}));
   if(sc==='LAVA_WORLD'){SD.embers=Array.from({length:200},()=>mkEmber(true));SD.eruptions=[];}
@@ -1272,7 +1299,7 @@ function drawLavaWorld(t){
   }
   // Embers
   if(!SD.embers)SD.embers=Array.from({length:50},()=>mkEmber(true));
-  for(let i=SD.embers.length-1;i>=0;i--){const e=SD.embers[i];e.x+=e.vx;e.y+=e.vy*(1+SM.energy*0.4);e.life-=0.004;if(e.life<=0||e.y<-20){SD.embers[i]=mkEmber(false);continue;}x0.beginPath();x0.arc(e.x,e.y,e.r*e.life,0,Math.PI*2);x0.fillStyle=rgba(pc(e.ci),e.life*0.9);x0.shadowBlur=8;x0.shadowColor=pc(e.ci);x0.fill();x0.shadowBlur=0;}
+  for(let i=SD.embers.length-1;i>=0;i--){const e=SD.embers[i];e.x+=e.vx;e.y+=e.vy*(1+SM.energy*0.4);e.life-=0.004;if(e.life<=0||e.y<-20){SD.embers[i]=mkEmber(false);continue;}softGlow(x0,e.x,e.y,e.r*e.life,pc(e.ci),e.life);x0.beginPath();x0.arc(e.x,e.y,e.r*e.life,0,Math.PI*2);x0.fillStyle=rgba(pc(e.ci),e.life*0.9);x0.fill();}
   // Eruptions — centerpiece-shaped lava balls arc through sky
   if(!SD.eruptions)SD.eruptions=[];
   if(!SD.lavaBalls)SD.lavaBalls=[];
@@ -1295,7 +1322,7 @@ function drawLavaWorld(t){
     x0.fillStyle=rgba(pc(1),lb.life*0.4);x0.beginPath();x0.arc(lb.x,lb.y+lb.sz*0.6,lb.sz*0.2,0,Math.PI*2);x0.fill();
   }
   // Old eruption particles
-  for(let i=SD.eruptions.length-1;i>=0;i--){const er=SD.eruptions[i];er.life-=0.015;for(const p of er.particles){p.vx*=0.98;p.vy+=0.25;p.life-=0.018;if(p.life>0){x0.beginPath();x0.arc(er.x+p.vx*(1-p.life)*20,er.y-p.vy*(1-p.life)*20,p.life*5,0,Math.PI*2);x0.fillStyle=rgba(pc(p.ci),p.life*0.85);x0.shadowBlur=6;x0.shadowColor=pc(p.ci);x0.fill();x0.shadowBlur=0;}}if(er.life<=0)SD.eruptions.splice(i,1);}
+  for(let i=SD.eruptions.length-1;i>=0;i--){const er=SD.eruptions[i];er.life-=0.015;for(const p of er.particles){p.vx*=0.98;p.vy+=0.25;p.life-=0.018;if(p.life>0){const px2=er.x+p.vx*(1-p.life)*20,py2=er.y-p.vy*(1-p.life)*20;softGlow(x0,px2,py2,p.life*5,pc(p.ci),p.life);x0.beginPath();x0.arc(px2,py2,p.life*5,0,Math.PI*2);x0.fillStyle=rgba(pc(p.ci),p.life*0.85);x0.fill();}}if(er.life<=0)SD.eruptions.splice(i,1);}
 }
 
 
@@ -2353,10 +2380,10 @@ function drawJungleRave(t){
   for(let l=0;l<3;l++){const ly=v.len*(0.3+l*0.3);x0.fillStyle=rgba(pc(v.ci),0.25);x0.beginPath();x0.ellipse(v.x+Math.sin(v.swing+(l+2)*0.5)*offset,ly,8,5,v.swing*0.5,0,Math.PI*2);x0.fill();}}
   // Jungle creatures — birds, insects
   if(!SD.creatures){SD.creatures=Array.from({length:6},()=>mkJungleCreature(w,h));}
-  for(let i=SD.creatures.length-1;i>=0;i--){const cr=SD.creatures[i];cr.x+=cr.vx*(1+SM.energy*0.3);cr.ph+=0.02;if(cr.x<-cr.sz*2){SD.creatures[i]=mkJungleCreature(w,h);continue;}x0.save();x0.translate(cr.x,cr.y+Math.sin(cr.ph)*cr.sz*0.08);x0.shadowBlur=20;x0.shadowColor=pc(cr.ci);x0.fillStyle=rgba(pc(cr.ci),0.5*THEME.sceneIntensity*(1+SM.beatPulse*0.15));x0.beginPath();x0.ellipse(0,0,cr.sz*0.5,cr.sz*0.3,0,0,Math.PI*2);x0.fill();x0.shadowBlur=0;x0.restore();}
+  for(let i=SD.creatures.length-1;i>=0;i--){const cr=SD.creatures[i];cr.x+=cr.vx*(1+SM.energy*0.3);cr.ph+=0.02;if(cr.x<-cr.sz*2){SD.creatures[i]=mkJungleCreature(w,h);continue;}x0.save();x0.translate(cr.x,cr.y+Math.sin(cr.ph)*cr.sz*0.08);softGlow(x0,0,0,cr.sz*0.5,pc(cr.ci),0.5*THEME.sceneIntensity);x0.fillStyle=rgba(pc(cr.ci),0.5*THEME.sceneIntensity*(1+SM.beatPulse*0.15));x0.beginPath();x0.ellipse(0,0,cr.sz*0.5,cr.sz*0.3,0,0,Math.PI*2);x0.fill();x0.restore();}
   // Bioluminescent spores rising
   if(!SD.spores){SD.spores=Array.from({length:50},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.3,vy:-(0.2+Math.random()*0.6),r:1.5+Math.random()*3,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)}));}
-  for(const sp of SD.spores){sp.x+=sp.vx+Math.sin(sp.ph*0.5)*0.3;sp.y+=sp.vy*(1+SM.energy*0.2);sp.ph+=0.04;if(sp.y<-5){sp.y=h+5;sp.x=Math.random()*w;}const br=Math.sin(sp.ph)*0.4+0.6;x0.beginPath();x0.arc(sp.x,sp.y,sp.r*br,0,Math.PI*2);x0.fillStyle=rgba(pc(sp.ci),br*0.65*(0.4+songProg*0.7));x0.shadowBlur=8*(0.5+songProg);x0.shadowColor=pc(sp.ci);x0.fill();x0.shadowBlur=0;}
+  for(const sp of SD.spores){sp.x+=sp.vx+Math.sin(sp.ph*0.5)*0.3;sp.y+=sp.vy*(1+SM.energy*0.2);sp.ph+=0.04;if(sp.y<-5){sp.y=h+5;sp.x=Math.random()*w;}const br=Math.sin(sp.ph)*0.4+0.6;softGlow(x0,sp.x,sp.y,sp.r*br,pc(sp.ci),br*0.5*(0.4+songProg*0.7));x0.beginPath();x0.arc(sp.x,sp.y,sp.r*br,0,Math.PI*2);x0.fillStyle=rgba(pc(sp.ci),br*0.65*(0.4+songProg*0.7));x0.fill();}
   // Centerpiece — bioluminescent fruit hanging at center
   if(THEME.centerpiece){
     cpPh+=0.013;cpRot+=0.015;
@@ -2445,13 +2472,13 @@ function drawDiscoDimension(t){
     if(beat>0.4){pB=Math.min(1,pB+beat*0.4);if(superFloor&&Math.random()<0.15)pCi=Math.floor(Math.random()*4);}
     const bright=pB*(0.7+beat*0.5),strobeMult=superFloor?(0.5+Math.sin(t*0.05+tile.ph)*0.5):1;
     const alpha=Math.min(1,(0.15+bright*0.85)*THEME.sceneIntensity*floorBrightMult*strobeMult);
-    const c=h2r(pc(pCi));x0.fillStyle=`rgba(${c.r},${c.g},${c.b},${alpha*(isLight?1:0.5)})`;x0.shadowBlur=alpha>0.5?(12+beat*10+(superFloor?12:0)):0;x0.shadowColor=pc(pCi);
+    const c=h2r(pc(pCi));x0.fillStyle=`rgba(${c.r},${c.g},${c.b},${alpha*(isLight?1:0.5)})`;
     // Draw perspective trapezoid tile
-    x0.beginPath();x0.moveTo(tx,tileY);x0.lineTo(tx+rowTW,tileY);x0.lineTo(txNext+nextRowTW,tileNextY);x0.lineTo(txNext,tileNextY);x0.closePath();x0.fill();x0.shadowBlur=0;
+    x0.beginPath();x0.moveTo(tx,tileY);x0.lineTo(tx+rowTW,tileY);x0.lineTo(txNext+nextRowTW,tileNextY);x0.lineTo(txNext,tileNextY);x0.closePath();x0.fill();
     x0.strokeStyle=`rgba(0,0,0,${0.6+alpha*0.2})`;x0.lineWidth=1.5;
     x0.beginPath();x0.moveTo(tx,tileY);x0.lineTo(tx+rowTW,tileY);x0.lineTo(txNext+nextRowTW,tileNextY);x0.lineTo(txNext,tileNextY);x0.closePath();x0.stroke();
-    if(alpha>0.5||superFloor){x0.fillStyle=`rgba(${c.r},${c.g},${c.b},${(alpha-0.3)*0.35})`;x0.shadowBlur=20;x0.shadowColor=pc(pCi);
-      x0.beginPath();x0.moveTo(tx+2,tileY+2);x0.lineTo(tx+rowTW-2,tileY+2);x0.lineTo(txNext+nextRowTW-2,tileNextY-2);x0.lineTo(txNext+2,tileNextY-2);x0.closePath();x0.fill();x0.shadowBlur=0;}
+    if(alpha>0.5||superFloor){x0.fillStyle=`rgba(${c.r},${c.g},${c.b},${(alpha-0.3)*0.35})`;
+      x0.beginPath();x0.moveTo(tx+2,tileY+2);x0.lineTo(tx+rowTW-2,tileY+2);x0.lineTo(txNext+nextRowTW-2,tileNextY-2);x0.lineTo(txNext+2,tileNextY-2);x0.closePath();x0.fill();}
     if(alpha>0.6){const sG=x0.createLinearGradient(tx,tileY,tx+rowTW,tileNextY);sG.addColorStop(0,'transparent');sG.addColorStop(0.4,`rgba(255,255,255,${alpha*0.08})`);sG.addColorStop(1,'transparent');x0.fillStyle=sG;
       x0.beginPath();x0.moveTo(tx,tileY);x0.lineTo(tx+rowTW,tileY);x0.lineTo(txNext+nextRowTW,tileNextY);x0.lineTo(txNext,tileNextY);x0.closePath();x0.fill();}
   }
@@ -2464,7 +2491,7 @@ function drawDiscoDimension(t){
     const sG=x0.createRadialGradient(ball.x-bSz*0.2,ball.y-bSz*0.2,0,ball.x,ball.y,bSz);sG.addColorStop(0,'rgba(200,200,210,0.4)');sG.addColorStop(0.5,'rgba(100,100,120,0.3)');sG.addColorStop(1,'rgba(40,40,50,0.2)');x0.fillStyle=sG;x0.beginPath();x0.arc(ball.x,ball.y,bSz,0,Math.PI*2);x0.fill();
     for(let lat=0;lat<8;lat++)for(let lon=0;lon<14;lon++){const la=(lat/8-0.5)*Math.PI,lo=lon/14*Math.PI*2+ball.rot;const fx=Math.cos(la)*Math.cos(lo)*bSz*0.95,fy=Math.sin(la)*bSz*0.95,fz=Math.cos(la)*Math.sin(lo);if(fz<-0.1)continue;const vis=0.3+fz*0.7,fSz=(bSz*0.14)*(0.6+fz*0.4),sparkle=Math.abs(Math.sin(lo*3+ball.rot*2+lat))*vis;
       x0.fillStyle=`rgba(${200+Math.floor(sparkle*55)},${200+Math.floor(sparkle*55)},${210+Math.floor(sparkle*45)},${vis*0.35+sparkle*0.3+beat*0.15})`;x0.fillRect(ball.x+fx-fSz/2,ball.y+fy-fSz/2,fSz,fSz);
-      if(sparkle>0.7){x0.fillStyle=rgba(pc((lat+lon)%4),(sparkle-0.5)*0.8+beat*0.3);x0.shadowBlur=6+beat*4;x0.shadowColor=pc((lat+lon)%4);x0.fillRect(ball.x+fx-fSz*0.3,ball.y+fy-fSz*0.3,fSz*0.6,fSz*0.6);x0.shadowBlur=0;}}
+      if(sparkle>0.7){x0.fillStyle=rgba(pc((lat+lon)%4),(sparkle-0.5)*0.8+beat*0.3);x0.fillRect(ball.x+fx-fSz*0.3,ball.y+fy-fSz*0.3,fSz*0.6,fSz*0.6);}}
     x0.shadowBlur=bSz*0.5*(superLaser?1.8:1);x0.shadowColor=pc(ball.ci);x0.globalAlpha=0.7+beat*0.15;drawCPMini(x0,THEME.centerpiece,ball.x,ball.y,bSz*0.65,ball.rot);x0.globalAlpha=1;x0.shadowBlur=0;x0.restore();
     // Lasers
     const nL=superLaser?8:4;for(let lb=0;lb<nL;lb++){const la=ball.laserPh+lb/nL*Math.PI*2,lLen=Math.max(w,h)*1.5,lbx=ball.x+Math.cos(la)*lLen,lby=ball.y+Math.sin(la)*lLen,lci=(ball.ci+lb)%4,lA=(0.04+beat*0.08)*(superLaser?2:1)*laserMult;
@@ -3261,7 +3288,7 @@ function drawNeonCathedral(t){
     const br=0.4+Math.sin(m.ph)*0.3;
     x0.beginPath();x0.arc(m.x,m.y,m.r*br,0,Math.PI*2);
     x0.fillStyle=rgba(pc(m.ci),br*0.3);
-    x0.shadowBlur=4;x0.shadowColor=pc(m.ci);x0.fill();x0.shadowBlur=0;
+    x0.fill();
   }
 }
 
@@ -3302,9 +3329,9 @@ function drawClassicArcade(t){
   x0.fillStyle='rgba(0,0,0,0.18)';for(let sy2=scrY;sy2<scrY+scrH;sy2+=3)x0.fillRect(scrX,sy2,scrW,1);
   // Maze
   if(!A.mazeLines){A.mazeLines=[];const segs=[[0.08,0.17,0.38,0.17],[0.62,0.17,0.92,0.17],[0.08,0.45,0.32,0.45],[0.68,0.45,0.92,0.45],[0.08,0.72,0.45,0.72],[0.55,0.72,0.92,0.72],[0.08,0.17,0.08,0.45],[0.92,0.17,0.92,0.45],[0.42,0.55,0.58,0.55],[0.08,0.82,0.92,0.82]];for(const[x1,y1,x2,y2]of segs)A.mazeLines.push({x1:scrX+x1*scrW,y1:scrY+y1*scrH,x2:scrX+x2*scrW,y2:scrY+y2*scrH,ci:2});}
-  for(const ml of A.mazeLines){x0.beginPath();x0.moveTo(ml.x1,ml.y1);x0.lineTo(ml.x2,ml.y2);x0.strokeStyle=rgba(pc(2),(0.5+beat*0.2));x0.lineWidth=3;x0.shadowBlur=8;x0.shadowColor=pc(2);x0.stroke();x0.shadowBlur=0;}
+  for(const ml of A.mazeLines){x0.beginPath();x0.moveTo(ml.x1,ml.y1);x0.lineTo(ml.x2,ml.y2);x0.strokeStyle=rgba(pc(2),(0.5+beat*0.2));x0.lineWidth=3;x0.stroke();}
   // Dots
-  for(const d of A.dots){if(d.eaten)continue;d.ph+=0.04;const dR=d.big?12:7;x0.fillStyle=rgba(pc(3),(0.7+Math.abs(Math.sin(d.ph))*0.3));if(d.big){x0.shadowBlur=14+beat*10;x0.shadowColor=pc(3);}x0.beginPath();x0.arc(d.x,d.y,dR*(1+beat*0.2*(d.big?1:0.3)),0,Math.PI*2);x0.fill();x0.shadowBlur=0;}
+  for(const d of A.dots){if(d.eaten)continue;d.ph+=0.04;const dR=d.big?12:7;x0.fillStyle=rgba(pc(3),(0.7+Math.abs(Math.sin(d.ph))*0.3));if(d.big){softGlow(x0,d.x,d.y,dR*(1+beat*0.2),pc(3),0.5);}x0.beginPath();x0.arc(d.x,d.y,dR*(1+beat*0.2*(d.big?1:0.3)),0,Math.PI*2);x0.fill();}
   if(A.dots.every(d=>d.eaten))A.dots.forEach(d=>{d.eaten=false;});
   // Pac-Man patrolling
   if(!A.superPac||A.superPacAlpha<0.5){const pm=A.pacman;pm.x+=1.4*(1+energy*0.4)*pm.dir;pm.mouthA+=pm.mouthS*(1+energy*0.3);if(pm.mouthA>0.38||pm.mouthA<0)pm.mouthS*=-1;if(pm.x>scrX+scrW+40){pm.x=scrX-40;pm.y=scrY+h*0.3+Math.random()*h*0.35;}if(pm.x<scrX-40)pm.x=scrX+scrW+40;
@@ -3347,7 +3374,7 @@ function drawClassicArcade(t){
       A.explosions.push({x:bossX+(Math.random()-0.5)*40,y:bossY2+(Math.random()-0.5)*20,particles:Array.from({length:6},()=>({x:bossX,y:bossY2,vx:(Math.random()-0.5)*8,vy:(Math.random()-0.5)*8,life:0.6,ci:Math.floor(Math.random()*4),r:2+Math.random()*3})),timer:20});}}}
   // Explosions
   for(let i=A.explosions.length-1;i>=0;i--){const ex=A.explosions[i];ex.timer--;if(ex.timer<=0){A.explosions.splice(i,1);continue;}
-    for(const p of ex.particles){p.x+=p.vx;p.y+=p.vy;p.vy+=0.2;p.life-=0.03;if(p.life>0){x0.fillStyle=rgba(pc(p.ci),p.life*0.95);x0.shadowBlur=10;x0.shadowColor=pc(p.ci);x0.beginPath();x0.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);x0.fill();x0.shadowBlur=0;}}}
+    for(const p of ex.particles){p.x+=p.vx;p.y+=p.vy;p.vy+=0.2;p.life-=0.03;if(p.life>0){softGlow(x0,p.x,p.y,p.r*p.life,pc(p.ci),p.life);x0.fillStyle=rgba(pc(p.ci),p.life*0.95);x0.beginPath();x0.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);x0.fill();}}}
   x0.restore();
   // BOSS SURPRISE — Galaga mothership
   if(A.boss&&A.bossAlpha>0){if(A.boss.timer>0)A.bossAlpha=Math.min(1,A.bossAlpha+0.015);
@@ -5575,7 +5602,7 @@ function drawMountOlympus(t){
     const cg=x0.createRadialGradient(cloudX,cloudY,0,cloudX,cloudY,cloudR);const cci=c%4;
     cg.addColorStop(0,rgba(pc(cci),(0.08+beat*0.06+(superSt?0.08:0))));cg.addColorStop(0.5,rgba(pc((cci+1)%4),(0.04+beat*0.03)));cg.addColorStop(1,'transparent');x0.fillStyle=cg;x0.fillRect(0,0,w,h);}
   // Aurora streaks in clouds
-  for(let a=0;a<5;a++){const ay=h*(0.05+a*0.06);const ax=w*0.5+Math.sin(O.cloudPh+a*1.5)*w*0.3;x0.strokeStyle=rgba(pc(a%4),0.06+beat*0.04);x0.lineWidth=h*0.02;x0.shadowBlur=20;x0.shadowColor=pc(a%4);x0.beginPath();x0.moveTo(ax-w*0.2,ay);x0.bezierCurveTo(ax-w*0.05,ay-h*0.03,ax+w*0.05,ay+h*0.03,ax+w*0.2,ay);x0.stroke();x0.shadowBlur=0;}
+  for(let a=0;a<5;a++){const ay=h*(0.05+a*0.06);const ax=w*0.5+Math.sin(O.cloudPh+a*1.5)*w*0.3;x0.strokeStyle=rgba(pc(a%4),0.06+beat*0.04);x0.lineWidth=h*0.02;x0.beginPath();x0.moveTo(ax-w*0.2,ay);x0.bezierCurveTo(ax-w*0.05,ay-h*0.03,ax+w*0.05,ay+h*0.03,ax+w*0.2,ay);x0.stroke();}
   // Mountains — layered, glowing edges
   for(let ml=0;ml<3;ml++){const mBase=h*(0.55+ml*0.08);const mAlpha=0.15-ml*0.03;x0.fillStyle=`rgba(${8+ml*5},${4+ml*3},${15+ml*5},0.9)`;
     x0.beginPath();x0.moveTo(0,mBase+h*0.15);
@@ -5679,7 +5706,7 @@ function drawMountOlympus(t){
     // Scorch mark
     if(tgt.scorchMark){const sg=x0.createRadialGradient(tgt.x,tgt.y,0,tgt.x,tgt.y,25);sg.addColorStop(0,'rgba(40,20,5,0.6)');sg.addColorStop(0.5,'rgba(20,10,2,0.3)');sg.addColorStop(1,'transparent');x0.fillStyle=sg;x0.fillRect(tgt.x-25,tgt.y-25,50,50);}
     // Lingering embers
-    for(const e of tgt.embers){e.ph+=0.03;x0.fillStyle=rgba(pc(e.ci),0.3+Math.sin(e.ph)*0.2+beat*0.15);x0.shadowBlur=6;x0.shadowColor=pc(e.ci);x0.beginPath();x0.arc(e.x+Math.sin(e.ph*2)*3,e.y-Math.abs(Math.sin(e.ph))*8,2,0,Math.PI*2);x0.fill();x0.shadowBlur=0;}
+    for(const e of tgt.embers){e.ph+=0.03;softGlow(x0,e.x+Math.sin(e.ph*2)*3,e.y-Math.abs(Math.sin(e.ph))*8,2,pc(e.ci),0.3+Math.sin(e.ph)*0.2+beat*0.15);x0.fillStyle=rgba(pc(e.ci),0.3+Math.sin(e.ph)*0.2+beat*0.15);x0.beginPath();x0.arc(e.x+Math.sin(e.ph*2)*3,e.y-Math.abs(Math.sin(e.ph))*8,2,0,Math.PI*2);x0.fill();}
   }
   // Centerpiece
   if(THEME.centerpiece){cpRot+=0.01*(1+energy*0.15);cpPh+=0.013;const gs=Math.min(w,h)*(0.12+beat*0.04);x0.globalAlpha=0.85+beat*0.15;x0.shadowBlur=15+beat*12;x0.shadowColor=pc(0);drawCPMini(x0,THEME.centerpiece,cx,h*0.5,gs,cpRot);x0.globalAlpha=1;x0.shadowBlur=0;}
@@ -8953,8 +8980,9 @@ MusicProviders.spotify = {
   _preloadingTid: null,   // tid currently being preloaded (prevents duplicate fetches)
   _preloadPromise: null,  // promise for in-flight preload
   _rapidMode: false,      // true when polling at 1s near song end
-  _rapidTimeout: null,    // setTimeout for scheduling rapid mode start
   _pollBusy: false,       // prevents overlapping poll calls
+  _predictiveTimer: null, // setTimeout for predicted song-end transition
+  _predictiveScheduled: false, // prevents duplicate scheduling
 
   async init() {
     // Check for OAuth callback
@@ -9006,13 +9034,8 @@ MusicProviders.spotify = {
       MS.energy = d.is_playing ? 0.6 : 0.3;
       if (tid !== lastTid) {
         lastTid = tid;
-        // Song changed — exit rapid mode, clear preload state
-        this._rapidMode = false;
-        this._nextTrack = null;
-        this._preloadingTid = null;
-        this._preloadPromise = null;
-        if (this._rapidTimeout) { clearTimeout(this._rapidTimeout); this._rapidTimeout = null; }
-        // _washPrepped will be consumed by transition() — no need to clear here
+        // Song changed — exit rapid mode, clear preload/predictive state
+        this._clearPreloadState();
         setTrackInfo(tr.name, tr.artists.map(a => a.name).join(', '), true);
         const art = tr.album && tr.album.images && tr.album.images[0] ? tr.album.images[0].url : null;
         if (art) { document.getElementById('albumArt').src = art; document.getElementById('albumArt').style.display = ''; }
@@ -9020,7 +9043,7 @@ MusicProviders.spotify = {
           tr.artists.map(a => a.id), tr.explicit, tr.duration_ms);
       }
 
-      // ── Preload + rapid poll scheduling ──
+      // ── Preload + predictive transition scheduling ──
       if (d.is_playing && MS.duration > 0) {
         const remaining = MS.duration - MS.progress;
         // Start preloading next theme at 75% through song
@@ -9032,14 +9055,64 @@ MusicProviders.spotify = {
           this._rapidMode = true;
           console.log('[spotify] rapid polling — song ends in', Math.round(remaining/1000), 's');
         }
-        // Start wash overlay in last 2s if next theme is preloaded and ready
-        if (remaining < 2000 && remaining > 0 && this._preloadingTid && aiCache[this._preloadingTid]) {
-          prepTransitionWash(aiCache[this._preloadingTid]);
+        // Schedule predictive transition: wash starts ~1.5s before song end,
+        // scene swap fires at predicted song end — no poll latency
+        if (remaining < 8000 && remaining > 2000 && !this._predictiveScheduled
+            && this._preloadingTid && aiCache[this._preloadingTid] && this._nextTrack) {
+          this._schedulePredictiveTransition(remaining);
         }
       }
     } finally {
       this._pollBusy = false;
     }
+  },
+
+  // Schedule wash + scene swap timed to predicted song end
+  _schedulePredictiveTransition(remainingMs) {
+    this._predictiveScheduled = true;
+    const nextTheme = aiCache[this._preloadingTid];
+    const nextTrack = this._nextTrack;
+    // Start wash 1.5s before predicted song end
+    const washDelay = Math.max(0, remainingMs - 1500);
+    // Fire scene swap right at predicted song end
+    const swapDelay = Math.max(washDelay + 200, remainingMs);
+    console.log('[predictive] scheduling wash in', Math.round(washDelay/1000), 's, swap in', Math.round(swapDelay/1000), 's');
+
+    setTimeout(() => {
+      // Only fire wash if we haven't already changed songs
+      if (this._preloadingTid && aiCache[this._preloadingTid] && !inTrans) {
+        prepTransitionWash(nextTheme);
+      }
+    }, washDelay);
+
+    this._predictiveTimer = setTimeout(() => {
+      // Verify we're still on the same song and the next track is ready
+      if (!this._nextTrack || this._nextTrack.id !== nextTrack.id) return;
+      if (!aiCache[nextTrack.id]) return;
+      if (inTrans) return;
+      console.log('[predictive] firing transition for:', nextTrack.name);
+      // Optimistically apply the next track — set lastTid so poll confirms rather than re-triggers
+      lastTid = nextTrack.id;
+      this._clearPreloadState();
+      setTrackInfo(nextTrack.name, nextTrack.artists.map(a => a.name).join(', '), true);
+      if (nextTrack.albumArt) {
+        document.getElementById('albumArt').src = nextTrack.albumArt;
+        document.getElementById('albumArt').style.display = '';
+      }
+      loadTheme(nextTrack.id, nextTrack.name,
+        nextTrack.artists.map(a => a.name).join(', '),
+        nextTrack.artists.map(a => a.id),
+        nextTrack.explicit, nextTrack.duration_ms);
+    }, swapDelay);
+  },
+
+  _clearPreloadState() {
+    this._rapidMode = false;
+    this._nextTrack = null;
+    this._preloadingTid = null;
+    this._preloadPromise = null;
+    this._predictiveScheduled = false;
+    if (this._predictiveTimer) { clearTimeout(this._predictiveTimer); this._predictiveTimer = null; }
   },
 
   // Fetch the Spotify queue and pre-generate AI theme for the next track
@@ -9049,19 +9122,32 @@ MusicProviders.spotify = {
       if (!q || !q.queue || q.queue.length === 0) return;
       const next = q.queue[0];
       if (!next || !next.id || next.id === lastTid) return;
+      const artUrl = (next.album && next.album.images && next.album.images[0]) ? next.album.images[0].url : null;
+      // Pre-load album art image so it displays instantly on song change
+      if (artUrl) { const img = new Image(); img.src = artUrl; }
       // Already cached — nothing to do
       if (aiCache[next.id]) {
         console.log('[preload] next track already cached:', next.name);
+        // Still store next track info for predictive transition
+        this._nextTrack = {
+          id: next.id,
+          name: next.name,
+          artists: next.artists || [],
+          explicit: next.explicit,
+          duration_ms: next.duration_ms,
+          albumArt: artUrl
+        };
+        this._preloadingTid = next.id;
         return;
       }
-      // Store next track info for instant display on switch
+      // Store next track info for predictive transition
       this._nextTrack = {
         id: next.id,
         name: next.name,
         artists: next.artists || [],
         explicit: next.explicit,
         duration_ms: next.duration_ms,
-        albumArt: (next.album && next.album.images && next.album.images[0]) ? next.album.images[0].url : null
+        albumArt: artUrl
       };
       // Mark as preloading so we don't re-fetch
       this._preloadingTid = next.id;
@@ -9088,11 +9174,7 @@ MusicProviders.spotify = {
 
   destroy() {
     if (this._interval) { clearInterval(this._interval); this._interval = null; }
-    if (this._rapidTimeout) { clearTimeout(this._rapidTimeout); this._rapidTimeout = null; }
-    this._nextTrack = null;
-    this._preloadingTid = null;
-    this._preloadPromise = null;
-    this._rapidMode = false;
+    this._clearPreloadState();
     this._pollBusy = false;
   }
 };
@@ -9736,7 +9818,7 @@ async function getProviderGenres(artistIds) {
 function drawBeatFX(){
   const w=W(),h=H(),cx=w/2,cy=h/2;
   if(beatFX.shockwaveA>0.01){beatFX.shockwaveR+=12*(1+SM.energy);beatFX.shockwaveA*=0.88;x2.beginPath();x2.arc(cx,cy,beatFX.shockwaveR,0,Math.PI*2);x2.strokeStyle=rgba(pc(0),beatFX.shockwaveA);x2.lineWidth=3+beatFX.shockwaveA*5;x2.stroke();if(beatFX.shockwaveR>Math.sqrt(cx*cx+cy*cy)+100)beatFX.shockwaveA=0;}
-  if(beatFX.crackLines.length>0){for(let i=beatFX.crackLines.length-1;i>=0;i--){const cl=beatFX.crackLines[i];cl.life-=0.05;if(cl.life<=0){beatFX.crackLines.splice(i,1);continue;}x2.shadowBlur=15;x2.shadowColor=pc(cl.ci);let prev={x:cx,y:cy};for(const seg of cl.segs){x2.beginPath();x2.moveTo(prev.x,prev.y);x2.lineTo(seg.x,seg.y);x2.strokeStyle=rgba(pc(cl.ci),cl.life*0.9);x2.lineWidth=cl.life*3;x2.stroke();prev=seg;}x2.shadowBlur=0;}}
+  if(beatFX.crackLines.length>0){for(let i=beatFX.crackLines.length-1;i>=0;i--){const cl=beatFX.crackLines[i];cl.life-=0.05;if(cl.life<=0){beatFX.crackLines.splice(i,1);continue;}let prev={x:cx,y:cy};for(const seg of cl.segs){x2.beginPath();x2.moveTo(prev.x,prev.y);x2.lineTo(seg.x,seg.y);x2.strokeStyle=rgba(pc(cl.ci),cl.life*0.9);x2.lineWidth=cl.life*3;x2.stroke();prev=seg;}}}
   if(beatFX.invertA>0.01){x2.fillStyle=rgba(pc(0),beatFX.invertA*0.4);x2.fillRect(0,0,w,h);beatFX.invertA*=0.82;}
   if(beatFX.slamS>1.001){beatFX.slamS+=(1-beatFX.slamS)*0.15;}
   if(beatFX.gravityWave>0.01){x2.fillStyle=rgba(pc(2),beatFX.gravityWave*0.08);x2.fillRect(0,0,w,h);beatFX.gravityWave*=0.9;}
