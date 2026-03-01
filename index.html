@@ -14,6 +14,8 @@
 <title>VIZarcade</title>
 <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js" async></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'Share Tech Mono',monospace;color:#fff;cursor:none}
@@ -29,6 +31,7 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
 .btn:hover{background:#00ff99;box-shadow:0 0 30px rgba(0,255,153,0.9),0 0 60px rgba(0,255,65,0.5),inset 0 1px 0 rgba(255,255,255,0.4);transform:translateY(-2px)}
 #appleMusicBtn:hover{background:#ff5e66!important;box-shadow:0 0 30px rgba(252,60,68,0.9),0 0 60px rgba(252,60,68,0.5)!important}
 #localAudioBtn:hover{background:#33ffdf!important;box-shadow:0 0 30px rgba(6,255,216,0.9),0 0 60px rgba(6,255,216,0.5)!important}
+#djModeBtn:hover{background:#a855f7!important;box-shadow:0 0 30px rgba(168,85,247,0.9),0 0 60px rgba(131,56,236,0.5)!important}
 #loginErr{position:relative;z-index:1;color:#ff006e;font-size:0.62rem;letter-spacing:0.15em;margin-top:1.2rem;max-width:420px;text-align:center;display:none}#coinDisplay{position:relative;z-index:1;font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:0.4em;color:#ff0;text-shadow:0 0 10px #ff0,0 0 20px rgba(255,200,0,0.5);margin:0 0 2rem;animation:coinBlink 1s step-end infinite}
 @keyframes coinBlink{0%,100%{opacity:1}50%{opacity:0.2}}#arcadeScore{position:absolute;top:1.5rem;left:0;right:0;display:flex;justify-content:space-between;padding:0 2rem;z-index:1;font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:0.35em;color:#ff0;text-shadow:0 0 8px #ff0}
 .scanlines{position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.025) 2px,rgba(0,0,0,0.025) 4px);pointer-events:none;z-index:100}
@@ -83,6 +86,59 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
 .dp-badge.live{background:rgba(255,0,110,0.2);color:#ff006e;border:1px solid rgba(255,0,110,0.3)}
 .dp-monitor{padding:6px 14px;font-size:0.55rem;color:#7acc7a;letter-spacing:0.06em;line-height:1.7;border-bottom:1px solid rgba(0,255,65,0.08);flex-shrink:0}
 .dp-monitor span{color:#00ff41}
+
+/* ═══ DJ MODE — DISPLAY (kiosk) ═══ */
+body.djmode-display #ui,body.djmode-display #fsBtn,body.djmode-display #backBtn,
+body.djmode-display #nextSceneBtn,body.djmode-display #splash,body.djmode-display #cur,
+body.djmode-display #pgWrap,body.djmode-display #devPanel,body.djmode-display #sceneTag{display:none!important}
+body.djmode-display{cursor:none!important;user-select:none!important}
+#djmodeRoomOverlay{position:fixed;inset:0;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.92);font-family:'Share Tech Mono',monospace;color:#06ffd8;transition:opacity 1.5s;pointer-events:none}
+#djmodeRoomOverlay .room-code{font-family:'Bebas Neue',sans-serif;font-size:clamp(4rem,12vw,9rem);letter-spacing:0.25em;color:#00ff41;text-shadow:0 0 40px #00ff41,0 0 80px rgba(0,255,65,0.4);margin:1rem 0}
+#djmodeRoomOverlay .room-label{font-size:0.75rem;letter-spacing:0.5em;color:rgba(6,255,216,0.6);text-transform:uppercase}
+#djmodeRoomOverlay .room-url{font-size:0.6rem;letter-spacing:0.15em;color:rgba(255,255,255,0.3);margin-top:1.5rem;max-width:90vw;text-align:center;word-break:break-all}
+#djmodeRoomOverlay.fade-out{opacity:0}
+
+/* ═══ DJ MODE — DJ NAME FLASH OVERLAY ═══ */
+#djNameFlash{position:fixed;inset:0;z-index:88;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity 0.5s}
+#djNameFlash.show{opacity:1}
+#djNameFlash .dj-name-text{font-family:'Bebas Neue',sans-serif;font-size:clamp(3rem,10vw,8rem);letter-spacing:0.15em;text-align:center;text-shadow:0 0 60px currentColor,0 0 120px currentColor;animation:djNamePulse 0.8s ease-in-out infinite alternate}
+@keyframes djNamePulse{0%{transform:scale(1);filter:brightness(1)}100%{transform:scale(1.03);filter:brightness(1.3)}}
+
+/* ═══ DJ MODE — CONTROLLER ═══ */
+#djController{position:fixed;inset:0;z-index:600;display:none;flex-direction:column;background:#08081a;overflow-y:auto;overflow-x:hidden;font-family:'Share Tech Mono',monospace;color:#b0ffb0;-webkit-overflow-scrolling:touch}
+#djController.active{display:flex}
+.djc-header{padding:12px 16px;background:rgba(0,255,65,0.04);border-bottom:1px solid rgba(0,255,65,0.15);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:10;backdrop-filter:blur(12px)}
+.djc-header h1{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:#00ff41;letter-spacing:0.25em;margin:0;text-shadow:0 0 12px rgba(0,255,65,0.5)}
+.djc-status{display:flex;align-items:center;gap:6px;font-size:0.6rem;letter-spacing:0.1em}
+.djc-dot{width:8px;height:8px;border-radius:50%;background:#333;box-shadow:none;transition:all 0.3s}
+.djc-dot.connected{background:#00ff41;box-shadow:0 0 8px #00ff41}
+.djc-dot.error{background:#ff006e;box-shadow:0 0 8px #ff006e}
+.djc-info{padding:10px 16px;background:rgba(6,255,216,0.03);border-bottom:1px solid rgba(0,255,65,0.08);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.djc-info .scene-name{font-size:0.72rem;color:#06ffd8;letter-spacing:0.2em;text-transform:uppercase}
+.djc-info .scene-timer{font-size:0.65rem;color:rgba(0,255,65,0.5);letter-spacing:0.15em;font-variant-numeric:tabular-nums}
+.djc-section{padding:12px 16px;border-bottom:1px solid rgba(0,255,65,0.06)}
+.djc-section h3{font-size:0.58rem;letter-spacing:0.4em;color:#06ffd8;margin:0 0 10px;text-transform:uppercase;text-shadow:0 0 6px rgba(6,255,216,0.3)}
+.djc-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.djc-btn{background:rgba(0,255,65,0.06);border:1px solid rgba(0,255,65,0.2);color:#b0ffb0;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:0.15em;padding:14px 8px;cursor:pointer;text-align:center;transition:all 0.12s;border-radius:2px;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.djc-btn:active{background:rgba(0,255,65,0.25);border-color:#00ff41;color:#00ff41;transform:scale(0.97)}
+.djc-btn.primary{background:rgba(0,255,65,0.12);border-color:rgba(0,255,65,0.35);color:#00ff41;font-size:1.15rem;grid-column:span 1}
+.djc-btn.danger{background:rgba(255,0,110,0.06);border-color:rgba(255,0,110,0.2);color:#ff80b0}
+.djc-btn.danger:active{background:rgba(255,0,110,0.2);border-color:#ff006e;color:#ff006e}
+.djc-btn.highlight{background:rgba(255,190,11,0.08);border-color:rgba(255,190,11,0.25);color:#ffbe0b}
+.djc-btn.highlight:active{background:rgba(255,190,11,0.2);border-color:#ffbe0b}
+.djc-scene-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.djc-scene-btn{background:rgba(0,255,65,0.04);border:1px solid rgba(0,255,65,0.12);color:#7acc7a;font-family:'Share Tech Mono',monospace;font-size:0.62rem;letter-spacing:0.08em;padding:10px 6px;cursor:pointer;text-align:center;transition:all 0.12s;border-radius:2px;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.djc-scene-btn:active{background:rgba(0,255,65,0.2);border-color:#00ff41;color:#00ff41}
+.djc-scene-btn.active-scene{background:rgba(6,255,216,0.12);border-color:#06ffd8;color:#06ffd8;box-shadow:0 0 8px rgba(6,255,216,0.2)}
+.djc-dj-row{display:flex;gap:8px;align-items:stretch}
+.djc-dj-input{flex:1;background:rgba(0,0,0,0.4);border:1px solid rgba(0,255,65,0.2);color:#00ff41;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:0.1em;padding:10px 12px;outline:none;border-radius:2px}
+.djc-dj-input::placeholder{color:rgba(0,255,65,0.25);letter-spacing:0.15em}
+.djc-dj-input:focus{border-color:#06ffd8;box-shadow:0 0 12px rgba(6,255,216,0.2)}
+.djc-log{max-height:120px;overflow-y:auto;font-size:0.55rem;color:rgba(0,255,65,0.35);letter-spacing:0.05em;line-height:1.6;padding:4px 0}
+.djc-log-entry{padding:2px 0;border-bottom:1px solid rgba(0,255,65,0.04)}
+.djc-log-entry .log-time{color:rgba(0,255,65,0.2);margin-right:6px}
+.djc-disconnect{display:block;width:100%;margin-top:8px;padding:10px;background:none;border:1px solid rgba(255,0,110,0.2);color:rgba(255,0,110,0.5);font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.2em;cursor:pointer;text-align:center;border-radius:2px}
+.djc-disconnect:active{background:rgba(255,0,110,0.15);border-color:#ff006e;color:#ff006e}
 </style>
 </head>
 <body>
@@ -98,6 +154,7 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
   <button id="loginBtn" class="btn">▶ &nbsp;CONNECT SPOTIFY</button>
   <button id="appleMusicBtn" class="btn" style="margin-top:10px;background:#fc3c44;box-shadow:0 0 20px rgba(252,60,68,0.7),0 0 40px rgba(252,60,68,0.3);font-size:1.1rem">♫ &nbsp;APPLE MUSIC</button>
   <button id="localAudioBtn" class="btn" style="margin-top:10px;background:#06ffd8;box-shadow:0 0 20px rgba(6,255,216,0.7),0 0 40px rgba(6,255,216,0.3);font-size:1.1rem">🎤 &nbsp;LOCAL AUDIO</button>
+  <button id="djModeBtn" class="btn" style="margin-top:10px;background:#8338ec;box-shadow:0 0 20px rgba(131,56,236,0.7),0 0 40px rgba(131,56,236,0.3);font-size:1.1rem">🎛 &nbsp;DJ MODE</button>
   <div id="loginErr"></div>
 </div>
 <div id="wash"></div>
@@ -188,6 +245,55 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
     </div>
   </div>
   <div class="dp-info">Press <span style="color:#ff006e">D D D</span> or <span style="color:#ff006e">?dev=1</span> to toggle</div>
+</div>
+
+<!-- ═══ DJ MODE — DISPLAY ROOM OVERLAY ═══ -->
+<div id="djmodeRoomOverlay" style="display:none">
+  <div class="room-label">DJ MODE — ROOM CODE</div>
+  <div class="room-code" id="djmodeRoomCode">—</div>
+  <div class="room-label">OPEN CONTROLLER ON YOUR PHONE</div>
+  <div class="room-url" id="djmodeRoomUrl">—</div>
+</div>
+
+<!-- ═══ DJ MODE — DJ NAME FLASH ═══ -->
+<div id="djNameFlash"><div class="dj-name-text" id="djNameFlashText"></div></div>
+
+<!-- ═══ DJ MODE — CONTROLLER UI ═══ -->
+<div id="djController">
+  <div class="djc-header">
+    <h1>🎛 VIZarcade</h1>
+    <div class="djc-status"><span class="djc-dot" id="djcDot"></span><span id="djcStatusText">CONNECTING...</span></div>
+  </div>
+  <div class="djc-info">
+    <div class="scene-name" id="djcSceneName">—</div>
+    <div class="scene-timer" id="djcSceneTimer">0:00</div>
+  </div>
+  <div class="djc-section">
+    <h3>▸ Quick Actions</h3>
+    <div class="djc-actions">
+      <button class="djc-btn primary" id="djcNextScene">▶ NEXT</button>
+      <button class="djc-btn highlight" id="djcSurprise">⚡ SURPRISE</button>
+      <button class="djc-btn danger" id="djcBlackout">■ BLACK</button>
+    </div>
+  </div>
+  <div class="djc-section">
+    <h3>▸ DJ Name Flash</h3>
+    <div class="djc-dj-row">
+      <input type="text" class="djc-dj-input" id="djcDJName" placeholder="DJ NAME..." autocomplete="off" autocorrect="off" spellcheck="false"/>
+      <button class="djc-btn highlight" style="flex-shrink:0;padding:10px 16px" id="djcFlashName">FLASH</button>
+    </div>
+  </div>
+  <div class="djc-section">
+    <h3>▸ Scenes</h3>
+    <div class="djc-scene-grid" id="djcSceneGrid"></div>
+  </div>
+  <div class="djc-section">
+    <h3>▸ Session Log</h3>
+    <div class="djc-log" id="djcLog"></div>
+  </div>
+  <div class="djc-section">
+    <button class="djc-disconnect" id="djcDisconnect">✕ DISCONNECT</button>
+  </div>
 </div>
 
 <script>
@@ -11818,9 +11924,568 @@ requestAnimationFrame(render);
 // ── Init dev panel ──
 initDevPanel();
 
+// ═══════════════════════════════════════════════════════════
+// ══ DJ MODE SYSTEM ══
+// ═══════════════════════════════════════════════════════════
+//
+// Two roles:
+//   DISPLAY  — ?djmode=ROOMCODE  — kiosk mode, listens for commands
+//   CONTROLLER — ?controller=ROOMCODE — mobile remote, sends commands
+//
+// Communication via Firebase Realtime Database (free tier).
+// Room state lives at /rooms/{ROOMCODE}/
+//   /command   — latest command from controller {type, payload, ts}
+//   /state     — display pushes current state {scene, sceneStart, connected}
+
+const DJMode = {
+  role: null,        // 'display' | 'controller' | null
+  roomCode: null,
+  db: null,
+  roomRef: null,
+  commandRef: null,
+  stateRef: null,
+  _sceneStart: 0,
+  _sceneTimerInterval: null,
+  _blackout: false,
+  _djNameTimeout: null,
+  _sessionLog: [],
+
+  // ── Firebase config ──
+  // Uses a public Firebase project for room relay.
+  // This is safe — Firebase security rules should restrict access.
+  // Users can replace with their own Firebase config if desired.
+  FIREBASE_CONFIG: {
+    apiKey: "AIzaSyAaX2BWljLu9aSrRkpjTIwManUuv3h-1B4",
+    authDomain: "vizarcade.firebaseapp.com",
+    databaseURL: "https://vizarcade-default-rtdb.firebaseio.com",
+    projectId: "vizarcade",
+    storageBucket: "vizarcade.firebasestorage.app",
+    messagingSenderId: "143587533637",
+    appId: "1:143587533637:web:7cfb7e4edfaa88a0c2542c"
+  },
+
+  // ── Generate a short room code ──
+  generateRoomCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I,O,0,1 for readability
+    let code = 'VIZ-';
+    for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+  },
+
+  // ── Initialize Firebase ──
+  initFirebase() {
+    if (this.db) return true;
+    try {
+      if (!firebase || !firebase.database) {
+        console.error('[djmode] Firebase SDK not loaded');
+        return false;
+      }
+      // Check if already initialized
+      if (!firebase.apps.length) {
+        firebase.initializeApp(this.FIREBASE_CONFIG);
+      }
+      this.db = firebase.database();
+      console.log('[djmode] Firebase initialized');
+      return true;
+    } catch (e) {
+      console.error('[djmode] Firebase init failed:', e);
+      return false;
+    }
+  },
+
+  // ── Connect to a room ──
+  connectRoom(code) {
+    if (!this.db) return false;
+    this.roomCode = code;
+    this.roomRef = this.db.ref('rooms/' + code);
+    this.commandRef = this.roomRef.child('command');
+    this.stateRef = this.roomRef.child('state');
+    console.log('[djmode] connected to room:', code);
+    return true;
+  },
+
+  // ════════════════════════════════════════
+  // ── DISPLAY MODE (kiosk) ──
+  // ════════════════════════════════════════
+  async startDisplay(audioMode) {
+    this.role = 'display';
+    const code = this.generateRoomCode();
+
+    if (!this.initFirebase()) {
+      showErr('DJ Mode requires internet for room sync. Firebase failed to load.');
+      return false;
+    }
+    this.connectRoom(code);
+
+    // Enter kiosk mode — hide all UI
+    document.body.classList.add('djmode-display');
+    document.getElementById('login').style.display = 'none';
+
+    // Show room code overlay
+    const overlay = document.getElementById('djmodeRoomOverlay');
+    const codeEl = document.getElementById('djmodeRoomCode');
+    const urlEl = document.getElementById('djmodeRoomUrl');
+    codeEl.textContent = code;
+    const controllerUrl = location.origin + location.pathname + '?controller=' + code;
+    urlEl.textContent = controllerUrl;
+    overlay.style.display = 'flex';
+    overlay.style.opacity = '1';
+
+    // Push initial state to Firebase
+    this.stateRef.set({
+      scene: THEME.scene || 'WARP_SPEED',
+      sceneStart: Date.now(),
+      connected: true,
+      blackout: false
+    });
+
+    // Set up disconnect cleanup
+    this.stateRef.child('connected').onDisconnect().set(false);
+
+    // Start audio via local provider
+    token = 'LOCAL_AUDIO';
+    const provider = MusicProviders.local;
+    provider._mode = audioMode;
+
+    try {
+      provider._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      provider._analyser = provider._audioCtx.createAnalyser();
+      provider._analyser.fftSize = 256;
+      provider._analyser.smoothingTimeConstant = 0.8;
+      provider._freqData = new Uint8Array(provider._analyser.frequencyBinCount);
+
+      if (audioMode === 'system') {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        provider._stream = stream;
+        stream.getVideoTracks().forEach(t => t.stop());
+        const audioTracks = stream.getAudioTracks();
+        if (!audioTracks.length) {
+          showErr('No audio track captured. Make sure to share audio.');
+          this.stopDisplay();
+          return false;
+        }
+        provider._source = provider._audioCtx.createMediaStreamSource(stream);
+        provider._source.connect(provider._analyser);
+        audioTracks[0].onended = () => {
+          console.log('[djmode] system audio sharing stopped');
+          this.stopDisplay();
+        };
+      } else {
+        // mic mode
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        provider._stream = stream;
+        provider._source = provider._audioCtx.createMediaStreamSource(stream);
+        provider._source.connect(provider._analyser);
+      }
+
+      provider._startTime = Date.now();
+      songProg = 0.45;
+      progMult = 0.55 + songProg * 0.7;
+      MS.duration = 0;
+
+      // Start analysis loop
+      provider._interval = setInterval(() => provider.poll(), 100);
+      activeProvider = provider;
+      TransitionDetector.reset();
+      TransitionDetector.startCalibration();
+
+      // Suppress track info in DJ mode — controller manages names
+      setTrackInfo('', '', false);
+      document.getElementById('albumArt').style.display = 'none';
+      document.getElementById('pgWrap').style.display = 'none';
+
+      // Init scene and start render
+      initScene();
+
+      // Fade out room code overlay after 12 seconds
+      setTimeout(() => {
+        overlay.classList.add('fade-out');
+        setTimeout(() => { overlay.style.display = 'none'; }, 2000);
+      }, 12000);
+
+      // ── Listen for commands from controller ──
+      this.commandRef.on('value', (snap) => {
+        const cmd = snap.val();
+        if (!cmd || !cmd.type) return;
+        this._handleCommand(cmd);
+      });
+
+      // Update state periodically
+      this._sceneStart = Date.now();
+      this._pushState();
+
+      console.log('[djmode] display started — room:', code);
+      return true;
+
+    } catch (e) {
+      console.error('[djmode] audio init failed:', e);
+      if (e.name === 'NotAllowedError') {
+        showErr('Permission denied. Please allow audio access.');
+      } else {
+        showErr('Audio access failed: ' + (e.message || e));
+      }
+      this.stopDisplay();
+      return false;
+    }
+  },
+
+  // ── Handle incoming command from controller ──
+  _handleCommand(cmd) {
+    console.log('[djmode] command received:', cmd.type, cmd.payload || '');
+
+    switch (cmd.type) {
+      case 'nextScene':
+        if (!inTrans) {
+          skipToNextScene();
+          this._sceneStart = Date.now();
+          this._pushState();
+        }
+        break;
+
+      case 'jumpScene':
+        if (!inTrans && cmd.payload && ALL_SCENES.includes(cmd.payload)) {
+          // Build theme for the target scene
+          const scene = cmd.payload;
+          const cp = enforceCP(rndEl(ALL_CPS.filter(x => !getForbidCPs().includes(x))));
+          const palette = THEME.palette.slice();
+          palette.push(palette.shift());
+          const theme = {
+            scene: scene, label: '', splashDesc: '', palette: palette,
+            bgColor: THEME.bgColor, centerpiece: cp,
+            centerpieceScale: 0.3 + Math.random() * 0.7,
+            centerpieceX: 0.3 + Math.random() * 0.4,
+            centerpieceY: 0.3 + Math.random() * 0.4,
+            centerpieceBehavior: rndEl(['rotate','pulse_beat','breathe','orbit_slow','bounce','drift']),
+            beatReactions: THEME.beatReactions || ['shockwave'],
+            sceneSpeed: 0.7 + Math.random() * 1.3,
+            sceneIntensity: 0.5 + Math.random() * 0.5,
+            energy: THEME.energy || 0.5, chaos: Math.random() * 0.6
+          };
+          recordScene(scene);
+          recordCP(cp);
+          applyTheme('', '', theme);
+          this._sceneStart = Date.now();
+          this._pushState();
+        }
+        break;
+
+      case 'surprise':
+        if (!inTrans) {
+          const variant = (cmd.payload != null) ? cmd.payload : undefined;
+          fireSurprise(variant);
+          surpriseFired = true;
+        }
+        break;
+
+      case 'blackout':
+        this._blackout = !this._blackout;
+        const bo = document.getElementById('surpriseOverlay');
+        if (this._blackout) {
+          bo.style.background = '#000';
+          bo.style.opacity = '1';
+          bo.style.transition = 'opacity 0.5s';
+        } else {
+          bo.style.opacity = '0';
+          setTimeout(() => { bo.style.background = ''; bo.style.transition = ''; }, 600);
+        }
+        this.stateRef.update({ blackout: this._blackout });
+        break;
+
+      case 'djNameFlash':
+        if (cmd.payload) {
+          this._flashDJName(cmd.payload);
+        }
+        break;
+    }
+  },
+
+  // ── Flash DJ name on display ──
+  _flashDJName(name) {
+    const el = document.getElementById('djNameFlash');
+    const txt = document.getElementById('djNameFlashText');
+    if (!el || !txt) return;
+
+    // Clear any existing flash
+    if (this._djNameTimeout) clearTimeout(this._djNameTimeout);
+    el.classList.remove('show');
+
+    // Try to use the DJ Signature system if the DJ is in the database
+    const match = matchDJArtist(name);
+    if (match && !DJ_SIG_EXCLUDED_SCENES.has(THEME.scene)) {
+      // Use the existing DJ sig system for recognized DJs
+      djSig.active = true;
+      djSig.artist = match;
+      djSig.morph = 0;
+      djSig.phase = 'morphIn';
+      djSig.triggered = true;
+      djSig.holdDuration = 6000 + Math.random() * 2000;
+      djSig.particles = [];
+      return;
+    }
+
+    // Fallback: show big name overlay with current theme color
+    txt.textContent = name.toUpperCase();
+    txt.style.color = pc(0);
+    el.classList.add('show');
+    this._djNameTimeout = setTimeout(() => {
+      el.classList.remove('show');
+      this._djNameTimeout = null;
+    }, 6000);
+  },
+
+  // ── Push state to Firebase ──
+  _pushState() {
+    if (!this.stateRef) return;
+    this.stateRef.update({
+      scene: THEME.scene || 'WARP_SPEED',
+      sceneStart: this._sceneStart,
+      blackout: this._blackout
+    });
+  },
+
+  // ── Stop display mode ──
+  stopDisplay() {
+    document.body.classList.remove('djmode-display');
+    const overlay = document.getElementById('djmodeRoomOverlay');
+    if (overlay) { overlay.style.display = 'none'; overlay.classList.remove('fade-out'); }
+    const flash = document.getElementById('djNameFlash');
+    if (flash) flash.classList.remove('show');
+    if (this.commandRef) this.commandRef.off();
+    if (this.stateRef) this.stateRef.update({ connected: false });
+    if (this._sceneTimerInterval) clearInterval(this._sceneTimerInterval);
+    this.role = null;
+    this.roomCode = null;
+    stopProvider();
+  },
+
+  // ════════════════════════════════════════
+  // ── CONTROLLER MODE (remote) ──
+  // ════════════════════════════════════════
+  startController(code) {
+    this.role = 'controller';
+
+    if (!this.initFirebase()) {
+      alert('Firebase failed to load. Check your internet connection.');
+      return;
+    }
+    this.connectRoom(code);
+
+    // Hide everything except controller
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('ui').style.display = 'none';
+    document.body.style.cursor = 'default';
+
+    const ctrl = document.getElementById('djController');
+    ctrl.classList.add('active');
+
+    // Build scene grid
+    const grid = document.getElementById('djcSceneGrid');
+    grid.innerHTML = '';
+    ALL_SCENES.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'djc-scene-btn';
+      btn.textContent = s.replace(/_/g, ' ');
+      btn.dataset.scene = s;
+      btn.addEventListener('click', () => this._sendCommand('jumpScene', s));
+      grid.appendChild(btn);
+    });
+
+    // ── Wire up buttons ──
+    document.getElementById('djcNextScene').addEventListener('click', () => {
+      this._sendCommand('nextScene');
+      this._log('Next scene');
+    });
+    document.getElementById('djcSurprise').addEventListener('click', () => {
+      this._sendCommand('surprise');
+      this._log('Surprise fired');
+    });
+    document.getElementById('djcBlackout').addEventListener('click', () => {
+      this._sendCommand('blackout');
+      this._log('Blackout toggle');
+    });
+    document.getElementById('djcFlashName').addEventListener('click', () => {
+      const name = document.getElementById('djcDJName').value.trim();
+      if (name) {
+        this._sendCommand('djNameFlash', name);
+        this._log('DJ flash: ' + name);
+      }
+    });
+    // Allow Enter key in DJ name input
+    document.getElementById('djcDJName').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('djcFlashName').click();
+      }
+    });
+    document.getElementById('djcDisconnect').addEventListener('click', () => {
+      this.stopController();
+    });
+
+    // ── Listen for state updates from display ──
+    this.stateRef.on('value', (snap) => {
+      const state = snap.val();
+      if (!state) {
+        this._setConnectionStatus(false);
+        return;
+      }
+
+      this._setConnectionStatus(state.connected === true);
+
+      // Update scene name
+      const sceneName = (state.scene || '—').replace(/_/g, ' ');
+      document.getElementById('djcSceneName').textContent = sceneName;
+
+      // Update scene timer
+      if (state.sceneStart) {
+        this._updateSceneTimer(state.sceneStart);
+      }
+
+      // Highlight active scene in grid
+      grid.querySelectorAll('.djc-scene-btn').forEach(btn => {
+        btn.classList.toggle('active-scene', btn.dataset.scene === state.scene);
+      });
+
+      // Update blackout button state
+      const blackoutBtn = document.getElementById('djcBlackout');
+      if (state.blackout) {
+        blackoutBtn.textContent = '■ LIVE';
+        blackoutBtn.classList.add('active-scene');
+      } else {
+        blackoutBtn.textContent = '■ BLACK';
+        blackoutBtn.classList.remove('active-scene');
+      }
+    });
+
+    this._log('Connected to room ' + code);
+    console.log('[djmode] controller started — room:', code);
+  },
+
+  // ── Send a command to the display ──
+  _sendCommand(type, payload) {
+    if (!this.commandRef) return;
+    const cmd = { type: type, ts: Date.now() };
+    if (payload !== undefined) cmd.payload = payload;
+    this.commandRef.set(cmd);
+    console.log('[djmode] sent command:', type, payload || '');
+  },
+
+  // ── Update connection status indicator ──
+  _setConnectionStatus(connected) {
+    const dot = document.getElementById('djcDot');
+    const text = document.getElementById('djcStatusText');
+    if (connected) {
+      dot.className = 'djc-dot connected';
+      text.textContent = 'CONNECTED';
+      text.style.color = '#00ff41';
+    } else {
+      dot.className = 'djc-dot error';
+      text.textContent = 'DISPLAY OFFLINE';
+      text.style.color = '#ff006e';
+    }
+  },
+
+  // ── Update scene timer display ──
+  _updateSceneTimer(startTime) {
+    if (this._sceneTimerInterval) clearInterval(this._sceneTimerInterval);
+    const timerEl = document.getElementById('djcSceneTimer');
+    function tick() {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const m = Math.floor(elapsed / 60);
+      const s = elapsed % 60;
+      timerEl.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    }
+    tick();
+    this._sceneTimerInterval = setInterval(tick, 1000);
+  },
+
+  // ── Add entry to session log ──
+  _log(msg) {
+    const now = new Date();
+    const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ':' + (now.getSeconds() < 10 ? '0' : '') + now.getSeconds();
+    this._sessionLog.push({ time, msg });
+    const logEl = document.getElementById('djcLog');
+    if (logEl) {
+      const entry = document.createElement('div');
+      entry.className = 'djc-log-entry';
+      entry.innerHTML = '<span class="log-time">' + time + '</span>' + msg;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+  },
+
+  // ── Stop controller mode ──
+  stopController() {
+    if (this.stateRef) this.stateRef.off();
+    if (this._sceneTimerInterval) clearInterval(this._sceneTimerInterval);
+    const ctrl = document.getElementById('djController');
+    if (ctrl) ctrl.classList.remove('active');
+    this.role = null;
+    this.roomCode = null;
+    // Return to login
+    document.getElementById('login').style.display = 'flex';
+    document.body.style.cursor = '';
+  },
+
+  // ── Show DJ Mode audio source selector (for display) ──
+  showModeSelector() {
+    return new Promise(resolve => {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:250;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.95);gap:16px;';
+      const hasSystemAudio = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+      overlay.innerHTML =
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.8rem;letter-spacing:0.3em;color:#8338ec;text-shadow:0 0 20px #8338ec">DJ MODE — AUDIO SOURCE</div>' +
+        '<div style="font-size:0.6rem;letter-spacing:0.15em;color:rgba(255,255,255,0.35);margin-bottom:8px;max-width:320px;text-align:center">Choose how the display receives audio. System audio is recommended for direct connection.</div>' +
+        (hasSystemAudio ? '<button id="djSysBtn" class="btn" style="min-width:280px;background:#8338ec;box-shadow:0 0 20px rgba(131,56,236,0.7)">\uD83D\uDD0A \u00a0SYSTEM AUDIO</button>' : '') +
+        '<button id="djMicBtn" class="btn" style="min-width:280px;background:#8338ec;box-shadow:0 0 20px rgba(131,56,236,0.7)">\uD83C\uDFA4 \u00a0MICROPHONE</button>' +
+        '<button id="djCancelBtn" style="background:none;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);padding:0.6rem 2rem;cursor:pointer;font-family:\'Share Tech Mono\',monospace;font-size:0.7rem;letter-spacing:0.2em;margin-top:10px">CANCEL</button>';
+      document.body.appendChild(overlay);
+
+      const sysBtn = document.getElementById('djSysBtn');
+      if (sysBtn) sysBtn.onclick = () => { overlay.remove(); resolve('system'); };
+      document.getElementById('djMicBtn').onclick = () => { overlay.remove(); resolve('mic'); };
+      document.getElementById('djCancelBtn').onclick = () => { overlay.remove(); resolve(null); };
+    });
+  }
+};
+
+// ── DJ Mode button on login screen ──
+const djModeBtn = document.getElementById('djModeBtn');
+if (djModeBtn) {
+  djModeBtn.addEventListener('click', async () => {
+    const mode = await DJMode.showModeSelector();
+    if (!mode) return;
+    await DJMode.startDisplay(mode);
+  });
+}
+
+// ── Also update skipToNextScene & applyTheme to push DJ Mode state ──
+const _origApplyTheme = applyTheme;
+applyTheme = function(name, artist, theme) {
+  _origApplyTheme(name, artist, theme);
+  if (DJMode.role === 'display') {
+    DJMode._sceneStart = Date.now();
+    DJMode._pushState();
+  }
+};
+
 // ── Auth flow ──
 async function init() {
   const p = new URLSearchParams(location.search);
+
+  // ── DJ Mode: Controller URL ──
+  const controllerRoom = p.get('controller');
+  if (controllerRoom) {
+    DJMode.startController(controllerRoom);
+    return;
+  }
+
+  // ── DJ Mode: Display URL (auto-start with room code) ──
+  const djmodeRoom = p.get('djmode');
+  if (djmodeRoom) {
+    // djmode param = audio source hint ('system' or 'mic'), defaults to system
+    const mode = (djmodeRoom === 'mic') ? 'mic' : 'system';
+    await DJMode.startDisplay(mode);
+    return;
+  }
 
   // If returning from Spotify OAuth callback, go straight to Spotify provider
   if (p.get('code')) {
