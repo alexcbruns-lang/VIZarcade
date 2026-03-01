@@ -753,50 +753,64 @@ DJ_SIG_SCENE_STYLES['CYBER_GRID'] = function(ctx, dj, sz, alpha, e, bp, t) {
 
 // ── Lava World: fiery text with heat shimmer and dripping particles ──
 DJ_SIG_SCENE_STYLES['LAVA_WORLD'] = function(ctx, dj, sz, alpha, e, bp, t) {
-  const fontSize = sz * 0.55;
+  // Lava-carved text rising from the magma — large, fixed, glowing molten edges
+  const fontSize = sz * 0.6;
   ctx.font = `900 ${fontSize}px 'Impact', 'Arial Black', sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  // Heat shimmer offset
-  const shimX = Math.sin(t * 5) * 2 * e;
-  const shimY = Math.cos(t * 7) * 1.5 * e;
+  // Rising motion — text emerges upward during morphIn
+  const riseOff = (1 - alpha) * fontSize * 0.6;
 
-  // Molten glow under text
-  ctx.globalAlpha = alpha * 0.5;
-  const glow = ctx.createRadialGradient(0, fontSize * 0.2, 0, 0, fontSize * 0.2, sz * 0.7);
-  glow.addColorStop(0, 'rgba(255,100,0,0.6)');
-  glow.addColorStop(0.5, 'rgba(255,40,0,0.2)');
-  glow.addColorStop(1, 'transparent');
-  ctx.fillStyle = glow;
-  ctx.fillRect(-sz * 0.7, -sz * 0.5, sz * 1.4, sz * 1.0);
+  // Wide molten glow behind text
+  ctx.globalAlpha = alpha * 0.6;
+  const lavaGlow = ctx.createRadialGradient(0, riseOff, 0, 0, riseOff, sz * 0.9);
+  lavaGlow.addColorStop(0, 'rgba(255,80,0,0.7)');
+  lavaGlow.addColorStop(0.4, 'rgba(255,30,0,0.3)');
+  lavaGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = lavaGlow;
+  ctx.fillRect(-sz, -sz * 0.6 + riseOff, sz * 2, sz * 1.2);
 
-  // Main text — hot white/yellow core
-  ctx.globalAlpha = alpha * 0.95;
-  ctx.fillStyle = '#ffffff';
-  ctx.shadowBlur = 25 + bp * 20;
-  ctx.shadowColor = '#ff4400';
-  ctx.fillText(dj.display, shimX, shimY);
-
-  // Orange outline layer
-  ctx.globalAlpha = alpha * 0.7;
-  ctx.fillStyle = '#ff6600';
-  ctx.shadowBlur = 40;
+  // Molten cracks layer — orange with heavy glow
+  ctx.globalAlpha = alpha * 0.75;
+  ctx.fillStyle = '#ff4400';
+  ctx.shadowBlur = 45 + bp * 25;
   ctx.shadowColor = '#ff2200';
-  ctx.fillText(dj.display, shimX + 1, shimY + 1);
+  ctx.fillText(dj.display, 0, riseOff);
+
+  // Hot white core
+  ctx.globalAlpha = alpha * 0.95;
+  ctx.fillStyle = '#ffffcc';
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = '#ff6600';
+  ctx.fillText(dj.display, 0, riseOff);
   ctx.shadowBlur = 0;
 
-  // Spawn lava drip particles from text bottom
-  if (Math.random() < 0.3 + bp * 0.4) {
+  // Lava drips falling from text bottom
+  if (Math.random() < 0.4 + bp * 0.5) {
     const tw = ctx.measureText(dj.display).width;
     djSig.particles.push({
-      x: (Math.random() - 0.5) * tw * 0.8,
-      y: fontSize * 0.3,
-      vx: (Math.random() - 0.5) * 0.5,
-      vy: 0.5 + Math.random() * 1.5,
+      x: (Math.random() - 0.5) * tw * 0.9,
+      y: fontSize * 0.35 + riseOff,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: 1 + Math.random() * 2,
       life: 1,
-      sz: 2 + Math.random() * 4,
-      ci: Math.random() < 0.5 ? '#ff4400' : '#ffaa00'
+      sz: 3 + Math.random() * 5,
+      ci: Math.random() < 0.4 ? '#ffffaa' : Math.random() < 0.5 ? '#ff4400' : '#ff8800'
+    });
+  }
+
+  // Heat distortion embers rising from text top
+  if (Math.random() < 0.25) {
+    const tw = ctx.measureText(dj.display).width;
+    djSig.particles.push({
+      x: (Math.random() - 0.5) * tw * 0.7,
+      y: -fontSize * 0.4 + riseOff,
+      vx: (Math.random() - 0.5) * 0.8,
+      vy: -(1 + Math.random() * 2),
+      life: 1,
+      sz: 1.5 + Math.random() * 2.5,
+      ci: 'rgba(255,200,50,0.8)'
     });
   }
 
@@ -848,6 +862,746 @@ DJ_SIG_SCENE_STYLES['NEON_CATHEDRAL'] = function(ctx, dj, sz, alpha, e, bp, t) {
   ctx.shadowColor = pc(1);
   ctx.fillText(dj.display, 0, 0);
   ctx.shadowBlur = 0;
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Deep Sea: bioluminescent glow, jellyfish pulsing, deep ocean trails ──
+DJ_SIG_SCENE_STYLES['DEEP_SEA'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.5;
+  ctx.font = `600 ${fontSize}px 'Trebuchet MS', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Bioluminescent pulse — size breathes like jellyfish
+  const breathe = 1 + Math.sin(t * 1.5) * 0.06;
+  ctx.save();
+  ctx.scale(breathe, breathe);
+
+  // Deep ocean glow halo
+  ctx.globalAlpha = alpha * 0.35;
+  const bioGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, sz * 0.75);
+  bioGlow.addColorStop(0, rgba(pc(0), 0.5));
+  bioGlow.addColorStop(0.5, rgba(pc(1), 0.15));
+  bioGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = bioGlow;
+  ctx.fillRect(-sz, -sz * 0.6, sz * 2, sz * 1.2);
+
+  // Pulsing tentacle-like glow strands below text
+  ctx.globalAlpha = alpha * 0.2;
+  for (let i = 0; i < 5; i++) {
+    const tx = (i - 2) * fontSize * 0.18;
+    const tendrilLen = sz * (0.25 + bp * 0.15 + Math.sin(t * 2 + i) * 0.08);
+    const grd = ctx.createLinearGradient(tx, fontSize * 0.3, tx, fontSize * 0.3 + tendrilLen);
+    grd.addColorStop(0, rgba(pc(i % 4), 0.5));
+    grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd;
+    ctx.fillRect(tx - 2, fontSize * 0.3, 4 + Math.sin(t + i) * 2, tendrilLen);
+  }
+
+  // Main text — luminous aqua/teal
+  ctx.globalAlpha = alpha * 0.6;
+  ctx.fillStyle = pc(0);
+  ctx.shadowBlur = 35 + bp * 20;
+  ctx.shadowColor = pc(0);
+  ctx.fillText(dj.display, 0, 0);
+
+  ctx.globalAlpha = alpha * 0.92;
+  ctx.fillStyle = '#e0ffff';
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = pc(1);
+  ctx.fillText(dj.display, 0, 0);
+  ctx.shadowBlur = 0;
+
+  ctx.restore();
+
+  // Bioluminescent spore particles
+  if (Math.random() < 0.3 + bp * 0.3) {
+    djSig.particles.push({
+      x: (Math.random() - 0.5) * sz * 0.8,
+      y: (Math.random() - 0.5) * fontSize * 0.6,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -(0.3 + Math.random() * 0.8),
+      life: 1,
+      sz: 1.5 + Math.random() * 3,
+      ci: rgba(pc(Math.floor(Math.random() * 4)), 0.8)
+    });
+  }
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Storm Chaser: lightning-crackling text, wind jitter, rain streaking ──
+DJ_SIG_SCENE_STYLES['STORM_CHASER'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.55;
+  ctx.font = `900 ${fontSize}px 'Impact', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Wind jitter
+  const jitterX = (Math.random() - 0.5) * bp * 6;
+  const jitterY = (Math.random() - 0.5) * bp * 3;
+
+  // Dark storm cloud behind text
+  ctx.globalAlpha = alpha * 0.3;
+  const stormBg = ctx.createRadialGradient(0, -fontSize * 0.2, 0, 0, -fontSize * 0.2, sz * 0.7);
+  stormBg.addColorStop(0, 'rgba(40,40,60,0.6)');
+  stormBg.addColorStop(1, 'transparent');
+  ctx.fillStyle = stormBg;
+  ctx.fillRect(-sz, -sz * 0.6, sz * 2, sz * 1.2);
+
+  // Lightning bolt from text on beat
+  if (bp > 0.5) {
+    ctx.strokeStyle = rgba('#ffffff', alpha * bp);
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = pc(0);
+    const tw = ctx.measureText(dj.display).width;
+    for (let b = 0; b < 2; b++) {
+      let bx = (Math.random() - 0.5) * tw * 0.6;
+      let by = fontSize * 0.3;
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      for (let s = 0; s < 4; s++) {
+        bx += (Math.random() - 0.5) * 20;
+        by += 8 + Math.random() * 15;
+        ctx.lineTo(bx, by);
+      }
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+  }
+
+  // Rain streaks through text area
+  ctx.globalAlpha = alpha * 0.2;
+  ctx.strokeStyle = 'rgba(180,200,220,0.4)';
+  ctx.lineWidth = 1;
+  for (let r = 0; r < 8; r++) {
+    const rx = (Math.random() - 0.5) * sz * 1.2;
+    const ry = -sz * 0.4 + Math.random() * sz * 0.8;
+    ctx.beginPath();
+    ctx.moveTo(rx, ry);
+    ctx.lineTo(rx - 3, ry + 12 + Math.random() * 10);
+    ctx.stroke();
+  }
+
+  // Main text — electric white with storm glow
+  ctx.globalAlpha = alpha * 0.95;
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowBlur = 20 + bp * 30;
+  ctx.shadowColor = bp > 0.5 ? '#ffffff' : pc(0);
+  ctx.fillText(dj.display, jitterX, jitterY);
+  ctx.shadowBlur = 0;
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Jungle Rave: tribal text with vine tendrils and neon underglow ──
+DJ_SIG_SCENE_STYLES['JUNGLE_RAVE'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.5;
+  ctx.font = `800 ${fontSize}px 'Arial Black', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Neon underglow pulsing
+  ctx.globalAlpha = alpha * (0.3 + bp * 0.2);
+  const neonGlow = ctx.createRadialGradient(0, fontSize * 0.15, 0, 0, fontSize * 0.15, sz * 0.7);
+  neonGlow.addColorStop(0, rgba(pc(1), 0.5));
+  neonGlow.addColorStop(0.6, rgba(pc(0), 0.2));
+  neonGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = neonGlow;
+  ctx.fillRect(-sz, -sz * 0.5, sz * 2, sz * 1.0);
+
+  // Vine tendrils growing from text edges
+  ctx.globalAlpha = alpha * 0.35;
+  ctx.strokeStyle = '#22aa44';
+  ctx.lineWidth = 2;
+  const tw = ctx.measureText(dj.display).width;
+  for (let v = 0; v < 6; v++) {
+    const vx = (v - 2.5) * tw * 0.18;
+    const side = v % 2 === 0 ? -1 : 1;
+    ctx.beginPath();
+    ctx.moveTo(vx, side * fontSize * 0.3);
+    const curl = Math.sin(t * 0.8 + v * 1.5) * 15;
+    ctx.quadraticCurveTo(vx + curl, side * (fontSize * 0.3 + 20), vx + curl * 1.5, side * (fontSize * 0.3 + 35 + bp * 10));
+    ctx.stroke();
+    // Leaf dot at tip
+    ctx.fillStyle = rgba(pc(v % 4), 0.5);
+    ctx.beginPath();
+    ctx.arc(vx + curl * 1.5, side * (fontSize * 0.3 + 35 + bp * 10), 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Green-tinted text layer
+  ctx.globalAlpha = alpha * 0.5;
+  ctx.fillStyle = '#00ff66';
+  ctx.shadowBlur = 30 + bp * 15;
+  ctx.shadowColor = '#00ff66';
+  ctx.fillText(dj.display, 0, 0);
+
+  // Bright core
+  ctx.globalAlpha = alpha * 0.9;
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = pc(0);
+  ctx.fillText(dj.display, 0, 0);
+  ctx.shadowBlur = 0;
+
+  // Firefly particles
+  if (Math.random() < 0.25) {
+    djSig.particles.push({
+      x: (Math.random() - 0.5) * sz,
+      y: (Math.random() - 0.5) * sz * 0.6,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: (Math.random() - 0.5) * 0.5,
+      life: 1,
+      sz: 2 + Math.random() * 2,
+      ci: Math.random() < 0.5 ? '#44ff44' : '#aaff00'
+    });
+  }
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Disco Dimension: mirror-ball faceted text with disco sparkle ──
+DJ_SIG_SCENE_STYLES['DISCO_DIMENSION'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.5;
+  ctx.font = `800 ${fontSize}px 'Arial Black', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Disco sparkle rays from behind text
+  ctx.globalAlpha = alpha * 0.2;
+  for (let r = 0; r < 12; r++) {
+    const angle = t * 0.3 + r * Math.PI / 6;
+    const rayLen = sz * (0.5 + bp * 0.3);
+    ctx.strokeStyle = rgba(pc(r % 4), 0.4 + bp * 0.3);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(angle) * fontSize * 0.3, Math.sin(angle) * fontSize * 0.2);
+    ctx.lineTo(Math.cos(angle) * rayLen, Math.sin(angle) * rayLen * 0.7);
+    ctx.stroke();
+  }
+
+  // Mirror-ball faceted fill — cycle colors across text
+  ctx.globalAlpha = alpha * 0.7;
+  ctx.fillStyle = pc(Math.floor(t * 2) % 4);
+  ctx.shadowBlur = 25 + bp * 20;
+  ctx.shadowColor = pc((Math.floor(t * 2) + 1) % 4);
+  ctx.fillText(dj.display, 0, 0);
+
+  // Shimmering white overlay
+  ctx.globalAlpha = alpha * (0.4 + bp * 0.4);
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = '#ffffff';
+  ctx.fillText(dj.display, 0, 0);
+  ctx.shadowBlur = 0;
+
+  // Sparkle particles
+  if (Math.random() < 0.4 + bp * 0.3) {
+    djSig.particles.push({
+      x: (Math.random() - 0.5) * sz * 0.8,
+      y: (Math.random() - 0.5) * sz * 0.5,
+      vx: (Math.random() - 0.5) * 2,
+      vy: (Math.random() - 0.5) * 2,
+      life: 1,
+      sz: 1.5 + Math.random() * 2.5,
+      ci: pc(Math.floor(Math.random() * 4))
+    });
+  }
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Acid Trip: melting/warping text with psychedelic rainbow cycling ──
+DJ_SIG_SCENE_STYLES['ACID_TRIP'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.5;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Psychedelic rainbow layers — each offset and colored differently
+  const layers = 5;
+  for (let i = layers; i >= 0; i--) {
+    const hue = ((t * 40 + i * 60) % 360);
+    const meltX = Math.sin(t * 2 + i * 0.8) * (4 + i * 2);
+    const meltY = Math.cos(t * 1.5 + i * 1.1) * (3 + i * 1.5);
+    const meltScale = 1 + Math.sin(t * 1.8 + i * 0.5) * 0.05 * i;
+
+    ctx.save();
+    ctx.scale(meltScale, meltScale + Math.sin(t * 2.5 + i) * 0.03);
+
+    ctx.globalAlpha = alpha * (i === 0 ? 0.9 : 0.2);
+    ctx.font = `${i === 0 ? 800 : 600} ${fontSize}px 'Arial Black', sans-serif`;
+    ctx.fillStyle = i === 0 ? '#ffffff' : `hsl(${hue}, 100%, ${60 + i * 5}%)`;
+    ctx.shadowBlur = i === 0 ? 15 + bp * 15 : 20;
+    ctx.shadowColor = `hsl(${(hue + 180) % 360}, 100%, 50%)`;
+    ctx.fillText(dj.display, meltX, meltY);
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Space Station: holographic HUD-style text with scan lines ──
+DJ_SIG_SCENE_STYLES['SPACE_STATION'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.45;
+  ctx.font = `600 ${fontSize}px 'Courier New', monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // HUD frame brackets
+  const tw = ctx.measureText(dj.display).width;
+  const frameW = tw * 0.6 + 20;
+  const frameH = fontSize * 0.7;
+  ctx.globalAlpha = alpha * 0.4;
+  ctx.strokeStyle = rgba(pc(0), 0.6);
+  ctx.lineWidth = 1.5;
+  // Top-left bracket
+  ctx.beginPath();
+  ctx.moveTo(-frameW, -frameH); ctx.lineTo(-frameW, -frameH - 8); ctx.lineTo(-frameW + 15, -frameH - 8);
+  ctx.stroke();
+  // Top-right bracket
+  ctx.beginPath();
+  ctx.moveTo(frameW, -frameH); ctx.lineTo(frameW, -frameH - 8); ctx.lineTo(frameW - 15, -frameH - 8);
+  ctx.stroke();
+  // Bottom-left bracket
+  ctx.beginPath();
+  ctx.moveTo(-frameW, frameH); ctx.lineTo(-frameW, frameH + 8); ctx.lineTo(-frameW + 15, frameH + 8);
+  ctx.stroke();
+  // Bottom-right bracket
+  ctx.beginPath();
+  ctx.moveTo(frameW, frameH); ctx.lineTo(frameW, frameH + 8); ctx.lineTo(frameW - 15, frameH + 8);
+  ctx.stroke();
+
+  // Data readout text above
+  ctx.globalAlpha = alpha * 0.3;
+  ctx.font = `400 ${fontSize * 0.22}px 'Courier New', monospace`;
+  ctx.fillStyle = pc(0);
+  ctx.fillText('ARTIST IDENT // ' + dj.display, 0, -frameH - 16);
+
+  // Horizontal scan line
+  const scanY = Math.sin(t * 3) * frameH;
+  ctx.globalAlpha = alpha * 0.2;
+  ctx.fillStyle = rgba(pc(0), 0.5);
+  ctx.fillRect(-frameW, scanY - 1, frameW * 2, 2);
+
+  // Main holographic text
+  ctx.font = `600 ${fontSize}px 'Courier New', monospace`;
+  ctx.globalAlpha = alpha * 0.5;
+  ctx.fillStyle = pc(0);
+  ctx.shadowBlur = 20 + bp * 15;
+  ctx.shadowColor = pc(0);
+  ctx.fillText(dj.display, 0, 0);
+
+  ctx.globalAlpha = alpha * (0.7 + bp * 0.25);
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = pc(1);
+  ctx.fillText(dj.display, 0, 0);
+  ctx.shadowBlur = 0;
+
+  // Holographic flicker
+  if (Math.random() < 0.05) {
+    ctx.globalAlpha = alpha * 0.15;
+    ctx.fillStyle = pc(0);
+    ctx.fillRect(-frameW, -frameH, frameW * 2, frameH * 2);
+  }
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Electric Forest: branch-shaped text with firefly particles ──
+DJ_SIG_SCENE_STYLES['ELECTRIC_FOREST'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.5;
+  ctx.font = `700 ${fontSize}px 'Georgia', serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Forest ambient glow
+  ctx.globalAlpha = alpha * 0.25;
+  const forestGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, sz * 0.7);
+  forestGlow.addColorStop(0, rgba(pc(1), 0.4));
+  forestGlow.addColorStop(0.5, 'rgba(0,60,20,0.2)');
+  forestGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = forestGlow;
+  ctx.fillRect(-sz, -sz * 0.6, sz * 2, sz * 1.2);
+
+  // Root/branch lines extending from text
+  ctx.globalAlpha = alpha * 0.25;
+  ctx.strokeStyle = rgba(pc(1), 0.5);
+  ctx.lineWidth = 1.5;
+  const tw = ctx.measureText(dj.display).width;
+  for (let b = 0; b < 8; b++) {
+    const bx = (b - 3.5) * tw * 0.12;
+    const dir = b % 2 === 0 ? -1 : 1;
+    ctx.beginPath();
+    ctx.moveTo(bx, dir * fontSize * 0.3);
+    const endX = bx + Math.sin(t * 0.5 + b) * 12;
+    const endY = dir * (fontSize * 0.3 + 18 + bp * 8 + Math.sin(t * 0.7 + b * 2) * 5);
+    ctx.quadraticCurveTo(bx + Math.sin(t + b) * 8, dir * (fontSize * 0.3 + 10), endX, endY);
+    ctx.stroke();
+  }
+
+  // Green nature text layer
+  ctx.globalAlpha = alpha * 0.5;
+  ctx.fillStyle = pc(1);
+  ctx.shadowBlur = 25 + bp * 15;
+  ctx.shadowColor = pc(1);
+  ctx.fillText(dj.display, 0, 0);
+
+  // Bright core
+  ctx.globalAlpha = alpha * 0.85;
+  ctx.fillStyle = '#eeffee';
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = pc(0);
+  ctx.fillText(dj.display, 0, 0);
+  ctx.shadowBlur = 0;
+
+  // Firefly particles drifting around text
+  if (Math.random() < 0.3) {
+    djSig.particles.push({
+      x: (Math.random() - 0.5) * sz * 1.2,
+      y: (Math.random() - 0.5) * sz * 0.7,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.3,
+      life: 1,
+      sz: 1.5 + Math.random() * 2,
+      ci: Math.random() < 0.6 ? '#aaff44' : '#ffff66'
+    });
+  }
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Omnia Nightclub: laser-projected text with beam sweep ──
+DJ_SIG_SCENE_STYLES['OMNIA_NIGHTCLUB'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.55;
+  ctx.font = `900 ${fontSize}px 'Arial Black', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Laser beam sweep behind text
+  ctx.globalAlpha = alpha * 0.15;
+  const sweepAngle = t * 0.8;
+  for (let l = 0; l < 5; l++) {
+    const la = sweepAngle + l * Math.PI * 2 / 5;
+    const lx = Math.cos(la) * sz * 0.9;
+    const ly = Math.sin(la) * sz * 0.5;
+    ctx.strokeStyle = rgba(pc(l % 4), 0.5 + bp * 0.3);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(lx, ly);
+    ctx.stroke();
+  }
+
+  // Haze/smoke effect
+  ctx.globalAlpha = alpha * 0.2;
+  const hazeGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, sz * 0.6);
+  hazeGrad.addColorStop(0, 'rgba(255,255,255,0.15)');
+  hazeGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = hazeGrad;
+  ctx.fillRect(-sz, -sz * 0.5, sz * 2, sz);
+
+  // Main laser-projected text
+  ctx.globalAlpha = alpha * 0.6;
+  ctx.fillStyle = pc(0);
+  ctx.shadowBlur = 35 + bp * 25;
+  ctx.shadowColor = pc(0);
+  ctx.fillText(dj.display, 0, 0);
+
+  ctx.globalAlpha = alpha * 0.95;
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowBlur = 15 + bp * 10;
+  ctx.shadowColor = pc(1);
+  ctx.fillText(dj.display, 0, 0);
+  ctx.shadowBlur = 0;
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Gotham: bat-signal spotlight, gritty noir text with rain ──
+DJ_SIG_SCENE_STYLES['GOTHAM'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.55;
+  ctx.font = `900 ${fontSize}px 'Impact', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Spotlight cone from above
+  ctx.globalAlpha = alpha * 0.2;
+  ctx.beginPath();
+  ctx.moveTo(-8, -sz * 0.6);
+  ctx.lineTo(-sz * 0.5, sz * 0.4);
+  ctx.lineTo(sz * 0.5, sz * 0.4);
+  ctx.lineTo(8, -sz * 0.6);
+  ctx.closePath();
+  const spotGrad = ctx.createLinearGradient(0, -sz * 0.6, 0, sz * 0.4);
+  spotGrad.addColorStop(0, 'rgba(255,255,200,0.4)');
+  spotGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = spotGrad;
+  ctx.fill();
+
+  // Noir rain streaks
+  ctx.globalAlpha = alpha * 0.15;
+  ctx.strokeStyle = 'rgba(180,190,200,0.3)';
+  ctx.lineWidth = 0.8;
+  for (let r = 0; r < 12; r++) {
+    const rx = (Math.random() - 0.5) * sz * 1.2;
+    const ry = -sz * 0.5 + Math.random() * sz;
+    ctx.beginPath();
+    ctx.moveTo(rx, ry);
+    ctx.lineTo(rx - 2, ry + 10 + Math.random() * 8);
+    ctx.stroke();
+  }
+
+  // Gritty dark shadow
+  ctx.globalAlpha = alpha * 0.4;
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  ctx.fillText(dj.display, 2, 2);
+
+  // Main text — harsh yellow-white in spotlight
+  ctx.globalAlpha = alpha * 0.95;
+  ctx.fillStyle = '#ffffcc';
+  ctx.shadowBlur = 20 + bp * 20;
+  ctx.shadowColor = '#ffff88';
+  ctx.fillText(dj.display, 0, 0);
+  ctx.shadowBlur = 0;
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Day of Dead: marigold-adorned text with sugar skull elements ──
+DJ_SIG_SCENE_STYLES['DAY_OF_DEAD'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.48;
+  ctx.font = `800 ${fontSize}px 'Georgia', serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Marigold glow halo
+  ctx.globalAlpha = alpha * 0.3;
+  const mariGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, sz * 0.7);
+  mariGlow.addColorStop(0, 'rgba(255,165,0,0.5)');
+  mariGlow.addColorStop(0.5, 'rgba(255,100,50,0.2)');
+  mariGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = mariGlow;
+  ctx.fillRect(-sz, -sz * 0.6, sz * 2, sz * 1.2);
+
+  // Decorative marigold petals around text
+  ctx.globalAlpha = alpha * 0.35;
+  const tw = ctx.measureText(dj.display).width;
+  for (let p = 0; p < 10; p++) {
+    const pa = t * 0.3 + p * Math.PI / 5;
+    const pr = tw * 0.55 + fontSize * 0.15;
+    const px = Math.cos(pa) * pr;
+    const py = Math.sin(pa) * pr * 0.55;
+    ctx.fillStyle = p % 3 === 0 ? '#ff6600' : p % 3 === 1 ? '#ffaa00' : '#ff4488';
+    ctx.beginPath();
+    ctx.ellipse(px, py, 4 + bp * 2, 3 + bp * 1.5, pa, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Rich colored text layer
+  ctx.globalAlpha = alpha * 0.6;
+  ctx.fillStyle = '#ff6600';
+  ctx.shadowBlur = 30 + bp * 15;
+  ctx.shadowColor = '#ff4400';
+  ctx.fillText(dj.display, 0, 0);
+
+  // Bright core with warm glow
+  ctx.globalAlpha = alpha * 0.9;
+  ctx.fillStyle = '#ffffdd';
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = '#ffaa00';
+  ctx.fillText(dj.display, 0, 0);
+  ctx.shadowBlur = 0;
+
+  // Falling petal particles
+  if (Math.random() < 0.25 + bp * 0.2) {
+    djSig.particles.push({
+      x: (Math.random() - 0.5) * sz * 0.8,
+      y: -fontSize * 0.4,
+      vx: (Math.random() - 0.5) * 1,
+      vy: 0.5 + Math.random() * 1,
+      life: 1,
+      sz: 2 + Math.random() * 3,
+      ci: Math.random() < 0.5 ? '#ff8800' : '#ffaa00'
+    });
+  }
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Mount Olympus: godly marble text with lightning and golden glow ──
+DJ_SIG_SCENE_STYLES['MOUNT_OLYMPUS'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.55;
+  ctx.font = `800 ${fontSize}px 'Georgia', 'Times New Roman', serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Golden divine aura
+  ctx.globalAlpha = alpha * 0.35;
+  const aura = ctx.createRadialGradient(0, 0, 0, 0, 0, sz * 0.8);
+  aura.addColorStop(0, 'rgba(255,215,0,0.5)');
+  aura.addColorStop(0.4, 'rgba(255,180,0,0.2)');
+  aura.addColorStop(1, 'transparent');
+  ctx.fillStyle = aura;
+  ctx.fillRect(-sz, -sz * 0.6, sz * 2, sz * 1.2);
+
+  // Lightning from above on beat
+  if (bp > 0.4) {
+    ctx.globalAlpha = alpha * bp * 0.7;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.5;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#aaccff';
+    let lx = (Math.random() - 0.5) * sz * 0.3;
+    let ly = -sz * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(lx, ly);
+    for (let s = 0; s < 5; s++) {
+      lx += (Math.random() - 0.5) * 25;
+      ly += 12 + Math.random() * 10;
+      ctx.lineTo(lx, ly);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Golden marble text
+  ctx.globalAlpha = alpha * 0.6;
+  ctx.fillStyle = '#daa520';
+  ctx.shadowBlur = 30 + bp * 20;
+  ctx.shadowColor = '#ffd700';
+  ctx.fillText(dj.display, 0, 0);
+
+  // Bright marble core
+  ctx.globalAlpha = alpha * 0.92;
+  ctx.fillStyle = '#fff8dc';
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = '#daa520';
+  ctx.fillText(dj.display, 0, 0);
+  ctx.shadowBlur = 0;
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Atlantis: underwater text with bubble streams and caustic light ──
+DJ_SIG_SCENE_STYLES['ATLANTIS'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.5;
+  ctx.font = `700 ${fontSize}px 'Trebuchet MS', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Caustic light ripples
+  ctx.globalAlpha = alpha * 0.12;
+  for (let c = 0; c < 4; c++) {
+    const cx2 = Math.sin(t * 0.7 + c * 1.5) * sz * 0.3;
+    const cy2 = Math.cos(t * 0.9 + c * 2) * sz * 0.2;
+    const cr = sz * (0.15 + Math.sin(t * 1.2 + c) * 0.05);
+    const cg = ctx.createRadialGradient(cx2, cy2, 0, cx2, cy2, cr);
+    cg.addColorStop(0, 'rgba(100,220,255,0.5)');
+    cg.addColorStop(1, 'transparent');
+    ctx.fillStyle = cg;
+    ctx.fillRect(-sz, -sz * 0.5, sz * 2, sz);
+  }
+
+  // Aqua colored text
+  ctx.globalAlpha = alpha * 0.55;
+  ctx.fillStyle = '#00ccaa';
+  ctx.shadowBlur = 30 + bp * 20;
+  ctx.shadowColor = '#00aacc';
+  ctx.fillText(dj.display, 0, 0);
+
+  // Bright core with water tint
+  ctx.globalAlpha = alpha * 0.9;
+  ctx.fillStyle = '#e0ffff';
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = '#00ddff';
+  ctx.fillText(dj.display, 0, 0);
+  ctx.shadowBlur = 0;
+
+  // Bubble particles rising from text
+  if (Math.random() < 0.35 + bp * 0.25) {
+    const tw = ctx.measureText(dj.display).width;
+    djSig.particles.push({
+      x: (Math.random() - 0.5) * tw * 0.8,
+      y: fontSize * 0.3,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: -(1 + Math.random() * 1.5),
+      life: 1,
+      sz: 2 + Math.random() * 4,
+      ci: rgba('#88eeff', 0.6)
+    });
+  }
+
+  ctx.globalAlpha = 1;
+};
+
+// ── Egyptian Tomb: hieroglyphic-inspired gold text with sand particles ──
+DJ_SIG_SCENE_STYLES['EGYPTIAN_TOMB'] = function(ctx, dj, sz, alpha, e, bp, t) {
+  const fontSize = sz * 0.5;
+  ctx.font = `800 ${fontSize}px 'Georgia', serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Torch-lit warm glow
+  ctx.globalAlpha = alpha * 0.3;
+  const torchGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, sz * 0.7);
+  torchGlow.addColorStop(0, 'rgba(255,180,50,0.4)');
+  torchGlow.addColorStop(0.5, 'rgba(200,100,20,0.15)');
+  torchGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = torchGlow;
+  ctx.fillRect(-sz, -sz * 0.6, sz * 2, sz * 1.2);
+
+  // Decorative line above and below (hieroglyphic border style)
+  ctx.globalAlpha = alpha * 0.3;
+  ctx.strokeStyle = '#daa520';
+  ctx.lineWidth = 1.5;
+  const tw = ctx.measureText(dj.display).width;
+  const bw = tw * 0.55;
+  ctx.beginPath();
+  ctx.moveTo(-bw, -fontSize * 0.45); ctx.lineTo(bw, -fontSize * 0.45);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-bw, fontSize * 0.45); ctx.lineTo(bw, fontSize * 0.45);
+  ctx.stroke();
+  // Small decorative dots on the lines
+  for (let d = 0; d < 5; d++) {
+    const dx = (d - 2) * bw * 0.45;
+    ctx.fillStyle = '#daa520';
+    ctx.beginPath(); ctx.arc(dx, -fontSize * 0.45, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(dx, fontSize * 0.45, 2, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Gold text layer
+  ctx.globalAlpha = alpha * 0.65;
+  ctx.fillStyle = '#daa520';
+  ctx.shadowBlur = 25 + bp * 15;
+  ctx.shadowColor = '#cc8800';
+  ctx.fillText(dj.display, 0, 0);
+
+  // Bright gold core
+  ctx.globalAlpha = alpha * 0.92;
+  ctx.fillStyle = '#fff8dc';
+  ctx.shadowBlur = 6;
+  ctx.shadowColor = '#daa520';
+  ctx.fillText(dj.display, 0, 0);
+  ctx.shadowBlur = 0;
+
+  // Sand dust particles
+  if (Math.random() < 0.2 + bp * 0.2) {
+    djSig.particles.push({
+      x: (Math.random() - 0.5) * sz,
+      y: (Math.random() - 0.5) * sz * 0.5,
+      vx: 0.3 + Math.random() * 0.8,
+      vy: (Math.random() - 0.5) * 0.3,
+      life: 1,
+      sz: 1 + Math.random() * 2,
+      ci: Math.random() < 0.5 ? '#daa520' : '#c8a050'
+    });
+  }
 
   ctx.globalAlpha = 1;
 };
@@ -935,24 +1689,27 @@ function _djSigDefault(ctx, dj, sz, alpha, e, bp, t) {
 // ── Update & draw scene-specific particles (lava drips, sparks, etc.) ──
 function _updateDJSigParticles(ctx, cx, cy, sz, scene) {
   if (djSig.particles.length === 0) return;
+  // Scene-aware gravity: underwater/deep sea/forest scenes have buoyancy
+  const buoyant = scene === 'DEEP_SEA' || scene === 'ATLANTIS' || scene === 'ELECTRIC_FOREST';
+  const grav = buoyant ? -0.02 : 0.08;
   ctx.save();
   ctx.translate(cx, cy);
   for (let i = djSig.particles.length - 1; i >= 0; i--) {
     const p = djSig.particles[i];
     p.x += p.vx;
     p.y += p.vy;
-    p.vy += 0.08; // gravity
+    p.vy += grav;
     p.life -= 0.015;
     if (p.life <= 0) { djSig.particles.splice(i, 1); continue; }
     ctx.globalAlpha = p.life * djSig.morph;
     ctx.fillStyle = p.ci || pc(0);
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.sz * p.life, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, Math.max(0.5, p.sz * p.life), 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore();
   // Cap particle count
-  if (djSig.particles.length > 60) djSig.particles.splice(0, djSig.particles.length - 60);
+  if (djSig.particles.length > 80) djSig.particles.splice(0, djSig.particles.length - 80);
 }
 
 
@@ -3179,12 +3936,21 @@ function drawAcidTrip(t){
     const meltY=h/2+Math.cos(SD.fracPh)*h*0.1*melt;
     const ms=Math.min(w,h)*(0.12+SM.beatPulse*0.04);
     cpRot+=0.02*(1+melt);cpPh+=0.013;
-    x0.save();
-    x0.translate(meltX,meltY);
-    x0.scale(1+Math.sin(SD.fracPh*2)*0.25*melt,1+Math.cos(SD.fracPh*1.5)*0.25*melt);
-    x0.globalAlpha=(0.2+SM.beatPulse*0.12)*(1+melt*0.4);
-    drawCP(x0,THEME.centerpiece,ms,cpPh*100);
-    x0.globalAlpha=1;x0.restore();
+
+    const _acidMorph = djSig.active && djSig.morph > 0 && !DJ_SIG_EXCLUDED_SCENES.has(THEME.scene);
+    if (_acidMorph && djSig.morph >= 1) {
+      // Full DJ signature — psychedelic style
+      drawDJSignature(x0, meltX, meltY, ms, THEME.scene);
+    } else {
+      x0.save();
+      x0.translate(meltX,meltY);
+      x0.scale(1+Math.sin(SD.fracPh*2)*0.25*melt,1+Math.cos(SD.fracPh*1.5)*0.25*melt);
+      const cpAlpha = _acidMorph ? (1 - djSig.morph) : 1;
+      x0.globalAlpha=cpAlpha*(0.2+SM.beatPulse*0.12)*(1+melt*0.4);
+      drawCP(x0,THEME.centerpiece,ms,cpPh*100);
+      x0.globalAlpha=1;x0.restore();
+      if (_acidMorph) drawDJSignature(x0, meltX, meltY, ms * (0.4 + 0.6 * djSig.morph), THEME.scene);
+    }
   }
 }
 
@@ -4814,6 +5580,12 @@ function drawOmniaNightclub(t){
   fglow.addColorStop(0.5,rgba(pc(1),0.04));
   fglow.addColorStop(1,'transparent');
   x0.fillStyle=fglow;x0.fillRect(0,0,w,h);
+
+  // ── DJ Signature — Omnia has no centerpiece, so draw standalone ──
+  if (djSig.active && djSig.morph > 0 && !DJ_SIG_EXCLUDED_SCENES.has(THEME.scene)) {
+    const sigSz = Math.min(w, h) * 0.15;
+    drawDJSignature(x0, cx, h * 0.45, sigSz, THEME.scene);
+  }
 }
 
 
