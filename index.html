@@ -97,12 +97,12 @@ body.djmode-display{cursor:none!important;user-select:none!important}
 #djmodeRoomOverlay .room-code{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,8vw,5rem);letter-spacing:0.25em;color:#00ff41;text-shadow:0 0 40px #00ff41,0 0 80px rgba(0,255,65,0.4);margin:0.8rem 0 0.5rem}
 #djmodeRoomOverlay .room-label{font-size:0.7rem;letter-spacing:0.5em;color:rgba(6,255,216,0.6);text-transform:uppercase}
 #djmodeRoomOverlay .room-qr-wrap{margin:1rem 0;display:flex;align-items:center;justify-content:center}
-#djmodeRoomOverlay .room-qr-wrap canvas{border:3px solid rgba(0,255,65,0.3);border-radius:4px;box-shadow:0 0 30px rgba(0,255,65,0.15);display:block}
+#djmodeRoomOverlay .room-qr-wrap canvas{border:3px solid rgba(0,255,65,0.3);border-radius:4px;box-shadow:0 0 30px rgba(0,255,65,0.15);display:block;width:180px!important;height:180px!important;max-width:180px!important;max-height:180px!important}
+#djmodeFsBtnFixed{position:fixed;bottom:2.5rem;right:2.5rem;z-index:502;background:none;border:1px solid rgba(0,255,65,0.25);color:rgba(0,255,65,0.5);font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;padding:0.4rem 0.7rem;cursor:pointer;transition:all 0.2s;pointer-events:all;display:none}
+#djmodeFsBtnFixed:hover{border-color:#00ff41;color:#00ff41;box-shadow:0 0 10px rgba(0,255,65,0.3)}
 #djmodeRoomOverlay .room-url{font-size:0.55rem;letter-spacing:0.12em;color:rgba(255,255,255,0.35);margin-top:0.8rem;max-width:90vw;text-align:center;word-break:break-all}
 #djmodeRoomOverlay .room-waiting{font-size:0.6rem;letter-spacing:0.3em;color:rgba(131,56,236,0.7);margin-top:1.2rem;animation:waitingPulse 2s ease-in-out infinite}
 @keyframes waitingPulse{0%,100%{opacity:0.4}50%{opacity:1}}
-#djmodeRoomOverlay .room-fs-btn{margin-top:1.2rem;padding:0.7rem 2rem;background:rgba(0,255,65,0.08);border:1px solid rgba(0,255,65,0.3);color:#00ff41;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:0.25em;cursor:pointer;transition:all 0.15s}
-#djmodeRoomOverlay .room-fs-btn:hover{background:rgba(0,255,65,0.2);border-color:#00ff41;box-shadow:0 0 15px rgba(0,255,65,0.3)}
 #djmodeRoomOverlay.fade-out{opacity:0;pointer-events:none}
 #djmodeExitZone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:501;cursor:none;-webkit-tap-highlight-color:transparent}
 
@@ -263,8 +263,8 @@ body.djmode-display{cursor:none!important;user-select:none!important}
   <div class="room-qr-wrap"><canvas id="djmodeQR"></canvas></div>
   <div class="room-url" id="djmodeRoomUrl">—</div>
   <div class="room-waiting" id="djmodeWaiting">WAITING FOR CONTROLLER...</div>
-  <button class="room-fs-btn" id="djmodeFsBtn">⛶ FULLSCREEN</button>
 </div>
+<button id="djmodeFsBtnFixed" style="display:none">⛶ FULLSCREEN</button>
 <div id="djmodeExitZone" style="display:none"></div>
 
 <!-- ═══ DJ MODE — DJ NAME FLASH ═══ -->
@@ -12120,16 +12120,21 @@ const DJMode = {
     // Draw QR code using QRious library
     try { this._drawQR(qrCanvas, controllerUrl); } catch (e) { console.warn('[djmode] QR generation failed:', e); }
 
-    // Fullscreen button on overlay
-    const fsBtn = document.getElementById('djmodeFsBtn');
-    const fsBtnHandler = () => {
+    // Fixed-position fullscreen button (bottom-right, always visible until fullscreen entered)
+    const fsBtnFixed = document.getElementById('djmodeFsBtnFixed');
+    fsBtnFixed.style.display = 'block';
+    fsBtnFixed.onclick = () => {
       if (document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen().catch(() => {});
       } else if (document.documentElement.webkitRequestFullscreen) {
         document.documentElement.webkitRequestFullscreen();
       }
     };
-    fsBtn.onclick = fsBtnHandler;
+    // Hide FS button when fullscreen is entered, show when exited
+    this._fsChangeHandler = () => {
+      fsBtnFixed.style.display = document.fullscreenElement ? 'none' : 'block';
+    };
+    document.addEventListener('fullscreenchange', this._fsChangeHandler);
 
     // Push initial state to Firebase
     this.stateRef.set({
@@ -12220,36 +12225,13 @@ const DJMode = {
     switch (cmd.type) {
       case 'nextScene':
         if (!inTrans) {
-          skipToNextScene();
-          this._sceneStart = Date.now();
-          this._pushState();
+          this._fadeToScene(null);
         }
         break;
 
       case 'jumpScene':
         if (!inTrans && cmd.payload && ALL_SCENES.includes(cmd.payload)) {
-          // Build theme for the target scene
-          const scene = cmd.payload;
-          const cp = enforceCP(rndEl(ALL_CPS.filter(x => !getForbidCPs().includes(x))));
-          const palette = THEME.palette.slice();
-          palette.push(palette.shift());
-          const theme = {
-            scene: scene, label: '', splashDesc: '', palette: palette,
-            bgColor: THEME.bgColor, centerpiece: cp,
-            centerpieceScale: 0.3 + Math.random() * 0.7,
-            centerpieceX: 0.3 + Math.random() * 0.4,
-            centerpieceY: 0.3 + Math.random() * 0.4,
-            centerpieceBehavior: rndEl(['rotate','pulse_beat','breathe','orbit_slow','bounce','drift']),
-            beatReactions: THEME.beatReactions || ['shockwave'],
-            sceneSpeed: 0.7 + Math.random() * 1.3,
-            sceneIntensity: 0.5 + Math.random() * 0.5,
-            energy: THEME.energy || 0.5, chaos: Math.random() * 0.6
-          };
-          recordScene(scene);
-          recordCP(cp);
-          applyTheme('', '', theme);
-          this._sceneStart = Date.now();
-          this._pushState();
+          this._fadeToScene(cmd.payload);
         }
         break;
 
@@ -12281,6 +12263,66 @@ const DJMode = {
         }
         break;
     }
+  },
+
+  // ── Clean fade transition for DJ mode (no splash text) ──
+  _fadeToScene(targetScene) {
+    if (inTrans) return;
+    inTrans = true;
+
+    // Pick scene
+    let scene;
+    if (targetScene) {
+      scene = targetScene;
+    } else {
+      const shortlist = getSceneShortlist().filter(s => s !== THEME.scene);
+      scene = shortlist[0] || rndEl(ALL_SCENES.filter(s => s !== THEME.scene));
+    }
+
+    const cp = enforceCP(rndEl(ALL_CPS.filter(x => !getForbidCPs().includes(x))));
+    const palette = THEME.palette.slice();
+    palette.push(palette.shift());
+
+    // Fade to black
+    const wash = document.getElementById('wash');
+    wash.style.background = '#000';
+    wash.style.transition = 'opacity 0.6s ease';
+    wash.style.opacity = '1';
+
+    setTimeout(() => {
+      // Swap scene while hidden
+      THEME.scene = scene;
+      THEME.centerpiece = cp;
+      THEME.palette = palette;
+      THEME.centerpieceScale = 0.3 + Math.random() * 0.7;
+      THEME.centerpieceX = 0.3 + Math.random() * 0.4;
+      THEME.centerpieceY = 0.3 + Math.random() * 0.4;
+      THEME.centerpieceBehavior = rndEl(['rotate','pulse_beat','breathe','orbit_slow','bounce','drift']);
+      THEME.sceneSpeed = 0.7 + Math.random() * 1.3;
+      THEME.sceneIntensity = 0.5 + Math.random() * 0.5;
+
+      recordScene(scene);
+      recordCP(cp);
+      clearSurpriseState();
+      initScene();
+      setupDJSignature('');
+      surpriseFired = false;
+      _songStartTime = Date.now();
+
+      // Fade back in
+      setTimeout(() => {
+        wash.style.transition = 'opacity 0.8s ease';
+        wash.style.opacity = '0';
+        setTimeout(() => {
+          wash.style.background = '';
+          wash.style.transition = '';
+          inTrans = false;
+        }, 900);
+      }, 150);
+
+      this._sceneStart = Date.now();
+      this._pushState();
+    }, 650);
   },
 
   // ── Flash DJ name on display ──
@@ -12336,6 +12378,12 @@ const DJMode = {
     if (flash) flash.classList.remove('show');
     const exitZone = document.getElementById('djmodeExitZone');
     if (exitZone) exitZone.style.display = 'none';
+    const fsBtnFixed = document.getElementById('djmodeFsBtnFixed');
+    if (fsBtnFixed) fsBtnFixed.style.display = 'none';
+    if (this._fsChangeHandler) {
+      document.removeEventListener('fullscreenchange', this._fsChangeHandler);
+      this._fsChangeHandler = null;
+    }
     if (this._controllerListener && this.stateRef) {
       this.stateRef.child('controllerConnected').off('value', this._controllerListener);
     }
