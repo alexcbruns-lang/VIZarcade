@@ -93,10 +93,11 @@ body.djmode-display #ui,body.djmode-display #fsBtn,body.djmode-display #backBtn,
 body.djmode-display #nextSceneBtn,body.djmode-display #splash,body.djmode-display #cur,
 body.djmode-display #pgWrap,body.djmode-display #devPanel,body.djmode-display #sceneTag{display:none!important}
 body.djmode-display{cursor:none!important;user-select:none!important}
-#djmodeRoomOverlay{position:fixed;inset:0;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.92);font-family:'Share Tech Mono',monospace;color:#06ffd8;transition:opacity 1.5s;pointer-events:all}
+#djmodeRoomOverlay{position:fixed;inset:0;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.92);font-family:'Share Tech Mono',monospace;color:#06ffd8;transition:opacity 1.5s;pointer-events:all;cursor:default!important}
 #djmodeRoomOverlay .room-code{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,8vw,5rem);letter-spacing:0.25em;color:#00ff41;text-shadow:0 0 40px #00ff41,0 0 80px rgba(0,255,65,0.4);margin:0.8rem 0 0.5rem}
 #djmodeRoomOverlay .room-label{font-size:0.7rem;letter-spacing:0.5em;color:rgba(6,255,216,0.6);text-transform:uppercase}
-#djmodeRoomOverlay .room-qr{margin:1rem 0;border:3px solid rgba(0,255,65,0.3);border-radius:4px;box-shadow:0 0 30px rgba(0,255,65,0.15);width:180px;height:180px}
+#djmodeRoomOverlay .room-qr-wrap{margin:1rem 0;display:flex;align-items:center;justify-content:center}
+#djmodeRoomOverlay .room-qr-wrap canvas{border:3px solid rgba(0,255,65,0.3);border-radius:4px;box-shadow:0 0 30px rgba(0,255,65,0.15);display:block}
 #djmodeRoomOverlay .room-url{font-size:0.55rem;letter-spacing:0.12em;color:rgba(255,255,255,0.35);margin-top:0.8rem;max-width:90vw;text-align:center;word-break:break-all}
 #djmodeRoomOverlay .room-waiting{font-size:0.6rem;letter-spacing:0.3em;color:rgba(131,56,236,0.7);margin-top:1.2rem;animation:waitingPulse 2s ease-in-out infinite}
 @keyframes waitingPulse{0%,100%{opacity:0.4}50%{opacity:1}}
@@ -259,7 +260,7 @@ body.djmode-display{cursor:none!important;user-select:none!important}
   <div class="room-label">DJ MODE — ROOM CODE</div>
   <div class="room-code" id="djmodeRoomCode">—</div>
   <div class="room-label">SCAN TO CONNECT CONTROLLER</div>
-  <canvas class="room-qr" id="djmodeQR" width="200" height="200"></canvas>
+  <div class="room-qr-wrap"><canvas id="djmodeQR"></canvas></div>
   <div class="room-url" id="djmodeRoomUrl">—</div>
   <div class="room-waiting" id="djmodeWaiting">WAITING FOR CONTROLLER...</div>
   <button class="room-fs-btn" id="djmodeFsBtn">⛶ FULLSCREEN</button>
@@ -10401,13 +10402,14 @@ function triggerBeat() {
   if (sc === 'CARNIVAL' && SD.ferrisRot != null) SD.ferrisRot += 0.15;
   if (sc === 'OMNIA_NIGHTCLUB' && SD.chandelierY != null) SD.chandelierY = Math.max(H() * 0.05, SD.chandelierY - 20 * (1 + progMult));
 
-  // Surprise detection — blocked for 60s after song transition
+  // Surprise detection — blocked for 60s after song transition, blocked entirely in DJ mode
   pushEnergy(SM.energy);
   const _surpriseCooldownActive = (Date.now() - _songStartTime) < 60000;
-  if (!devSurpriseLock && !surpriseFired && !_surpriseCooldownActive && songProg > 0.55) {
+  const _djModeActive = (typeof DJMode !== 'undefined' && DJMode.role === 'display');
+  if (!_djModeActive && !devSurpriseLock && !surpriseFired && !_surpriseCooldownActive && songProg > 0.55) {
     if (spikeDetected()) { setTimeout(fireSurprise, 200); surpriseFired = true; }
   }
-  if (!devSurpriseLock && !surpriseFired && !_surpriseCooldownActive && songProg > 0.88) { setTimeout(fireSurprise, 0); surpriseFired = true; }
+  if (!_djModeActive && !devSurpriseLock && !surpriseFired && !_surpriseCooldownActive && songProg > 0.88) { setTimeout(fireSurprise, 0); surpriseFired = true; }
 
   // DJ Signature trigger — check for energy peak to morph centerpiece into DJ name
   checkDJSigTrigger();
@@ -11287,6 +11289,9 @@ MusicProviders.local = {
     }
 
     // ── Transition detection via TransitionDetector ──
+    // In DJ mode, skip all auto-transitions and auto-surprises — controller manages these
+    if (typeof DJMode !== 'undefined' && DJMode.role === 'display') return;
+
     const detection = TransitionDetector.update(energy, this._mode);
 
     if (detection.surprise) {
