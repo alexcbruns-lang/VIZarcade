@@ -9814,7 +9814,7 @@ function clearSurpriseState() {
 }
 
 function fireSurprise(forcedVariant){
-  if(forcedVariant==null&&!midShifted&&Math.random()<0.05&&songProg>0.3&&songProg<0.75){
+  if(forcedVariant==null&&!midShifted&&Math.random()<0.05&&songProg>0.3&&songProg<0.75&&!(typeof DJMode!=='undefined'&&DJMode.role==='display')){
     midShifted=true;
     const f=getForbidCPs(),pool=ALL_SCENES.filter(s=>s!==THEME.scene);
     const newScene=rndEl(pool);
@@ -12436,15 +12436,22 @@ const DJMode = {
 
   // ── Surprise loop system ──
   _startSurpriseLoop() {
-    this._stopSurpriseLoop();
+    // Clear any previous interval only (don't reset state)
+    if (this._surpriseLoop) {
+      clearInterval(this._surpriseLoop);
+      this._surpriseLoop = null;
+    }
     // Fire immediately
     const v = this._surpriseVariant;
+    surpriseFired = false;
     fireSurprise(v != null ? v : undefined);
     surpriseFired = true;
     // Re-fire every 12 seconds
     this._surpriseLoop = setInterval(() => {
       if (!this._surpriseActive) { this._stopSurpriseLoop(); return; }
-      surpriseFired = false; // reset so fireSurprise works
+      // Clear previous surprise effects before firing next
+      clearSurpriseState();
+      surpriseFired = false;
       fireSurprise(v != null ? v : Math.floor(Math.random() * 3));
       surpriseFired = true;
     }, 12000);
