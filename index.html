@@ -9754,6 +9754,63 @@ function clearSurpriseState() {
   // Reset surprise-related beatFX state that could carry over
   beatFX.speedBoost = 0;
   beatFX.shockwaveA = 0;
+
+  // ── Reset ALL scene-specific surprise states ──
+  if (SD.cyberGrid) {
+    SD.cyberGrid.glitching = false; SD.cyberGrid.glitchTimer = 0;
+    SD.cyberGrid.speedBoost = 1; SD.cyberGrid.speedTimer = 0;
+    SD.cyberGrid.spiral = false; SD.cyberGrid.spiralTimer = 0;
+  }
+  if (SD.deepSea) {
+    SD.deepSea.superVibrant = false; SD.deepSea.superVibrantTimer = 0;
+    SD.deepSea.leviathan = null; SD.deepSea.vortex = null;
+  }
+  if (SD.storm) {
+    SD.storm.transformerExplosion = false; SD.storm.transformerTimer = 0;
+    SD.storm.colorLightning = false; SD.storm.colorLightningTimer = 0;
+    SD.storm.heavyRain = false; SD.storm.heavyRainTimer = 0;
+    SD.storm.transformerSparks = []; SD.storm.sparkStreams = [];
+  }
+  if (SD.disco) {
+    SD.disco.superFloor = false; SD.disco.superFloorTimer = 0;
+    SD.disco.superLaser = false; SD.disco.superLaserTimer = 0;
+  }
+  if (SD.space) {
+    SD.space.superUFO = false; SD.space.superUFOTimer = 0;
+    SD.space.starExplosion = false; SD.space.starExpTimer = 0;
+    SD.space.asteroidShower = false; SD.space.asteroidTimer = 0;
+  }
+  if (SD.cath) {
+    SD.cath.gargoyleAlive = false; SD.cath.gargoyleAliveTimer = 0;
+    SD.cath.doorsOpen = false; SD.cath.doorsOpenTimer = 0;
+    SD.cath.gargoyleFireBreath = false; SD.cath.gargoyleFireTimer = 0;
+  }
+  if (SD.ef) {
+    SD.ef.laserOverload = false; SD.ef.laserOverloadTimer = 0;
+    SD.ef.mushroomBloom = false; SD.ef.mushroomBloomTimer = 0;
+    SD.ef.windstorm = false; SD.ef.windstormTimer = 0;
+  }
+  if (SD.omnia) {
+    SD.omnia.laserActive = false;
+  }
+  if (SD.junkyard) {
+    SD.junkyard.superCrusher = false; SD.junkyard.superCrusherTimer = 0;
+    SD.junkyard.superSparks = false; SD.junkyard.superSparksTimer = 0;
+    SD.junkyard.giantLaser = false; SD.junkyard.giantLaserTimer = 0;
+  }
+  if (SD.gotham) {
+    SD.gotham.fireBlazeMode = false; SD.gotham.fireBlazeTimer = 0;
+    SD.gotham.spotlightMode = false; SD.gotham.spotlightModeTimer = 0;
+  }
+  if (SD.carnival) {
+    SD.carnival.superFW = false; SD.carnival.superFWTimer = 0;
+    SD.carnival.hyperWheel = false; SD.carnival.hyperWheelTimer = 0;
+  }
+  if (SD.egypt) {
+    SD.egypt.superMummies = false; SD.egypt.superMummiesTimer = 0;
+    SD.egypt.superFlames = false; SD.egypt.superFlamesTimer = 0;
+    SD.egypt.superHiero = false; SD.egypt.superHieroTimer = 0;
+  }
 }
 
 function fireSurprise(forcedVariant){
