@@ -195,6 +195,7 @@ body.djmode-display{cursor:none!important;user-select:none!important}
   <button id="appleMusicBtn" class="btn" style="margin-top:10px;background:#fc3c44;box-shadow:0 0 20px rgba(252,60,68,0.7),0 0 40px rgba(252,60,68,0.3);font-size:1.1rem">♫ &nbsp;APPLE MUSIC</button>
   <button id="localAudioBtn" class="btn" style="margin-top:10px;background:#06ffd8;box-shadow:0 0 20px rgba(6,255,216,0.7),0 0 40px rgba(6,255,216,0.3);font-size:1.1rem">🎤 &nbsp;LOCAL AUDIO</button>
   <button id="djModeBtn" class="btn" style="margin-top:10px;background:#8338ec;box-shadow:0 0 20px rgba(131,56,236,0.7),0 0 40px rgba(131,56,236,0.3);font-size:1.1rem">🎛 &nbsp;DJ MODE</button>
+  <button id="pwaInstallBtn" class="btn" style="display:none;margin-top:10px;background:rgba(255,190,11,0.2);box-shadow:0 0 20px rgba(255,190,11,0.5),0 0 40px rgba(255,190,11,0.2);font-size:0.85rem;letter-spacing:0.2em;border:1px solid rgba(255,190,11,0.4);color:#ffbe0b">⬇ &nbsp;INSTALL APP</button>
   <div id="loginErr"></div>
 </div>
 <div id="wash"></div>
@@ -13169,6 +13170,46 @@ async function init() {
   // No saved session — show login screen
 }
 init();
+
+// ══════════════════════════════════════════════════════════
+// ── PWA: Service Worker Registration + Install Prompt ──
+// ══════════════════════════════════════════════════════════
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('[pwa] SW registered, scope:', reg.scope))
+      .catch(err => console.warn('[pwa] SW registration failed:', err));
+  });
+}
+
+let _deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+  const btn = document.getElementById('pwaInstallBtn');
+  if (btn) btn.style.display = '';
+  console.log('[pwa] install prompt available');
+});
+
+const _pwaBtn = document.getElementById('pwaInstallBtn');
+if (_pwaBtn) {
+  _pwaBtn.addEventListener('click', async () => {
+    if (!_deferredInstallPrompt) return;
+    _deferredInstallPrompt.prompt();
+    const result = await _deferredInstallPrompt.userChoice;
+    console.log('[pwa] install result:', result.outcome);
+    _deferredInstallPrompt = null;
+    _pwaBtn.style.display = 'none';
+  });
+}
+
+window.addEventListener('appinstalled', () => {
+  console.log('[pwa] app installed');
+  _deferredInstallPrompt = null;
+  const btn = document.getElementById('pwaInstallBtn');
+  if (btn) btn.style.display = 'none';
+});
 
 
 </script>
