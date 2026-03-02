@@ -165,11 +165,13 @@ body.djmode-display{cursor:none!important;user-select:none!important}
 .djc-queue-label{font-size:0.52rem;letter-spacing:0.2em;color:rgba(0,255,65,0.35);text-transform:uppercase;margin-bottom:4px}
 .djc-queue-value{font-size:0.72rem;color:#06ffd8;letter-spacing:0.1em}
 .djc-queue-value.empty{color:rgba(255,255,255,0.15);font-style:italic}
-.djc-palette-row{display:flex;gap:6px;align-items:center;margin-top:8px}
-.djc-palette-row label{font-size:0.52rem;letter-spacing:0.15em;color:#7acc7a;flex-shrink:0}
-.djc-color-pick{width:36px;height:28px;border:1px solid rgba(0,255,65,0.2);border-radius:2px;cursor:pointer;padding:0;background:none;-webkit-appearance:none;appearance:none}
-.djc-color-pick::-webkit-color-swatch-wrapper{padding:1px}
-.djc-color-pick::-webkit-color-swatch{border:none;border-radius:1px}
+.djc-palette-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;max-height:220px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(0,255,65,0.3) transparent}
+.djc-palette-btn{display:flex;align-items:center;gap:6px;padding:7px 6px;background:rgba(0,255,65,0.03);border:1px solid rgba(0,255,65,0.08);cursor:pointer;transition:all 0.12s;border-radius:2px;-webkit-tap-highlight-color:transparent}
+.djc-palette-btn:active{transform:scale(0.97)}
+.djc-palette-btn.active-pal{border-color:rgba(6,255,216,0.5);background:rgba(6,255,216,0.08);box-shadow:0 0 8px rgba(6,255,216,0.15)}
+.djc-palette-swatches{display:flex;gap:2px;flex-shrink:0}
+.djc-palette-swatches span{width:14px;height:14px;border-radius:1px;display:block}
+.djc-palette-name{font-family:'Share Tech Mono',monospace;font-size:0.48rem;color:#7acc7a;letter-spacing:0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .djc-push-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .djc-push-btn{background:rgba(6,255,216,0.08);border:1px solid rgba(6,255,216,0.3);color:#06ffd8;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:0.15em;padding:14px 8px;cursor:pointer;text-align:center;transition:all 0.12s;border-radius:2px;-webkit-tap-highlight-color:transparent}
 .djc-push-btn:active{background:rgba(6,255,216,0.25);border-color:#06ffd8;transform:scale(0.97)}
@@ -314,13 +316,12 @@ body.djmode-display{cursor:none!important;user-select:none!important}
     <h3>▸ Quick Actions</h3>
     <div class="djc-actions">
       <button class="djc-btn primary" id="djcNextScene">▶ NEXT</button>
-      <button class="djc-btn highlight" id="djcSurprise">⚡ SURPRISE</button>
       <button class="djc-btn danger" id="djcBlackout">■ BLACK</button>
     </div>
     <div class="djc-variant-row" id="djcVariantRow">
-      <button class="djc-btn" id="djcVar0" data-variant="0">V1</button>
-      <button class="djc-btn" id="djcVar1" data-variant="1">V2</button>
-      <button class="djc-btn" id="djcVar2" data-variant="2">V3</button>
+      <button class="djc-btn highlight" id="djcVar0" data-variant="0">⚡ V1</button>
+      <button class="djc-btn highlight" id="djcVar1" data-variant="1">⚡ V2</button>
+      <button class="djc-btn highlight" id="djcVar2" data-variant="2">⚡ V3</button>
     </div>
   </div>
   <div class="djc-section">
@@ -351,13 +352,7 @@ body.djmode-display{cursor:none!important;user-select:none!important}
   </div>
   <div class="djc-section">
     <h3>▸ Palette</h3>
-    <div class="djc-palette-row">
-      <label>COLORS</label>
-      <input type="color" class="djc-color-pick" id="djcColor0" value="#ff006e"/>
-      <input type="color" class="djc-color-pick" id="djcColor1" value="#8338ec"/>
-      <input type="color" class="djc-color-pick" id="djcColor2" value="#06ffd8"/>
-      <input type="color" class="djc-color-pick" id="djcColor3" value="#ffbe0b"/>
-    </div>
+    <div class="djc-palette-grid" id="djcPaletteGrid"></div>
   </div>
   <div class="djc-section">
     <h3>▸ Controls</h3>
@@ -12404,6 +12399,10 @@ const DJMode = {
       this._surpriseLoop = null;
     }
     this._surpriseVariant = null;
+    this._surpriseActive = false;
+    // Clear any active surprise effects
+    clearSurpriseState();
+    surpriseFired = false;
   },
 
   // ── Push a queued scene with specific settings ──
@@ -12703,9 +12702,14 @@ const DJMode = {
       const parts = [];
       if (queue.scene) parts.push(queue.scene.replace(/_/g, ' '));
       if (queue.centerpiece) parts.push(queue.centerpiece.replace(/_/g, ' '));
-      if (queue.palette) parts.push('custom palette');
+      if (queue.palette) {
+        // Find matching palette name
+        const palBtn = document.getElementById('djcPaletteGrid').querySelector('.active-pal');
+        const palName = palBtn ? palBtn.querySelector('.djc-palette-name').textContent : 'palette';
+        parts.push(palName);
+      }
       if (parts.length > 0) {
-        queuePreview.textContent = parts.join(' + ');
+        queuePreview.textContent = parts.join(' · ');
         queuePreview.classList.remove('empty');
       } else {
         queuePreview.textContent = 'Select scene, centerpiece, and palette below';
@@ -12719,44 +12723,22 @@ const DJMode = {
       this._log('Next scene (random)');
     });
 
-    // Surprise toggle — click to loop on, click again to stop
-    const surpriseBtn = document.getElementById('djcSurprise');
-    let surpriseOn = false;
-    surpriseBtn.addEventListener('click', () => {
-      surpriseOn = !surpriseOn;
-      if (surpriseOn) {
-        surpriseBtn.classList.add('surprise-on');
-        surpriseBtn.textContent = '⚡ STOP';
-        this._sendCommand('surpriseOn');
-        this._log('Surprise loop ON');
-      } else {
-        surpriseBtn.classList.remove('surprise-on');
-        surpriseBtn.textContent = '⚡ SURPRISE';
-        this._sendCommand('surpriseOff');
-        this._log('Surprise loop OFF');
-      }
-    });
-
-    // Surprise variant buttons — toggle specific variant loop
+    // Surprise variant toggles — click to loop on, click again to stop
     document.querySelectorAll('#djcVariantRow .djc-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const v = parseInt(btn.dataset.variant);
         const wasActive = btn.classList.contains('surprise-on');
-        // Clear all variant toggles
+        // Clear all variant toggles first
         document.querySelectorAll('#djcVariantRow .djc-btn').forEach(b => b.classList.remove('surprise-on'));
         if (wasActive) {
+          // Turn off
           this._sendCommand('surpriseOff');
-          surpriseOn = false;
-          surpriseBtn.classList.remove('surprise-on');
-          surpriseBtn.textContent = '⚡ SURPRISE';
           this._log('Surprise V' + (v + 1) + ' OFF');
         } else {
+          // Turn on this variant
           btn.classList.add('surprise-on');
-          surpriseOn = true;
-          surpriseBtn.classList.add('surprise-on');
-          surpriseBtn.textContent = '⚡ STOP';
           this._sendCommand('surpriseOn', v);
-          this._log('Surprise V' + (v + 1) + ' loop ON');
+          this._log('Surprise V' + (v + 1) + ' ON');
         }
       });
     });
@@ -12828,18 +12810,54 @@ const DJMode = {
       cpGrid.appendChild(btn);
     });
 
-    // ── Palette color pickers ──
-    const colorPickers = [
-      document.getElementById('djcColor0'),
-      document.getElementById('djcColor1'),
-      document.getElementById('djcColor2'),
-      document.getElementById('djcColor3')
+    // ── Palette presets ──
+    const PALETTE_PRESETS = [
+      { name: 'Neon Nights',   colors: ['#ff006e','#8338ec','#06ffd8','#ffbe0b'] },
+      { name: 'Fire',          colors: ['#ff0000','#ff6600','#ffaa00','#ffdd00'] },
+      { name: 'Ice',           colors: ['#00d4ff','#66eeff','#aaf0ff','#e0f8ff'] },
+      { name: 'Sunset',        colors: ['#ff4500','#ff6b35','#f7c59f','#8e24aa'] },
+      { name: 'Ocean',         colors: ['#003366','#006699','#0099cc','#00cccc'] },
+      { name: 'Toxic',         colors: ['#39ff14','#00ff41','#adff2f','#ccff00'] },
+      { name: 'Purple Rain',   colors: ['#9b59b6','#8e44ad','#6c3483','#bb8fce'] },
+      { name: 'Blood Moon',    colors: ['#8b0000','#cc0000','#ff3333','#660033'] },
+      { name: 'Gold Rush',     colors: ['#ffd700','#daa520','#b8860b','#ffcc00'] },
+      { name: 'Cyberpunk',     colors: ['#ff2975','#f222ff','#8c1eff','#00f0ff'] },
+      { name: 'Tropical',      colors: ['#00e676','#ffea00','#ff6d00','#e91e63'] },
+      { name: 'Monochrome',    colors: ['#ffffff','#bbbbbb','#777777','#333333'] },
+      { name: 'Pastel Dream',  colors: ['#ffb3ba','#bae1ff','#baffc9','#ffffba'] },
+      { name: 'Lava',          colors: ['#ff0000','#ff4400','#cc0000','#880000'] },
+      { name: 'Electric Blue',  colors: ['#0000ff','#0066ff','#00aaff','#00ddff'] },
+      { name: 'Forest',        colors: ['#006400','#228b22','#32cd32','#90ee90'] },
+      { name: 'Miami Vice',    colors: ['#ff1493','#00ced1','#ff69b4','#40e0d0'] },
+      { name: 'Aurora',        colors: ['#00ff87','#60efff','#c850c0','#7f00ff'] },
+      { name: 'Midnight',      colors: ['#1a0033','#330066','#4d0099','#6600cc'] },
+      { name: 'Infrared',      colors: ['#ff0044','#cc0033','#990022','#660011'] },
     ];
-    colorPickers.forEach(picker => {
-      picker.addEventListener('input', () => {
-        queue.palette = colorPickers.map(p => p.value);
+    const palGrid = document.getElementById('djcPaletteGrid');
+    palGrid.innerHTML = '';
+    PALETTE_PRESETS.forEach((preset, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'djc-palette-btn';
+      btn.dataset.palIdx = idx;
+      const swatches = document.createElement('div');
+      swatches.className = 'djc-palette-swatches';
+      preset.colors.forEach(c => {
+        const s = document.createElement('span');
+        s.style.background = c;
+        swatches.appendChild(s);
+      });
+      const label = document.createElement('span');
+      label.className = 'djc-palette-name';
+      label.textContent = preset.name;
+      btn.appendChild(swatches);
+      btn.appendChild(label);
+      btn.addEventListener('click', () => {
+        queue.palette = preset.colors.slice();
+        palGrid.querySelectorAll('.djc-palette-btn').forEach(b => b.classList.remove('active-pal'));
+        btn.classList.add('active-pal');
         updateQueuePreview();
       });
+      palGrid.appendChild(btn);
     });
 
     // ── Push buttons — send queued scene with fade or cut ──
