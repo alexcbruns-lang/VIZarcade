@@ -23,6 +23,32 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'Sh
 #cur{position:fixed;width:8px;height:8px;border-radius:50%;pointer-events:none;z-index:9999;mix-blend-mode:screen;transition:background 2s}
 canvas{position:fixed;top:0;left:0;width:100%;height:100%}
 #c0{z-index:1}#c1{z-index:2}#c2{z-index:3}#c3{z-index:4;pointer-events:none}
+#landingPage{position:fixed;inset:0;z-index:210;background:#000;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;cursor:default}
+#landingPage::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,0,0.012) 2px,rgba(0,255,0,0.012) 4px);pointer-events:none;z-index:1}
+.lp-wrap{position:relative;z-index:2;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:0 1.5rem}
+.lp-hero{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;text-align:center;padding:2rem 0}
+.lp-hero-logo{font-family:'Bebas Neue',sans-serif;font-size:clamp(4rem,12vw,10rem);letter-spacing:0.12em;color:#00ff41;text-shadow:0 0 40px #00ff41,0 0 80px rgba(0,255,65,0.4),0 0 120px rgba(0,255,65,0.15),5px 5px 0 #006600,10px 10px 0 #003300;line-height:0.9;opacity:0;animation:lpFadeUp 0.8s 0.2s forwards}
+.lp-hero-sub{font-size:clamp(0.6rem,1.4vw,0.8rem);letter-spacing:0.55em;color:#00cc33;text-transform:uppercase;text-shadow:0 0 12px #00ff41;margin:0.6rem 0 1.8rem;opacity:0;animation:lpFadeUp 0.7s 0.5s forwards}
+.lp-hero-desc{font-size:clamp(0.82rem,1.6vw,1.05rem);color:rgba(255,255,255,0.55);max-width:520px;line-height:1.75;letter-spacing:0.04em;margin-bottom:2.5rem;opacity:0;animation:lpFadeUp 0.7s 0.7s forwards}
+.lp-cta{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.3rem,2.5vw,1.6rem);letter-spacing:0.35em;color:#000;background:#00ff41;border:none;padding:1.2rem 4rem;cursor:pointer;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));box-shadow:0 0 25px rgba(0,255,65,0.8),0 0 50px rgba(0,255,65,0.3);transition:all 0.15s;font-weight:900;opacity:0;animation:lpFadeUp 0.7s 0.9s forwards}
+.lp-cta:hover{background:#00ff99;box-shadow:0 0 40px rgba(0,255,153,0.9),0 0 80px rgba(0,255,65,0.5);transform:translateY(-3px) scale(1.02)}
+.lp-cta:active{transform:translateY(0) scale(0.98)}
+.lp-scroll-hint{margin-top:2.5rem;font-size:0.55rem;letter-spacing:0.4em;color:rgba(0,255,65,0.25);text-transform:uppercase;opacity:0;animation:lpFadeUp 0.7s 1.2s forwards}
+.lp-scroll-hint span{display:block;margin-top:0.4rem;font-size:1.2rem;animation:lpBounce 2s ease-in-out infinite}
+@keyframes lpBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+.lp-features{width:100%;max-width:900px;padding:4rem 0 5rem;display:grid;grid-template-columns:1fr;gap:2.5rem}
+@media(min-width:640px){.lp-features{grid-template-columns:1fr 1fr;gap:2rem 3rem}}
+.lp-card{border:1px solid rgba(0,255,65,0.08);background:rgba(0,255,65,0.015);padding:1.8rem 1.6rem;position:relative;opacity:0;animation:lpFadeUp 0.6s forwards;animation-play-state:paused}
+.lp-card.visible{animation-play-state:running}
+.lp-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--card-accent,#00ff41);box-shadow:0 0 12px var(--card-accent,#00ff41)}
+.lp-card-icon{font-size:1.6rem;margin-bottom:0.7rem}
+.lp-card-title{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:0.25em;color:var(--card-accent,#00ff41);text-shadow:0 0 8px var(--card-accent,rgba(0,255,65,0.5));margin-bottom:0.5rem}
+.lp-card-text{font-size:0.72rem;color:rgba(255,255,255,0.45);line-height:1.7;letter-spacing:0.03em}
+.lp-bottom{width:100%;max-width:900px;text-align:center;padding:2rem 0 4rem;opacity:0;animation:lpFadeUp 0.7s forwards;animation-play-state:paused}
+.lp-bottom.visible{animation-play-state:running}
+.lp-bottom-text{font-size:0.65rem;letter-spacing:0.2em;color:rgba(255,255,255,0.25);margin-top:1.5rem}
+.lp-divider{width:60px;height:1px;background:rgba(0,255,65,0.15);margin:0 auto 1.5rem}
+@keyframes lpFadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 #login{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000;overflow:hidden}
 #login::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,0,0.018) 2px,rgba(0,255,0,0.018) 4px),radial-gradient(ellipse 80% 60% at 50% 50%,rgba(6,255,216,0.04) 0%,transparent 70%);pointer-events:none}
 #login::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,transparent 60%,rgba(0,0,0,0.85) 100%);pointer-events:none;z-index:0}
@@ -185,6 +211,52 @@ body.djmode-display{cursor:none!important;user-select:none!important}
 <div id="cur"></div>
 <div class="scanlines"></div>
 <canvas id="c0"></canvas><canvas id="c1"></canvas><canvas id="c2"></canvas><canvas id="c3"></canvas>
+
+<div id="landingPage">
+  <div class="lp-wrap">
+
+    <div class="lp-hero">
+      <div class="lp-hero-logo">VIZarcade</div>
+      <div class="lp-hero-sub">AI-Powered Music Visualizer</div>
+      <div class="lp-hero-desc">
+        Turn any song into a live visual experience. 20 unique scenes react to your music in real time — powered by AI that adapts colors, effects, and energy to every track.
+      </div>
+      <button class="lp-cta" id="lpGetStarted">GET STARTED</button>
+      <div class="lp-scroll-hint">Learn more<span>▾</span></div>
+    </div>
+
+    <div class="lp-features" id="lpFeatures">
+      <div class="lp-card" style="--card-accent:#00ff41;animation-delay:0s">
+        <div class="lp-card-icon">🎧</div>
+        <div class="lp-card-title">Spotify</div>
+        <div class="lp-card-text">Connect your Spotify account and visuals sync automatically — track names, AI-generated themes, and seamless transitions between songs.</div>
+      </div>
+      <div class="lp-card" style="--card-accent:#06ffd8;animation-delay:0.1s">
+        <div class="lp-card-icon">🎤</div>
+        <div class="lp-card-title">Local Audio</div>
+        <div class="lp-card-text">Use your microphone, line-in from a mixer, or any audio file. Beat detection drives the visuals from whatever source you connect.</div>
+      </div>
+      <div class="lp-card" style="--card-accent:#8338ec;animation-delay:0.2s">
+        <div class="lp-card-icon">🎛</div>
+        <div class="lp-card-title">DJ Mode</div>
+        <div class="lp-card-text">Run visuals on a venue screen and control them from your phone. Queue scenes, trigger effects, and display DJ names — all over WiFi.</div>
+      </div>
+      <div class="lp-card" style="--card-accent:#ff006e;animation-delay:0.3s">
+        <div class="lp-card-icon">🤖</div>
+        <div class="lp-card-title">AI Themes</div>
+        <div class="lp-card-text">Every song gets a unique visual identity. The AI picks the scene, palette, centerpiece, and effects based on genre, mood, and energy.</div>
+      </div>
+    </div>
+
+    <div class="lp-bottom" id="lpBottom">
+      <div class="lp-divider"></div>
+      <button class="lp-cta" id="lpGetStarted2">GET STARTED</button>
+      <div class="lp-bottom-text">Works on desktop &amp; mobile · Install as an app · Free to use</div>
+    </div>
+
+  </div>
+</div>
+
 <div id="login">
   <div id="arcadeScore"><span>1UP &nbsp; 000000</span><span>HI-SCORE &nbsp; ∞</span><span>2UP &nbsp; 000000</span></div>
   <canvas id="loginCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.35"></canvas>
@@ -240,9 +312,9 @@ body.djmode-display{cursor:none!important;user-select:none!important}
   <div class="dp-section">
     <h3>▸ Fire Surprise</h3>
     <div class="dp-grid-3" id="dpSurpriseGrid">
-      <button class="dp-btn fire" data-var="0">Variant 0</button>
-      <button class="dp-btn fire" data-var="1">Variant 1</button>
-      <button class="dp-btn fire" data-var="2">Variant 2</button>
+      <button class="dp-btn fire" data-var="0">⚡ V1</button>
+      <button class="dp-btn fire" data-var="1">⚡ V2</button>
+      <button class="dp-btn fire" data-var="2">⚡ V3</button>
     </div>
     <div style="margin-top:6px">
       <button class="dp-btn fire" id="dpFireRandom" style="width:100%">🎲 Random Surprise</button>
@@ -277,7 +349,7 @@ body.djmode-display{cursor:none!important;user-select:none!important}
     <div class="dp-grid">
       <button class="dp-btn" id="dpFlash">Flash</button>
       <button class="dp-btn" id="dpComicBurst">Comic Burst</button>
-      <button class="dp-btn" id="dpShockwave">Shockwave</button>
+
       <button class="dp-btn" id="dpInvert">Invert</button>
       <button class="dp-btn" id="dpSlam">Bass Slam</button>
       <button class="dp-btn" id="dpGameOver">Game Over</button>
@@ -445,7 +517,7 @@ const THEME = {
   scene: 'WARP_SPEED', label: '', splashDesc: '',
   palette: ['#06ffd8', '#8338ec', '#ff006e', '#ffbe0b'],
   bgColor: '#000010', centerpiece: null, centerpieceScale: 0.5,
-  centerpieceBehavior: 'rotate', beatReactions: ['shockwave'],
+  centerpieceBehavior: 'rotate', beatReactions: ['speed_burst'],
   sceneSpeed: 1, sceneIntensity: 0.7, energy: 0.5, chaos: 0.3
 };
 const pc = i => THEME.palette[((i % 4) + 4) % 4];
@@ -482,7 +554,6 @@ let devSurpriseLock = false;
 // (state proxy removed — bare globals used)
 
 let beatFX = {
-  shockwaveR: 0, shockwaveA: 0, crackLines: [],
   invertA: 0, slamS: 1, speedBoost: 0, gravityWave: 0
 };
 
@@ -490,6 +561,33 @@ let beatFX = {
 const ALL_SCENES = ['WARP_SPEED', 'LAVA_WORLD', 'CYBER_GRID', 'DEEP_SEA', 'STORM_CHASER', 'JUNGLE_RAVE', 'DISCO_DIMENSION', 'ACID_TRIP', 'SPACE_STATION', 'NEON_CATHEDRAL', 'CLASSIC_ARCADE', 'ELECTRIC_FOREST', 'OMNIA_NIGHTCLUB', 'JUNKYARD', 'GOTHAM', 'DAY_OF_DEAD', 'MOUNT_OLYMPUS', 'ATLANTIS', 'CARNIVAL', 'EGYPTIAN_TOMB'];
 
 const ALL_CPS = ['skull', 'flaming_skull', 'skull_crossbones', 'smiley', 'demon_face', 'alien_head', 'robot_head', 'dragon', 'wolf_head', 'eagle', 'peace_sign', 'lightning_bolt', 'yin_yang', 'star', 'ankh', 'trident', 'flame', 'diamond', 'coffin', 'astronaut', 'rocket', 'ufo', 'vinyl_record', 'disco_ball', 'turntable', 'hourglass', 'crown', 'clock_face', 'chandelier', 'sun', 'moon', 'planet', 'comet', 'black_hole', 'wormhole', 'mandala', 'dna_helix', 'tesseract', 'eye', 'lotus'];
+
+const SURPRISE_LABELS = {
+  WARP_SPEED:      ['Hyperspeed', 'Asteroids', 'Overdrive'],
+  LAVA_WORLD:      ['Eruption',   'Flood',     'Volcanoes'],
+  DEEP_SEA:        ['Bloom',      'Leviathan', 'Vortex'],
+  CYBER_GRID:      ['Glitch',     'Turbo',     'Spiral'],
+  STORM_CHASER:    ['Transformer','Lightning', 'Downpour'],
+  JUNGLE_RAVE:     ['Stampede',   'Canopy',    'Frenzy'],
+  DISCO_DIMENSION: ['Strobe',     'Lasers',    'Overdrive'],
+  ACID_TRIP:       ['Invert',     'Warp',      'Flicker'],
+  SPACE_STATION:   ['Aliens',     'Supernova', 'Comets'],
+  NEON_CATHEDRAL:  ['Gargoyles',  'Doors',     'Firebreath'],
+  CLASSIC_ARCADE:  ['Pac-Man',    'Boss',      'Victory'],
+  ELECTRIC_FOREST: ['Lasers',     'Mushrooms', 'Windstorm'],
+  OMNIA_NIGHTCLUB: ['Lasers',     'CO2',       'Haywire'],
+  JUNKYARD:        ['Crusher',    'Sparks',    'Laser'],
+  GOTHAM:          ['Inferno',    'Spotlight',  'Riddler'],
+  DAY_OF_DEAD:     ['Mask',       'Zombies',   'Sombrero'],
+  MOUNT_OLYMPUS:   ['Thunder',    'Wrath',     'Revelation'],
+  ATLANTIS:        ['Whirlpool',  'Kraken',    'Bubbles'],
+  CARNIVAL:        ['Fireworks',  'Ferris',    'Clown'],
+  EGYPTIAN_TOMB:   ['Mummies',    'Inferno',   'Glyphs'],
+};
+function getSurpriseLabel(scene, variant) {
+  const labels = SURPRISE_LABELS[scene];
+  return labels ? labels[variant] || ('V' + (variant + 1)) : ('V' + (variant + 1));
+}
 
 const CP_INTEGRATED_SCENES = new Set(['WARP_SPEED', 'DEEP_SEA', 'STORM_CHASER', 'CARNIVAL', 'JUNKYARD', 'EGYPTIAN_TOMB', 'ELECTRIC_FOREST', 'ACID_TRIP', 'NEON_CATHEDRAL', 'SPACE_STATION', 'LAVA_WORLD', 'DISCO_DIMENSION', 'CLASSIC_ARCADE', 'GOTHAM', 'DAY_OF_DEAD', 'MOUNT_OLYMPUS', 'ATLANTIS', 'JUNGLE_RAVE', 'CYBER_GRID', 'OMNIA_NIGHTCLUB']);
 
@@ -2797,7 +2895,7 @@ function initScene(){
   if(sc==='ATLANTIS'){SD.fish=Array.from({length:30},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*1.5,vy:(Math.random()-0.5)*0.5,sz:Math.random()*20+8,ci:Math.floor(Math.random()*4)}));SD.bubbles=Array.from({length:60},()=>({x:Math.random()*w,y:Math.random()*h,r:Math.random()*8+2,vy:-(Math.random()*0.8+0.2),ph:Math.random()*Math.PI*2}));SD.ruins=Array.from({length:10},(_,i)=>({x:i/9,h:Math.random()*h*0.4+h*0.1,w:Math.random()*80+30,ci:i%4}));SD.lightShafts=Array.from({length:6},(_,i)=>({x:w*(0.05+i*0.18),ph:Math.random()*Math.PI*2}));}
   if(sc==='CARNIVAL'){SD.ferrisSegs=Array.from({length:12},(_,i)=>({angle:i/12*Math.PI*2,ci:i%4}));SD.ferrisRot=0;SD.confetti=Array.from({length:150},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*2,vy:Math.random()*2+0.5,rot:Math.random()*Math.PI*2,rotS:(Math.random()-0.5)*0.1,sz:Math.random()*8+3,ci:Math.floor(Math.random()*4)}));}
   if(sc==='EGYPTIAN_TOMB'){SD.hieroglyphs=Array.from({length:40},()=>({x:Math.random()*w,y:Math.random()*h,char:Math.floor(Math.random()*12),ci:Math.floor(Math.random()*4),alpha:Math.random()*0.5+0.2}));SD.torches=Array.from({length:6},(_,i)=>({x:(i/5)*0.9+0.05,ph:Math.random()*Math.PI*2}));SD.tunnelZ=0;SD.traps=[];}
-  beatFX={shockwaveR:0,shockwaveA:0,crackLines:[],invertA:0,slamS:1,speedBoost:0,gravityWave:0};
+  beatFX={invertA:0,slamS:1,speedBoost:0,gravityWave:0};
   energyHist=[];surpriseFired=false;surpriseArmed=false;midShifted=false;energyPeak=0;climaxArmed=false;beatReactionIdx=0;beatCount=0;cpRot=0;cpPh=0;cpOrbit=0;cpBounceX=0;cpBounceY=0;cpBounceVX=0.7+(Math.random()-0.5)*0.4;cpBounceVY=0.5+(Math.random()-0.5)*0.3;cpDriftX=0;cpDriftY=0;
   // Reset DJ signature morph on scene change (artist match persists per song)
   if (djSig.phase !== 'idle') { djSig.morph = 0; djSig.phase = 'idle'; djSig.particles = []; }
@@ -9754,7 +9852,6 @@ function clearSurpriseState() {
   if (go) { go.style.display = 'none'; }
   // Reset surprise-related beatFX state that could carry over
   beatFX.speedBoost = 0;
-  beatFX.shockwaveA = 0;
 
   // ── Reset ALL scene-specific surprise states ──
   if (SD.cyberGrid) {
@@ -9793,6 +9890,8 @@ function clearSurpriseState() {
   }
   if (SD.omnia) {
     SD.omnia.laserActive = false;
+    SD.omnia.co2Active = false;
+    if (SD.omnia.rings) SD.omnia.rings.forEach(r => { r.haywire = false; });
   }
   if (SD.junkyard) {
     SD.junkyard.superCrusher = false; SD.junkyard.superCrusherTimer = 0;
@@ -9802,10 +9901,29 @@ function clearSurpriseState() {
   if (SD.gotham) {
     SD.gotham.fireBlazeMode = false; SD.gotham.fireBlazeTimer = 0;
     SD.gotham.spotlightMode = false; SD.gotham.spotlightModeTimer = 0;
+    SD.gotham.riddler = null;
+  }
+  if (SD.dotd) {
+    SD.dotd.maskPulse = 0; SD.dotd.maskRotSpeed = 0.008;
+    SD.dotd.zombieActive = false; SD.dotd.zombies = [];
+    SD.dotd.sombrero = null;
+  }
+  if (SD.olympus) {
+    SD.olympus.angry = 0; SD.olympus.tiltSpeed = 0.008;
+  }
+  if (SD.atl) {
+    SD.atl.whirlpool = null; SD.atl.kraken = null;
+    SD.atl.bubbleStorm = false;
+  }
+  if (SD.arcade) {
+    SD.arcade.superPac = null; SD.arcade.boss = null;
+    SD.arcade.gameOverTimer = 0; SD.arcade.winnerTimer = 0;
+    SD.arcade.bossHP = 0; SD.arcade.bossLasers = [];
   }
   if (SD.carnival) {
     SD.carnival.superFW = false; SD.carnival.superFWTimer = 0;
     SD.carnival.hyperWheel = false; SD.carnival.hyperWheelTimer = 0;
+    SD.carnival.clown = null;
   }
   if (SD.egypt) {
     SD.egypt.superMummies = false; SD.egypt.superMummiesTimer = 0;
@@ -9833,7 +9951,7 @@ function fireSurprise(forcedVariant){
       sequence([[0,()=>{beatFX.speedBoost=6;flash('rgba(255,255,255,0.3)',300);}],[500,()=>{beatFX.speedBoost=10;flash(rgba(pc(0),0.4),200);}],[1500,()=>{flash('rgba(255,255,255,0.8)',150);}],[2000,()=>{beatFX.speedBoost=4;}],[5000,()=>{beatFX.speedBoost=0;}]]);
     } else if(variant===1){
       // Asteroid field
-      sequence([[0,()=>{flash(rgba(pc(1),0.5),400);for(let i=0;i<15;i++)surpriseTimeout(()=>{beatFX.shockwaveR=0;beatFX.shockwaveA=0.7;},i*200);}],[3000,()=>{beatFX.speedBoost=3;}],[7000,()=>{beatFX.speedBoost=0;}]]);
+      sequence([[0,()=>{flash(rgba(pc(1),0.5),400);}],[3000,()=>{beatFX.speedBoost=3;}],[7000,()=>{beatFX.speedBoost=0;}]]);
     } else {
       sequence([[0,()=>{beatFX.speedBoost=8;flash('rgba(0,0,0,0.95)',50);}],[100,()=>{flash(rgba(pc(0),0.9),100);}],[200,()=>{flash(rgba(pc(1),0.8),200);}],[500,()=>{beatFX.speedBoost=12;}],[2000,()=>{beatFX.speedBoost=3;}],[8000,()=>{beatFX.speedBoost=0;}]]);
     }
@@ -10204,7 +10322,7 @@ else if(sc==='DAY_OF_DEAD'){
       sequence([
         [0,()=>{
           flash('rgba(255,255,180,0.6)',200);
-          if(SD.zeus)SD.zeus.angry=1;
+          if(SD.olympus)SD.olympus.angry=1;
           for(let i=0;i<5;i++)surpriseTimeout(()=>{SD.lightnings&&SD.lightnings.push(mkLightning());flash('rgba(255,255,255,0.7)',60);},i*120);
         }],
         [800,()=>{
@@ -10213,26 +10331,24 @@ else if(sc==='DAY_OF_DEAD'){
         }],
         [1800,()=>{
           for(let i=0;i<10;i++)surpriseTimeout(()=>{SD.lightnings&&SD.lightnings.push(mkLightning());flash('rgba(255,255,255,0.5)',50);},i*90);
-          if(SD.zeus)SD.zeus.tiltSpeed=0.02; // head thrashing
+          if(SD.olympus)SD.olympus.tiltSpeed=0.02; // head thrashing
         }],
         [3500,()=>{flash('rgba(255,255,150,0.8)',200);}],
         [4500,()=>{
           for(let i=0;i<6;i++)surpriseTimeout(()=>{SD.lightnings&&SD.lightnings.push(mkLightning());},i*120);
         }],
-        [7000,()=>{if(SD.zeus){SD.zeus.tiltSpeed=0.004;SD.zeus.angry=0;}}],
+        [7000,()=>{if(SD.olympus){SD.olympus.tiltSpeed=0.004;SD.olympus.angry=0;}}],
       ]);
     } else if(variant===1){
       // B: Zeus rage — scene shakes, mountains flash, rapid-fire bolts at centerpiece
       sequence([
         [0,()=>{
           flash('rgba(255,255,100,0.9)',150);
-          if(SD.zeus){SD.zeus.angry=1;SD.zeus.tiltSpeed=0.025;}
-          beatFX.shockwaveR=0;beatFX.shockwaveA=0.9;
+          if(SD.olympus){SD.olympus.angry=1;SD.olympus.tiltSpeed=0.025;}
         }],
         [200,()=>{flash('rgba(255,200,50,0.7)',100);}],
         [400,()=>{
           flash('rgba(255,255,200,0.6)',150);
-          beatFX.shockwaveR=0;beatFX.shockwaveA=0.7;
           // Rapid fire 3 bolts
           if(SD.cpTarget&&SD.cpTarget.alive&&SD.boltsComing){
             const tgt=SD.cpTarget,w2=W(),h2=H();
@@ -10257,7 +10373,7 @@ else if(sc==='DAY_OF_DEAD'){
             SD.boltsComing.push({x:ex,y:ey,vx:dx/dist*20,vy:dy/dist*20,size:22,life:1.4,ci:1,target:tgt,eyeOrigin:true});
           }
         }],
-        [8000,()=>{if(SD.zeus){SD.zeus.angry=0;SD.zeus.tiltSpeed=0.004;}}],
+        [8000,()=>{if(SD.olympus){SD.olympus.angry=0;SD.olympus.tiltSpeed=0.004;}}],
       ]);
     } else {
       // C: Clouds part, Zeus fully revealed, laughs and unleashes everything at once
@@ -10269,7 +10385,7 @@ else if(sc==='DAY_OF_DEAD'){
         }],
         [800,()=>{
           flash('rgba(255,255,255,0.7)',200);
-          if(SD.zeus){SD.zeus.angry=1;SD.zeus.tiltSpeed=0;SD.zeus.tilt=0;} // Face front, centered
+          if(SD.olympus){SD.olympus.angry=1;SD.olympus.tiltSpeed=0;SD.olympus.tiltAngle=0;} // Face front, centered
         }],
         [1200,()=>{
           flash('rgba(255,255,200,0.9)',150);
@@ -10295,12 +10411,12 @@ else if(sc==='DAY_OF_DEAD'){
           flash('rgba(200,220,255,0.5)',400);
           // Clouds drift back
           if(SD.clouds)SD.clouds.forEach(cl=>{cl.vx=(Math.random()-0.5)*0.2;});
-          if(SD.zeus)SD.zeus.tiltSpeed=0.004;
+          if(SD.olympus)SD.olympus.tiltSpeed=0.004;
         }],
         [6000,()=>{
           for(let i=0;i<5;i++)surpriseTimeout(()=>{SD.lightnings&&SD.lightnings.push(mkLightning());},i*140);
         }],
-        [9000,()=>{if(SD.zeus){SD.zeus.angry=0;}}],
+        [9000,()=>{if(SD.olympus){SD.olympus.angry=0;}}],
       ]);
     }
   }
@@ -10480,32 +10596,16 @@ function spikeDetected() {
   return (nearPeak || bigSpike) && atPeak;
 }
 
-function spawnCracks() {
-  const cx = W() / 2, cy = H() / 2;
-  beatFX.crackLines = Array.from({ length: 8 }, () => {
-    const a = Math.random() * Math.PI * 2, len = Math.random() * Math.max(W(), H()) * 0.7 + 100;
-    const segs = []; let x2 = cx, y2 = cy;
-    for (let i = 0; i < 6; i++) {
-      x2 += Math.cos(a + (Math.random() - 0.5) * 0.8) * len / 6;
-      y2 += Math.sin(a + (Math.random() - 0.5) * 0.8) * len / 6;
-      segs.push({ x: x2, y: y2 });
-    }
-    return { segs, life: 1, ci: Math.floor(Math.random() * 4) };
-  });
-}
-
 function triggerBeat() {
   SM.beatPulse = 1; beatCount++;
-  const reactions = THEME.beatReactions || ['shockwave'];
+  const reactions = THEME.beatReactions || ['speed_burst'];
   const reaction = reactions[beatReactionIdx % reactions.length];
   beatReactionIdx++;
   const intensity = 0.5 + progMult * 0.7;
 
   switch (reaction) {
     case 'speed_burst': beatFX.speedBoost = 1.5 * intensity; break;
-    case 'shockwave': beatFX.shockwaveR = 0; beatFX.shockwaveA = 0.8 * intensity; break;
     case 'color_invert': beatFX.invertA = 0.45 * intensity; break;
-    case 'world_crack': spawnCracks(); break;
     case 'bass_slam': beatFX.slamS = 1 + 0.12 * intensity; break;
     case 'strobe_cut': beatFX.invertA = THEME.energy > 0.6 ? 0.8 * intensity : 0.3; break;
     case 'creature_surge': if (SD.creatures) SD.creatures.push(mkDeepCreature(W(), H())); break;
@@ -10640,13 +10740,13 @@ async function loadTheme(tid,name,artist,artistIds,isExplicit,durationMs){
     if(!r.ok)throw new Error('HTTP '+r.status);
     const raw=await r.json();if(raw.error)throw new Error(raw.error);
     const VALID_BEH=['rotate','spin_fast','pulse_beat','breathe','orbit_slow','rise_set','fixed','strobe','bounce','drift','watermark'];
-    const VALID_BEATS=['speed_burst','shockwave','color_invert','world_crack','bass_slam','strobe_cut','creature_surge','cannon_fire','lightning_strike','gravity_wave','petal_burst','pixel_explode','skull_surge','coin_shower','tentacle_surge'];
+    const VALID_BEATS=['speed_burst','color_invert','bass_slam','strobe_cut','creature_surge','cannon_fire','lightning_strike','gravity_wave','petal_burst','pixel_explode','skull_surge','coin_shower','tentacle_surge'];
     const scene=enforceScene((raw.scene||shortlist[0]||'WARP_SPEED').toUpperCase().replace(/ /g,'_'),shortlist);
     const cp=enforceCP(raw.centerpiece);
-    const reactions=(raw.beatReactions||['shockwave']).filter(r2=>VALID_BEATS.includes(r2)).slice(0,4);
+    const reactions=(raw.beatReactions||['speed_burst']).filter(r2=>VALID_BEATS.includes(r2)).slice(0,4);
     const cpX=Math.min(0.9,Math.max(0.1,parseFloat(raw.centerpieceX)||0.5));
     const cpY=Math.min(0.9,Math.max(0.1,parseFloat(raw.centerpieceY)||0.5));
-    const theme={scene,label:raw.label||'',splashDesc:raw.splashDesc||'',palette:Array.isArray(raw.palette)&&raw.palette.length===4?raw.palette:['#ff006e','#8338ec','#06ffd8','#ffbe0b'],bgColor:raw.bgColor||'#000010',centerpiece:cp,centerpieceScale:Math.min(1.5,Math.max(0,parseFloat(raw.centerpieceScale)||0.5)),centerpieceX:cpX,centerpieceY:cpY,centerpieceBehavior:VALID_BEH.includes(raw.centerpieceBehavior)?raw.centerpieceBehavior:'rotate',beatReactions:reactions.length?reactions:['shockwave'],sceneSpeed:Math.min(3,Math.max(0.3,parseFloat(raw.sceneSpeed)||1)),sceneIntensity:Math.min(1,Math.max(0,parseFloat(raw.sceneIntensity)||0.7)),energy:Math.min(1,Math.max(0,parseFloat(raw.energy)||0.5)),chaos:Math.min(1,Math.max(0,parseFloat(raw.chaos)||0.4))};
+    const theme={scene,label:raw.label||'',splashDesc:raw.splashDesc||'',palette:Array.isArray(raw.palette)&&raw.palette.length===4?raw.palette:['#ff006e','#8338ec','#06ffd8','#ffbe0b'],bgColor:raw.bgColor||'#000010',centerpiece:cp,centerpieceScale:Math.min(1.5,Math.max(0,parseFloat(raw.centerpieceScale)||0.5)),centerpieceX:cpX,centerpieceY:cpY,centerpieceBehavior:VALID_BEH.includes(raw.centerpieceBehavior)?raw.centerpieceBehavior:'rotate',beatReactions:reactions.length?reactions:['speed_burst'],sceneSpeed:Math.min(3,Math.max(0.3,parseFloat(raw.sceneSpeed)||1)),sceneIntensity:Math.min(1,Math.max(0,parseFloat(raw.sceneIntensity)||0.7)),energy:Math.min(1,Math.max(0,parseFloat(raw.energy)||0.5)),chaos:Math.min(1,Math.max(0,parseFloat(raw.chaos)||0.4))};
     // Cache the theme
     aiCache[tid]=theme;
     // Only apply (transition + record) if this is the currently playing song
@@ -11636,7 +11736,7 @@ function skipToNextScene() {
     centerpieceX: 0.3 + Math.random() * 0.4,
     centerpieceY: 0.3 + Math.random() * 0.4,
     centerpieceBehavior: rndEl(['rotate', 'pulse_beat', 'breathe', 'orbit_slow', 'bounce', 'drift']),
-    beatReactions: THEME.beatReactions || ['shockwave'],
+    beatReactions: THEME.beatReactions || ['speed_burst'],
     sceneSpeed: 0.7 + Math.random() * 1.3,
     sceneIntensity: 0.5 + Math.random() * 0.5,
     energy: THEME.energy || 0.5,
@@ -11665,8 +11765,6 @@ async function getProviderGenres(artistIds) {
 
 function drawBeatFX(){
   const w=W(),h=H(),cx=w/2,cy=h/2;
-  if(beatFX.shockwaveA>0.01){beatFX.shockwaveR+=12*(1+SM.energy);beatFX.shockwaveA*=0.88;x2.beginPath();x2.arc(cx,cy,beatFX.shockwaveR,0,Math.PI*2);x2.strokeStyle=rgba(pc(0),beatFX.shockwaveA);x2.lineWidth=3+beatFX.shockwaveA*5;x2.stroke();if(beatFX.shockwaveR>Math.sqrt(cx*cx+cy*cy)+100)beatFX.shockwaveA=0;}
-  if(beatFX.crackLines.length>0){for(let i=beatFX.crackLines.length-1;i>=0;i--){const cl=beatFX.crackLines[i];cl.life-=0.05;if(cl.life<=0){beatFX.crackLines.splice(i,1);continue;}let prev={x:cx,y:cy};for(const seg of cl.segs){x2.beginPath();x2.moveTo(prev.x,prev.y);x2.lineTo(seg.x,seg.y);x2.strokeStyle=rgba(pc(cl.ci),cl.life*0.9);x2.lineWidth=cl.life*3;x2.stroke();prev=seg;}}}
   if(beatFX.invertA>0.01){x2.fillStyle=rgba(pc(0),beatFX.invertA*0.4);x2.fillRect(0,0,w,h);beatFX.invertA*=0.82;}
   if(beatFX.slamS>1.001){beatFX.slamS+=(1-beatFX.slamS)*0.15;}
   if(beatFX.gravityWave>0.01){x2.fillStyle=rgba(pc(2),beatFX.gravityWave*0.08);x2.fillRect(0,0,w,h);beatFX.gravityWave*=0.9;}
@@ -11791,7 +11889,7 @@ function initDevPanel(){
     // After initScene resets surpriseFired=false, mark it as fired to block auto-triggers
     surpriseFired=true;
     // Reset beat FX
-    beatFX.speedBoost=0;beatFX.invertA=0;beatFX.shockwaveA=0;beatFX.slamS=1;beatFX.gravityWave=0;
+    beatFX.speedBoost=0;beatFX.invertA=0;beatFX.slamS=1;beatFX.gravityWave=0;
     // Clear surprise overlay
     const o=document.getElementById('surpriseOverlay');
     o.style.transition='opacity 0.3s';o.style.opacity='0';
@@ -11807,9 +11905,11 @@ function initDevPanel(){
   // ── Update surprise button highlights ──
   function updateSurpriseButtons(){
     const btns=document.getElementById('dpSurpriseGrid').querySelectorAll('[data-var]');
+    const sc=THEME.scene;
     btns.forEach(btn=>{
       const v=parseInt(btn.dataset.var);
       btn.classList.toggle('active',v===activeSurpriseVariant);
+      btn.textContent='⚡ '+getSurpriseLabel(sc,v);
     });
     document.getElementById('dpFireRandom').classList.toggle('active',activeSurpriseVariant!=null&&![0,1,2].includes(activeSurpriseVariant));
   }
@@ -11821,7 +11921,7 @@ function initDevPanel(){
     // Cancel any active surprise (without re-initing, since we're about to do that)
     activeSurpriseVariant=null;
     updateSurpriseButtons();
-    beatFX.speedBoost=0;beatFX.invertA=0;beatFX.shockwaveA=0;beatFX.slamS=1;beatFX.gravityWave=0;
+    beatFX.speedBoost=0;beatFX.invertA=0;beatFX.slamS=1;beatFX.gravityWave=0;
     document.getElementById('surpriseOverlay').style.opacity='0';
     document.getElementById('gameOverScreen').style.display='none';
     document.getElementById('comicPanel').style.display='none';
@@ -11833,6 +11933,7 @@ function initDevPanel(){
     initScene();
     // After initScene resets surpriseFired=false, block auto-firing
     surpriseFired=true;
+    updateSurpriseButtons();
     document.getElementById('sceneTag').textContent=sceneName.replace(/_/g,' ')+' — DEV';
     console.log('[dev] jumped to scene:',sceneName);
   }
@@ -11873,7 +11974,7 @@ function initDevPanel(){
     midShifted=true; // prevent mid-shift
     // Call fireSurprise with the forced variant
     fireSurprise(variant);
-    console.log('[dev] fired surprise variant',variant,'for scene',THEME.scene);
+    console.log('[dev] fired surprise',getSurpriseLabel(THEME.scene,variant),'(v'+variant+') for scene',THEME.scene);
   }
 
   // ── DJ Signature dev controls ──
@@ -11969,7 +12070,7 @@ function initDevPanel(){
   // ── Quick actions ──
   document.getElementById('dpFlash').addEventListener('click',()=>flash(pc(0),400));
   document.getElementById('dpComicBurst').addEventListener('click',doComicBurst);
-  document.getElementById('dpShockwave').addEventListener('click',()=>{beatFX.shockwaveR=0;beatFX.shockwaveA=0.9;});
+
   document.getElementById('dpInvert').addEventListener('click',()=>{beatFX.invertA=0.8;});
   document.getElementById('dpSlam').addEventListener('click',()=>{beatFX.slamS=1.25;});
   document.getElementById('dpGameOver').addEventListener('click',showGameOver);
@@ -11996,7 +12097,7 @@ function initDevPanel(){
       document.getElementById('dpBPM').textContent=MS.beatInterval>0?Math.round(60000/MS.beatInterval):'—';
       document.getElementById('dpBeatCt').textContent=beatCount;
       document.getElementById('dpProg').textContent=Math.round(songProg*100)+'%';
-      document.getElementById('dpSurprise').textContent=activeSurpriseVariant!==null?('V'+activeSurpriseVariant+' ACTIVE'):(surpriseFired?'FIRED':'armed');
+      document.getElementById('dpSurprise').textContent=activeSurpriseVariant!==null?(getSurpriseLabel(THEME.scene,activeSurpriseVariant)+' ACTIVE'):(surpriseFired?'FIRED':'armed');
       document.getElementById('dpDJSig').textContent=djSig.active?(djSig.artist.display+' ['+djSig.phase+(djSig.morph>0?' '+Math.round(djSig.morph*100)+'%':'')+']'):'—';
       // Highlight active scene button
       const btns=document.getElementById('dpSceneGrid').children;
@@ -12118,6 +12219,58 @@ const appleBtn = document.getElementById('appleMusicBtn');
 if (appleBtn) appleBtn.addEventListener('click', () => startProvider('apple'));
 const localBtn = document.getElementById('localAudioBtn');
 if (localBtn) localBtn.addEventListener('click', () => startProvider('local'));
+
+// ── Landing page ──
+(function initLandingPage() {
+  const lp = document.getElementById('landingPage');
+  if (!lp) return;
+
+  // Skip landing page if we're returning from OAuth, have a saved session, or are a DJ controller
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('code') || p.get('error') || p.get('controller') || p.get('dev')) {
+    lp.style.display = 'none';
+    return;
+  }
+  // Also skip if there's a saved Spotify token
+  try { if (localStorage.getItem('at')) { lp.style.display = 'none'; return; } } catch(e) {}
+
+  function dismissLanding() {
+    lp.style.transition = 'opacity 0.4s ease';
+    lp.style.opacity = '0';
+    setTimeout(() => { lp.style.display = 'none'; }, 400);
+  }
+
+  document.getElementById('lpGetStarted').addEventListener('click', dismissLanding);
+  document.getElementById('lpGetStarted2').addEventListener('click', dismissLanding);
+
+  // Also hide landing page whenever login screen gets hidden (OAuth callback, saved session, etc.)
+  const loginEl = document.getElementById('login');
+  const lpObs = new MutationObserver(() => {
+    if (loginEl.style.display === 'none' && lp.style.display !== 'none') {
+      lp.style.display = 'none';
+    }
+  });
+  lpObs.observe(loginEl, { attributes: true, attributeFilter: ['style'] });
+
+  // Intersection observer for scroll-triggered card animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) e.target.classList.add('visible');
+    });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.lp-card, .lp-bottom').forEach(el => observer.observe(el));
+
+  // Hide scroll hint once user scrolls
+  const hint = document.querySelector('.lp-scroll-hint');
+  if (hint) {
+    lp.addEventListener('scroll', () => {
+      if (lp.scrollTop > 50 && hint.style.opacity !== '0') {
+        hint.style.transition = 'opacity 0.5s';
+        hint.style.opacity = '0';
+      }
+    }, { passive: true });
+  }
+})();
 
 // ── Arcade landing canvas animation ──
 (function initArcadeCanvas() {
@@ -12976,17 +13129,19 @@ const DJMode = {
       btn.addEventListener('click', () => {
         const v = parseInt(btn.dataset.variant);
         const wasActive = btn.classList.contains('surprise-on');
+        const sc = this._lastDisplayState ? this._lastDisplayState.scene : '';
+        const label = getSurpriseLabel(sc, v);
         // Clear all variant toggles first
         document.querySelectorAll('#djcVariantRow .djc-btn').forEach(b => b.classList.remove('surprise-on'));
         if (wasActive) {
           // Turn off
           this._sendCommand('surpriseOff');
-          this._log('Surprise V' + (v + 1) + ' OFF');
+          this._log(label + ' OFF');
         } else {
           // Turn on this variant
           btn.classList.add('surprise-on');
           this._sendCommand('surpriseOn', v);
-          this._log('Surprise V' + (v + 1) + ' ON');
+          this._log(label + ' ON');
         }
       });
     });
@@ -13160,6 +13315,13 @@ const DJMode = {
       // Update scene name
       const sceneName = (state.scene || '—').replace(/_/g, ' ');
       document.getElementById('djcSceneName').textContent = sceneName;
+
+      // Update surprise variant labels for new scene
+      const sc = state.scene || '';
+      document.querySelectorAll('#djcVariantRow .djc-btn').forEach(btn => {
+        const v = parseInt(btn.dataset.variant);
+        btn.textContent = '⚡ ' + getSurpriseLabel(sc, v);
+      });
 
       // Update scene timer
       if (state.sceneStart) {
