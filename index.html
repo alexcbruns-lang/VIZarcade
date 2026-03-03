@@ -12655,9 +12655,10 @@ const DJMode = {
         if (msg.source === 'controller' && msg.type === 'command') {
           this._handleCommand(msg.cmd);
         }
-        if (msg.source === 'controller' && msg.type === 'preview' && msg.payload) {
-          this._renderPreview(msg.payload);
-        }
+        // Preview requests handled separately — disabled for testing
+        // if (msg.source === 'controller' && msg.type === 'preview' && msg.payload) {
+        //   this._renderPreview(msg.payload);
+        // }
         if (msg.source === 'controller' && msg.type === 'hello') {
           // Local controller connected — treat same as Firebase controllerConnected
           console.log('[djmode] local controller connected via BroadcastChannel');
