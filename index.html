@@ -11340,7 +11340,7 @@ MusicProviders.local = {
     venueOverlay.style.cssText = 'position:fixed;inset:0;z-index:260;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.97);gap:12px;padding:20px;';
 
     // Header
-    let html = '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;letter-spacing:0.25em;color:#ffbe0b;text-shadow:0 0 20px rgba(255,190,11,0.6)">LINE-IN / VENUE SETUP</div>';
+    let html = '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;letter-spacing:0.25em;color:#ffbe0b;text-shadow:0 0 20px rgba(255,190,11,0.6)">SELECT AUDIO INPUT</div>';
 
     // Setup guide
     html += '<div style="font-family:\'Share Tech Mono\',monospace;font-size:0.6rem;color:rgba(255,255,255,0.45);text-align:center;max-width:380px;line-height:1.8;letter-spacing:0.06em;margin-bottom:4px">' +
@@ -11348,27 +11348,26 @@ MusicProviders.local = {
       '</div>';
 
     // Device list
-    html += '<div style="width:100%;max-width:380px;display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;padding:4px 0">';
+    html += '<div style="width:100%;max-width:420px;display:flex;flex-direction:column;gap:10px;max-height:50vh;overflow-y:auto;padding:4px 0">';
     devices.forEach((dev, i) => {
       const label = dev.label || ('Audio Input ' + (i + 1));
-      // Highlight likely USB/external interfaces
       const isExternal = /usb|interface|line|external|scarlett|focusrite|behringer|presonus|motu|audient|steinberg|native instruments|m-audio|zoom|tascam|roland|universal audio/i.test(label);
       const borderColor = isExternal ? 'rgba(255,190,11,0.5)' : 'rgba(0,255,65,0.15)';
       const bgColor = isExternal ? 'rgba(255,190,11,0.08)' : 'rgba(0,255,65,0.04)';
       const labelColor = isExternal ? '#ffbe0b' : '#b0ffb0';
-      const badge = isExternal ? '<span style="font-size:0.5rem;color:#ffbe0b;letter-spacing:0.15em;margin-left:8px">★ RECOMMENDED</span>' : '';
+      const badge = isExternal ? '<div style="font-size:0.5rem;color:#ffbe0b;letter-spacing:0.12em;margin-top:4px">\u2605 RECOMMENDED — likely your external interface</div>' : '';
       html += '<button class="venue-dev-btn" data-device-id="' + dev.deviceId + '" style="' +
         'background:' + bgColor + ';border:1px solid ' + borderColor + ';color:' + labelColor + ';' +
-        'font-family:\'Share Tech Mono\',monospace;font-size:0.7rem;letter-spacing:0.06em;' +
+        'font-family:\'Share Tech Mono\',monospace;font-size:0.7rem;letter-spacing:0.04em;' +
         'padding:12px 14px;cursor:pointer;text-align:left;transition:all 0.12s;border-radius:2px;' +
-        'display:flex;align-items:center;justify-content:space-between">' +
-        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + label + '</span>' + badge +
+        'display:block;word-break:break-word;-webkit-tap-highlight-color:transparent;touch-action:manipulation">' +
+        label + badge +
         '</button>';
     });
     html += '</div>';
 
-    // Back button
-    html += '<button id="venueBackBtn" style="background:none;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);padding:0.5rem 1.8rem;cursor:pointer;font-family:\'Share Tech Mono\',monospace;font-size:0.65rem;letter-spacing:0.2em;margin-top:6px">← BACK</button>';
+    // Back button — uses class for touch reliability
+    html += '<button class="venue-back-btn" style="background:none;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);padding:0.6rem 2rem;cursor:pointer;font-family:\'Share Tech Mono\',monospace;font-size:0.7rem;letter-spacing:0.2em;margin-top:8px;-webkit-tap-highlight-color:transparent;touch-action:manipulation">\u2190 BACK</button>';
 
     venueOverlay.innerHTML = html;
     document.body.appendChild(venueOverlay);
@@ -11377,7 +11376,7 @@ MusicProviders.local = {
     venueOverlay.querySelectorAll('.venue-dev-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const deviceId = btn.getAttribute('data-device-id');
-        const deviceLabel = btn.querySelector('span').textContent;
+        const deviceLabel = btn.textContent.replace(/★ RECOMMENDED.*/, '').trim();
         _showVenueSignalCheck(deviceId, deviceLabel, venueOverlay, (confirmedId) => {
           this._venueDeviceId = confirmedId;
           overlay.remove();
@@ -11386,10 +11385,14 @@ MusicProviders.local = {
       });
     });
 
-    // Back button
-    document.getElementById('venueBackBtn').onclick = () => {
+    // Back button — both click and touchend for mobile reliability
+    const backBtn = venueOverlay.querySelector('.venue-back-btn');
+    const goBack = (e) => {
+      if (e) e.preventDefault();
       venueOverlay.remove();
     };
+    backBtn.addEventListener('click', goBack);
+    backBtn.addEventListener('touchend', goBack);
   },
 
   // Store selected venue device ID
@@ -13357,29 +13360,29 @@ const DJMode = {
     const venueOverlay = document.createElement('div');
     venueOverlay.style.cssText = 'position:fixed;inset:0;z-index:260;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.97);gap:12px;padding:20px;';
 
-    let html = '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;letter-spacing:0.25em;color:#ffbe0b;text-shadow:0 0 20px rgba(255,190,11,0.6)">DJ MODE — VENUE SETUP</div>';
+    let html = '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;letter-spacing:0.25em;color:#ffbe0b;text-shadow:0 0 20px rgba(255,190,11,0.6)">SELECT AUDIO INPUT</div>';
     html += '<div style="font-family:\'Share Tech Mono\',monospace;font-size:0.6rem;color:rgba(255,255,255,0.45);text-align:center;max-width:380px;line-height:1.8;letter-spacing:0.06em;margin-bottom:4px">' +
       'Connect your mixer\'s <span style="color:#ffbe0b">Record Out</span> or <span style="color:#ffbe0b">Booth Out</span> to a USB audio interface, then select it below.' +
       '</div>';
 
-    html += '<div style="width:100%;max-width:380px;display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;padding:4px 0">';
+    html += '<div style="width:100%;max-width:420px;display:flex;flex-direction:column;gap:10px;max-height:50vh;overflow-y:auto;padding:4px 0">';
     devices.forEach((dev, i) => {
       const label = dev.label || ('Audio Input ' + (i + 1));
       const isExternal = /usb|interface|line|external|scarlett|focusrite|behringer|presonus|motu|audient|steinberg|native instruments|m-audio|zoom|tascam|roland|universal audio/i.test(label);
       const borderColor = isExternal ? 'rgba(255,190,11,0.5)' : 'rgba(131,56,236,0.2)';
       const bgColor = isExternal ? 'rgba(255,190,11,0.08)' : 'rgba(131,56,236,0.04)';
       const labelColor = isExternal ? '#ffbe0b' : '#c4a8ff';
-      const badge = isExternal ? '<span style="font-size:0.5rem;color:#ffbe0b;letter-spacing:0.15em;margin-left:8px">\u2605 RECOMMENDED</span>' : '';
+      const badge = isExternal ? '<div style="font-size:0.5rem;color:#ffbe0b;letter-spacing:0.12em;margin-top:4px">\u2605 RECOMMENDED — likely your external interface</div>' : '';
       html += '<button class="djvenue-dev-btn" data-device-id="' + dev.deviceId + '" style="' +
         'background:' + bgColor + ';border:1px solid ' + borderColor + ';color:' + labelColor + ';' +
-        'font-family:\'Share Tech Mono\',monospace;font-size:0.7rem;letter-spacing:0.06em;' +
+        'font-family:\'Share Tech Mono\',monospace;font-size:0.7rem;letter-spacing:0.04em;' +
         'padding:12px 14px;cursor:pointer;text-align:left;transition:all 0.12s;border-radius:2px;' +
-        'display:flex;align-items:center;justify-content:space-between">' +
-        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + label + '</span>' + badge +
+        'display:block;word-break:break-word;-webkit-tap-highlight-color:transparent;touch-action:manipulation">' +
+        label + badge +
         '</button>';
     });
     html += '</div>';
-    html += '<button id="djVenueBackBtn" style="background:none;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);padding:0.5rem 1.8rem;cursor:pointer;font-family:\'Share Tech Mono\',monospace;font-size:0.65rem;letter-spacing:0.2em;margin-top:6px">\u2190 BACK</button>';
+    html += '<button class="djvenue-back-btn" style="background:none;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);padding:0.6rem 2rem;cursor:pointer;font-family:\'Share Tech Mono\',monospace;font-size:0.7rem;letter-spacing:0.2em;margin-top:8px;-webkit-tap-highlight-color:transparent;touch-action:manipulation">\u2190 BACK</button>';
 
     venueOverlay.innerHTML = html;
     document.body.appendChild(venueOverlay);
@@ -13387,7 +13390,7 @@ const DJMode = {
     venueOverlay.querySelectorAll('.djvenue-dev-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const deviceId = btn.getAttribute('data-device-id');
-        const deviceLabel = btn.querySelector('span').textContent;
+        const deviceLabel = btn.textContent.replace(/★ RECOMMENDED.*/, '').trim();
         _showVenueSignalCheck(deviceId, deviceLabel, venueOverlay, (confirmedId) => {
           this._venueDeviceId = confirmedId;
           overlay.remove();
@@ -13396,9 +13399,13 @@ const DJMode = {
       });
     });
 
-    document.getElementById('djVenueBackBtn').onclick = () => {
+    const djBackBtn = venueOverlay.querySelector('.djvenue-back-btn');
+    const djGoBack = (e) => {
+      if (e) e.preventDefault();
       venueOverlay.remove();
     };
+    djBackBtn.addEventListener('click', djGoBack);
+    djBackBtn.addEventListener('touchend', djGoBack);
   },
 
   // Store selected venue device ID for DJ Mode
