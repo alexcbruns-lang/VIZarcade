@@ -202,11 +202,14 @@ body.djmode-display{cursor:none!important;user-select:none!important}
 .djc-palette-swatches{display:flex;gap:2px;flex-shrink:0}
 .djc-palette-swatches span{width:14px;height:14px;border-radius:1px;display:block}
 .djc-palette-name{font-family:'Share Tech Mono',monospace;font-size:0.48rem;color:#7acc7a;letter-spacing:0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.djc-push-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.djc-push-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
 .djc-push-btn{background:rgba(6,255,216,0.08);border:1px solid rgba(6,255,216,0.3);color:#06ffd8;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:0.15em;padding:14px 8px;cursor:pointer;text-align:center;transition:all 0.12s;border-radius:2px;-webkit-tap-highlight-color:transparent}
 .djc-push-btn:active{background:rgba(6,255,216,0.25);border-color:#06ffd8;transform:scale(0.97)}
 .djc-push-btn.cut{background:rgba(255,0,110,0.06);border-color:rgba(255,0,110,0.3);color:#ff80b0}
 .djc-push-btn.cut:active{background:rgba(255,0,110,0.2);border-color:#ff006e;color:#ff006e}
+.djc-push-btn.hold{background:rgba(255,190,11,0.06);border-color:rgba(255,190,11,0.3);color:#ffbe0b}
+.djc-push-btn.hold:active{background:rgba(255,190,11,0.2);border-color:#ffbe0b;color:#ffbe0b}
+.djc-push-btn.hold.toggled{background:rgba(255,190,11,0.25);border-color:#ffbe0b;color:#ffbe0b;box-shadow:0 0 12px rgba(255,190,11,0.4);animation:waitingPulse 2s ease-in-out infinite}
 .djc-btn.surprise-on{background:rgba(255,190,11,0.2)!important;border-color:#ffbe0b!important;color:#ffbe0b!important;box-shadow:0 0 10px rgba(255,190,11,0.3)!important;animation:surprisePulse 1.5s ease-in-out infinite}
 @keyframes surprisePulse{0%,100%{box-shadow:0 0 10px rgba(255,190,11,0.3)}50%{box-shadow:0 0 20px rgba(255,190,11,0.6)}}
 </style>
@@ -419,6 +422,7 @@ body.djmode-display{cursor:none!important;user-select:none!important}
     <div class="djc-push-row">
       <button class="djc-push-btn" id="djcPushFade">FADE IN</button>
       <button class="djc-push-btn cut" id="djcPushCut">HARD CUT</button>
+      <button class="djc-push-btn hold" id="djcPushHold">HOLD FADE</button>
     </div>
   </div>
   <div class="djc-section">
@@ -11810,6 +11814,7 @@ function render(t){
   x2.clearRect(0,0,w,h);
   drawBeatFX();
   x3.clearRect(0,0,w,h);
+  if(typeof DJMode!=='undefined'&&DJMode._holdFade&&DJMode._holdFade.active){DJMode._drawHoldVisual(x3,w,h,t);}
   const vg=x3.createRadialGradient(w/2,h/2,h*0.2,w/2,h/2,h*0.85);
   vg.addColorStop(0,'transparent');vg.addColorStop(1,'rgba(0,0,0,0.55)');
   x3.fillStyle=vg;x3.fillRect(0,0,w,h);
@@ -12360,6 +12365,7 @@ const DJMode = {
   _sessionLog: [],
   _localChannel: null,       // BroadcastChannel for same-device comms
   _isLocalController: false, // true when controller opened via popup
+  _holdFade: { active: false, progress: 0, startTime: 0, palette: null }, // Hold Fade state
 
   // ── Firebase config ──
   // Uses a public Firebase project for room relay.
@@ -12801,6 +12807,76 @@ const DJMode = {
           this._beatSensitivity = parseFloat(cmd.payload) || 1.0;
         }
         break;
+
+      case 'holdFade':
+        this._startHoldFade();
+        break;
+    }
+  },
+
+  // ── Hold Fade system ──
+  _startHoldFade() {
+    if (this._holdFade.active) return;
+    this._holdFade.active = true;
+    this._holdFade.progress = 0;
+    this._holdFade.startTime = Date.now();
+    this._holdFade.palette = THEME.palette ? THEME.palette.slice() : ['#00ff41','#06ffd8','#8338ec','#ff006e'];
+    this._stopSurpriseLoop();
+    clearSurpriseState();
+    console.log('[djmode] hold fade started');
+    this._pushState();
+  },
+
+  _endHoldFade() {
+    this._holdFade.active = false;
+    this._holdFade.progress = 0;
+    console.log('[djmode] hold fade ended');
+  },
+
+  _drawHoldVisual(ctx, w, h, t) {
+    const hf = this._holdFade;
+    if (!hf.active) return;
+    const elapsed = (Date.now() - hf.startTime) / 1000;
+    hf.progress = Math.min(1, elapsed / 12);
+
+    // Dark overlay fades in with progress
+    ctx.save();
+    ctx.globalAlpha = hf.progress * 0.85;
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+
+    // Once partly faded, draw breathing hold visual
+    if (hf.progress > 0.3) {
+      const holdAlpha = Math.min(1, (hf.progress - 0.3) / 0.4);
+      const pal = hf.palette || ['#00ff41','#06ffd8','#8338ec','#ff006e'];
+      const colorIdx = Math.floor(t / 4000) % pal.length;
+      const nextIdx = (colorIdx + 1) % pal.length;
+      const colorMix = (t % 4000) / 4000;
+      const c1 = h2r(pal[colorIdx]);
+      const c2 = h2r(pal[nextIdx]);
+      const mr = Math.round(c1.r + (c2.r - c1.r) * colorMix);
+      const mg = Math.round(c1.g + (c2.g - c1.g) * colorMix);
+      const mb = Math.round(c1.b + (c2.b - c1.b) * colorMix);
+      const breathe = 0.3 + 0.15 * Math.sin(t / 1200);
+      const beatBoost = SM.beatPulse * 0.15;
+      const pulseR = (h * 0.25) + (h * 0.08 * Math.sin(t / 2000)) + (h * beatBoost);
+      ctx.save();
+      ctx.globalAlpha = holdAlpha * (breathe + beatBoost);
+      const grd = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, pulseR);
+      grd.addColorStop(0, 'rgba(' + mr + ',' + mg + ',' + mb + ',0.4)');
+      grd.addColorStop(0.5, 'rgba(' + mr + ',' + mg + ',' + mb + ',0.12)');
+      grd.addColorStop(1, 'rgba(' + mr + ',' + mg + ',' + mb + ',0)');
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, w, h);
+      if (SM.beatPulse > 0.1) {
+        ctx.strokeStyle = 'rgba(' + mr + ',' + mg + ',' + mb + ',' + (SM.beatPulse * 0.3 * holdAlpha).toFixed(3) + ')';
+        ctx.lineWidth = 1.5 + SM.beatPulse * 3;
+        ctx.beginPath();
+        ctx.arc(w/2, h/2, pulseR * 0.8, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
   },
 
@@ -12843,6 +12919,7 @@ const DJMode = {
   _pushSceneFromQueue(q) {
     if (inTrans) return;
     inTrans = true;
+    this._endHoldFade();
 
     const scene = q.scene || THEME.scene;
     const cp = q.centerpiece || enforceCP(rndEl(ALL_CPS.filter(x => !getForbidCPs().includes(x))));
@@ -12874,6 +12951,9 @@ const DJMode = {
       if (djNameWasActive && djNameText) {
         setTimeout(() => this._showDJNamePersistent(djNameText), 100);
       }
+
+      this._sceneStart = Date.now();
+      this._pushState();
     };
 
     const useCut = (q.style === 'cut');
@@ -12905,8 +12985,6 @@ const DJMode = {
       }, 650);
     }
 
-    this._sceneStart = Date.now();
-    this._pushState();
   },
 
   // ── Persistent DJ name display (stays until toggled off) ──
@@ -12954,6 +13032,7 @@ const DJMode = {
   _fadeToScene(targetScene) {
     if (inTrans) return;
     inTrans = true;
+    this._endHoldFade();
 
     // Pick scene
     let scene;
@@ -12998,6 +13077,9 @@ const DJMode = {
       if (djNameWasActive && djNameText) {
         setTimeout(() => this._showDJNamePersistent(djNameText), 100);
       }
+
+      this._sceneStart = Date.now();
+      this._pushState();
     };
 
     if (useCut) {
@@ -13029,8 +13111,6 @@ const DJMode = {
       }, 650);
     }
 
-    this._sceneStart = Date.now();
-    this._pushState();
   },
 
   // ── Push state to Firebase ──
@@ -13040,7 +13120,8 @@ const DJMode = {
       scene: THEME.scene || 'WARP_SPEED',
       sceneStart: this._sceneStart,
       blackout: this._blackout,
-      centerpiece: THEME.centerpiece || ''
+      centerpiece: THEME.centerpiece || '',
+      holdFade: this._holdFade ? this._holdFade.active : false
     };
     // Cache locally for reconnection
     this._lastKnownState = Object.assign(this._lastKnownState || {}, state, { connected: true });
@@ -13061,7 +13142,8 @@ const DJMode = {
           sceneStart: this._sceneStart || Date.now(),
           blackout: this._blackout,
           centerpiece: THEME.centerpiece || '',
-          connected: true
+          connected: true,
+          holdFade: this._holdFade ? this._holdFade.active : false
         }
       });
     } catch (e) { /* channel may be closed */ }
@@ -13398,6 +13480,10 @@ const DJMode = {
       });
       this._log('Push (cut): ' + (queue.scene || 'current').replace(/_/g, ' '));
     });
+    document.getElementById('djcPushHold').addEventListener('click', () => {
+      this._sendCommand('holdFade');
+      this._log('Hold fade activated');
+    });
 
     // Beat sensitivity slider
     const beatSlider = document.getElementById('djcBeatSens');
@@ -13450,6 +13536,13 @@ const DJMode = {
       } else {
         blackoutBtn.textContent = '■ BLACK';
         blackoutBtn.classList.remove('toggled');
+      }
+
+      // Update hold fade button state
+      const holdBtn = document.getElementById('djcPushHold');
+      if (holdBtn) {
+        if (state.holdFade) { holdBtn.textContent = 'HOLDING...'; holdBtn.classList.add('toggled'); }
+        else { holdBtn.textContent = 'HOLD FADE'; holdBtn.classList.remove('toggled'); }
       }
 
       // Sync palette colors from display state if available
@@ -13591,6 +13684,14 @@ const DJMode = {
       if (bb) {
         if (state.blackout) { bb.textContent = '■ LIVE'; bb.classList.add('toggled'); }
         else { bb.textContent = '■ BLACK'; bb.classList.remove('toggled'); }
+      }
+    }
+    // Update hold fade button state
+    if (state.holdFade !== undefined) {
+      const hb = document.getElementById('djcPushHold');
+      if (hb) {
+        if (state.holdFade) { hb.textContent = 'HOLDING...'; hb.classList.add('toggled'); }
+        else { hb.textContent = 'HOLD FADE'; hb.classList.remove('toggled'); }
       }
     }
     // Update connection status
