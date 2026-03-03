@@ -12756,6 +12756,12 @@ const DJMode = {
       }
     });
 
+    // ── Listen for preview requests from controller (separate from commands) ──
+    this.roomRef.child('previewRequest').on('value', (snap) => {
+      const req = snap.val();
+      if (req && req.scene) this._renderPreview(req);
+    });
+
     // ── Listen for commands from controller ──
     this.commandRef.on('value', (snap) => {
       const cmd = snap.val();
@@ -12876,10 +12882,6 @@ const DJMode = {
 
       case 'holdFade':
         this._startHoldFade();
-        break;
-
-      case 'preview':
-        if (cmd.payload) this._renderPreview(cmd.payload);
         break;
     }
   },
@@ -13527,18 +13529,19 @@ const DJMode = {
       clearTimeout(_pvDebounce);
       _pvDebounce = setTimeout(() => {
         if (pvWrap) pvWrap.classList.add('loading');
-        // Send preview request via BroadcastChannel (same-device)
+        const pvPayload = { scene: queue.scene, centerpiece: queue.centerpiece, palette: queue.palette, ts: Date.now() };
+        // Send preview request via BroadcastChannel (same-device) — separate from commands
         if (DJMode._localChannel) {
           try {
             DJMode._localChannel.postMessage({
               source: 'controller', type: 'preview',
-              payload: { scene: queue.scene, centerpiece: queue.centerpiece, palette: queue.palette }
+              payload: pvPayload
             });
           } catch(e) {}
         }
-        // Also send via Firebase command for remote controllers
-        if (DJMode.commandRef) {
-          DJMode.commandRef.set({ type: 'preview', payload: { scene: queue.scene, centerpiece: queue.centerpiece, palette: queue.palette }, ts: Date.now() });
+        // For remote controllers, use a separate Firebase path (NOT commandRef)
+        if (DJMode.roomRef) {
+          try { DJMode.roomRef.child('previewRequest').set(pvPayload); } catch(e) {}
         }
       }, 400);
     }
