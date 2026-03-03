@@ -11807,14 +11807,14 @@ function render(t){
     case 'ATLANTIS':drawAtlantis(t);break;case 'CARNIVAL':drawCarnival(t);break;
     case 'EGYPTIAN_TOMB':drawEgyptianTomb(t);break;default:drawWarpSpeed(t);
   }
+  if(typeof DJMode!=='undefined'&&DJMode._holdFade&&DJMode._holdFade.active){DJMode._drawHoldVisual(x0,w,h,t);}
   x1.clearRect(0,0,w,h);
   if(THEME.centerpiece&&THEME.centerpieceScale>0&&!CP_INTEGRATED_SCENES.has(THEME.scene)){
     drawCPWithBehavior(x1,t);
   }
   x2.clearRect(0,0,w,h);
-  drawBeatFX();
+  if(!(typeof DJMode!=='undefined'&&DJMode._holdFade&&DJMode._holdFade.active&&DJMode._holdFade.progress>0.5)){drawBeatFX();}
   x3.clearRect(0,0,w,h);
-  if(typeof DJMode!=='undefined'&&DJMode._holdFade&&DJMode._holdFade.active){DJMode._drawHoldVisual(x3,w,h,t);}
   const vg=x3.createRadialGradient(w/2,h/2,h*0.2,w/2,h/2,h*0.85);
   vg.addColorStop(0,'transparent');vg.addColorStop(1,'rgba(0,0,0,0.55)');
   x3.fillStyle=vg;x3.fillRect(0,0,w,h);
@@ -12365,7 +12365,7 @@ const DJMode = {
   _sessionLog: [],
   _localChannel: null,       // BroadcastChannel for same-device comms
   _isLocalController: false, // true when controller opened via popup
-  _holdFade: { active: false, progress: 0, startTime: 0, palette: null }, // Hold Fade state
+  _holdFade: { active: false, progress: 0, startTime: 0, palette: null, exiting: false }, // Hold Fade state
 
   // ── Firebase config ──
   // Uses a public Firebase project for room relay.
@@ -12819,8 +12819,10 @@ const DJMode = {
     if (this._holdFade.active) return;
     this._holdFade.active = true;
     this._holdFade.progress = 0;
+    this._holdFade.exiting = false;
     this._holdFade.startTime = Date.now();
     this._holdFade.palette = THEME.palette ? THEME.palette.slice() : ['#00ff41','#06ffd8','#8338ec','#ff006e'];
+    THEME.palette = ['#ffffff','#cccccc','#999999','#666666'];
     this._stopSurpriseLoop();
     clearSurpriseState();
     console.log('[djmode] hold fade started');
@@ -12828,56 +12830,44 @@ const DJMode = {
   },
 
   _endHoldFade() {
+    if (this._holdFade.palette) {
+      THEME.palette = this._holdFade.palette.slice();
+    }
+    this._holdFade.exiting = true;
+    console.log('[djmode] hold fade exiting');
+  },
+
+  _finalizeHoldEnd() {
     this._holdFade.active = false;
     this._holdFade.progress = 0;
+    this._holdFade.exiting = false;
     console.log('[djmode] hold fade ended');
   },
 
   _drawHoldVisual(ctx, w, h, t) {
     const hf = this._holdFade;
     if (!hf.active) return;
+
+    // If exiting, keep full black overlay until wash covers screen
+    if (hf.exiting) {
+      ctx.save();
+      ctx.globalAlpha = 0.97;
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, w, h);
+      ctx.restore();
+      return;
+    }
+
     const elapsed = (Date.now() - hf.startTime) / 1000;
     hf.progress = Math.min(1, elapsed / 12);
 
-    // Dark overlay fades in with progress
+    // Black overlay fades in over 12s — covers scene on c0
+    // Centerpiece on c1 stays visible (separate canvas layer)
     ctx.save();
-    ctx.globalAlpha = hf.progress * 0.85;
+    ctx.globalAlpha = hf.progress * 0.97;
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, w, h);
     ctx.restore();
-
-    // Once partly faded, draw breathing hold visual
-    if (hf.progress > 0.3) {
-      const holdAlpha = Math.min(1, (hf.progress - 0.3) / 0.4);
-      const pal = hf.palette || ['#00ff41','#06ffd8','#8338ec','#ff006e'];
-      const colorIdx = Math.floor(t / 4000) % pal.length;
-      const nextIdx = (colorIdx + 1) % pal.length;
-      const colorMix = (t % 4000) / 4000;
-      const c1 = h2r(pal[colorIdx]);
-      const c2 = h2r(pal[nextIdx]);
-      const mr = Math.round(c1.r + (c2.r - c1.r) * colorMix);
-      const mg = Math.round(c1.g + (c2.g - c1.g) * colorMix);
-      const mb = Math.round(c1.b + (c2.b - c1.b) * colorMix);
-      const breathe = 0.3 + 0.15 * Math.sin(t / 1200);
-      const beatBoost = SM.beatPulse * 0.15;
-      const pulseR = (h * 0.25) + (h * 0.08 * Math.sin(t / 2000)) + (h * beatBoost);
-      ctx.save();
-      ctx.globalAlpha = holdAlpha * (breathe + beatBoost);
-      const grd = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, pulseR);
-      grd.addColorStop(0, 'rgba(' + mr + ',' + mg + ',' + mb + ',0.4)');
-      grd.addColorStop(0.5, 'rgba(' + mr + ',' + mg + ',' + mb + ',0.12)');
-      grd.addColorStop(1, 'rgba(' + mr + ',' + mg + ',' + mb + ',0)');
-      ctx.fillStyle = grd;
-      ctx.fillRect(0, 0, w, h);
-      if (SM.beatPulse > 0.1) {
-        ctx.strokeStyle = 'rgba(' + mr + ',' + mg + ',' + mb + ',' + (SM.beatPulse * 0.3 * holdAlpha).toFixed(3) + ')';
-        ctx.lineWidth = 1.5 + SM.beatPulse * 3;
-        ctx.beginPath();
-        ctx.arc(w/2, h/2, pulseR * 0.8, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
   },
 
   // ── Surprise loop system ──
@@ -12929,6 +12919,7 @@ const DJMode = {
     const djNameText = djSig.artist ? (djSig.artist.display || '') : '';
 
     const doSwap = () => {
+      if (this._holdFade.exiting) this._finalizeHoldEnd();
       THEME.scene = scene;
       THEME.centerpiece = cp;
       THEME.palette = palette;
@@ -13055,6 +13046,7 @@ const DJMode = {
     const djNameText = djSig.artist ? djSig.artist.display : '';
 
     const doSwap = () => {
+      if (this._holdFade.exiting) this._finalizeHoldEnd();
       THEME.scene = scene;
       THEME.centerpiece = cp;
       THEME.palette = palette;
