@@ -128,6 +128,10 @@ body.djmode-display{cursor:none!important;user-select:none!important}
 #djmodeFsBtnFixed:hover{border-color:#00ff41;color:#00ff41;box-shadow:0 0 10px rgba(0,255,65,0.3)}
 #djmodeRoomOverlay .room-url{font-size:0.55rem;letter-spacing:0.12em;color:rgba(255,255,255,0.35);margin-top:0.8rem;max-width:90vw;text-align:center;word-break:break-all}
 #djmodeRoomOverlay .room-waiting{font-size:0.6rem;letter-spacing:0.3em;color:rgba(131,56,236,0.7);margin-top:1.2rem;animation:waitingPulse 2s ease-in-out infinite}
+#djmodeRoomOverlay .room-divider{display:flex;align-items:center;gap:12px;margin:1rem 0 0.6rem;width:min(320px,80vw);color:rgba(255,255,255,0.2);font-size:0.55rem;letter-spacing:0.2em}
+#djmodeRoomOverlay .room-divider::before,#djmodeRoomOverlay .room-divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.12)}
+#djmodeOpenCtrl{background:none;border:1px solid rgba(131,56,236,0.5);color:rgba(131,56,236,0.9);font-family:'Share Tech Mono',monospace;font-size:0.65rem;letter-spacing:0.2em;padding:0.6rem 1.6rem;cursor:pointer;transition:all 0.25s;margin-top:0.2rem}
+#djmodeOpenCtrl:hover{border-color:#a855f7;color:#a855f7;box-shadow:0 0 15px rgba(168,85,247,0.4);background:rgba(131,56,236,0.1)}
 @keyframes waitingPulse{0%,100%{opacity:0.4}50%{opacity:1}}
 #djmodeRoomOverlay.fade-out{opacity:0;pointer-events:none}
 #djmodeExitZone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:501;cursor:none;-webkit-tap-highlight-color:transparent}
@@ -368,6 +372,8 @@ body.djmode-display{cursor:none!important;user-select:none!important}
   <div class="room-qr-wrap"><img id="djmodeQR" alt="QR Code" style="width:180px;height:180px;display:block;image-rendering:pixelated"/></div>
   <div class="room-url" id="djmodeRoomUrl">—</div>
   <div class="room-waiting" id="djmodeWaiting">WAITING FOR CONTROLLER...</div>
+  <div class="room-divider">OR SAME DEVICE</div>
+  <button id="djmodeOpenCtrl">🖥 OPEN CONTROLLER WINDOW</button>
 </div>
 <button id="djmodeFsBtnFixed" style="display:none">⛶ FULLSCREEN</button>
 <div id="djmodeExitZone" style="display:none"></div>
@@ -12231,10 +12237,11 @@ if (localBtn) localBtn.addEventListener('click', () => startProvider('local'));
     lp.style.display = 'none';
     return;
   }
-  // Also skip if there's a saved Spotify token
-  try { if (localStorage.getItem('at')) { lp.style.display = 'none'; return; } } catch(e) {}
+  // Also skip if there's a saved Spotify token or user has visited before
+  try { if (localStorage.getItem('at') || localStorage.getItem('vizarcade_visited')) { lp.style.display = 'none'; return; } } catch(e) {}
 
   function dismissLanding() {
+    try { localStorage.setItem('vizarcade_visited', '1'); } catch(e) {}
     lp.style.transition = 'opacity 0.4s ease';
     lp.style.opacity = '0';
     setTimeout(() => { lp.style.display = 'none'; }, 400);
@@ -12351,6 +12358,8 @@ const DJMode = {
   _transitionStyle: 'fade', // 'fade' or 'cut'
   _beatSensitivity: 1.0,    // 0-2 multiplier
   _sessionLog: [],
+  _localChannel: null,       // BroadcastChannel for same-device comms
+  _isLocalController: false, // true when controller opened via popup
 
   // ── Firebase config ──
   // Uses a public Firebase project for room relay.
@@ -12423,6 +12432,45 @@ const DJMode = {
     this.stateRef = this.roomRef.child('state');
     console.log('[djmode] connected to room:', code);
     return true;
+  },
+
+  // ════════════════════════════════════════
+  // ── LOCAL CHANNEL (BroadcastChannel for same-device DJ Mode) ──
+  // ════════════════════════════════════════
+  _initLocalChannel(roomCode) {
+    try {
+      if (typeof BroadcastChannel === 'undefined') return false;
+      this._localChannel = new BroadcastChannel('vizarcade-dj-' + roomCode);
+      console.log('[djmode] BroadcastChannel opened for room:', roomCode);
+      return true;
+    } catch (e) {
+      console.warn('[djmode] BroadcastChannel not available:', e);
+      return false;
+    }
+  },
+
+  _closeLocalChannel() {
+    if (this._localChannel) {
+      try { this._localChannel.close(); } catch (e) { /* ok */ }
+      this._localChannel = null;
+    }
+  },
+
+  // Open a popup controller window for same-device DJ Mode
+  _openControllerPopup(code) {
+    const controllerUrl = location.origin + location.pathname + '?controller=' + code + '&local=1';
+    const popW = Math.min(420, Math.floor(screen.width * 0.35));
+    const popH = Math.min(screen.height - 80, 900);
+    const popX = screen.width - popW - 20;
+    const popY = 40;
+    const features = 'width=' + popW + ',height=' + popH + ',left=' + popX + ',top=' + popY + ',resizable=yes,scrollbars=yes';
+    const popup = window.open(controllerUrl, 'vizarcade-controller', features);
+    if (!popup || popup.closed) {
+      showErr('Popup blocked! Please allow popups for this site and try again.');
+      return null;
+    }
+    console.log('[djmode] opened controller popup for room:', code);
+    return popup;
   },
 
   // ════════════════════════════════════════
@@ -12516,6 +12564,33 @@ const DJMode = {
 
     // Draw QR code using QRious library
     try { this._drawQR(qrCanvas, controllerUrl); } catch (e) { console.warn('[djmode] QR generation failed:', e); }
+
+    // ── BroadcastChannel for same-device controller ──
+    this._initLocalChannel(code);
+    if (this._localChannel) {
+      this._localChannel.onmessage = (ev) => {
+        const msg = ev.data;
+        if (!msg || !msg.source) return;
+        if (msg.source === 'controller' && msg.type === 'command') {
+          this._handleCommand(msg.cmd);
+        }
+        if (msg.source === 'controller' && msg.type === 'hello') {
+          // Local controller connected — treat same as Firebase controllerConnected
+          console.log('[djmode] local controller connected via BroadcastChannel');
+          if (this.stateRef) this.stateRef.update({ controllerConnected: true });
+          // Push current state to local channel so controller gets it immediately
+          this._pushStateLocal();
+        }
+      };
+    }
+
+    // ── "Open Controller Window" button ──
+    const openCtrlBtn = document.getElementById('djmodeOpenCtrl');
+    if (openCtrlBtn) {
+      openCtrlBtn.onclick = () => {
+        this._openControllerPopup(code);
+      };
+    }
 
     // Fixed-position fullscreen button (bottom-right, always visible until fullscreen entered)
     const fsBtnFixed = document.getElementById('djmodeFsBtnFixed');
@@ -12970,6 +13045,26 @@ const DJMode = {
     // Cache locally for reconnection
     this._lastKnownState = Object.assign(this._lastKnownState || {}, state, { connected: true });
     this.stateRef.update(state);
+    // Also push to local channel for same-device controller
+    this._pushStateLocal();
+  },
+
+  // ── Push state via BroadcastChannel (same-device controller) ──
+  _pushStateLocal() {
+    if (!this._localChannel) return;
+    try {
+      this._localChannel.postMessage({
+        source: 'display',
+        type: 'state',
+        state: {
+          scene: THEME.scene || 'WARP_SPEED',
+          sceneStart: this._sceneStart || Date.now(),
+          blackout: this._blackout,
+          centerpiece: THEME.centerpiece || '',
+          connected: true
+        }
+      });
+    } catch (e) { /* channel may be closed */ }
   },
 
   // ── Reconnection banner (display side) ──
@@ -13012,6 +13107,7 @@ const DJMode = {
       try { this.db.ref('.info/connected').off(); } catch (e) { /* ok */ }
     }
     this._hideReconnectBanner();
+    this._closeLocalChannel();
 
     document.body.classList.remove('djmode-display');
     const overlay = document.getElementById('djmodeRoomOverlay');
@@ -13054,6 +13150,24 @@ const DJMode = {
       return;
     }
     this.connectRoom(code);
+
+    // ── BroadcastChannel for same-device mode ──
+    const isLocal = new URLSearchParams(location.search).has('local');
+    this._isLocalController = isLocal;
+    if (isLocal) {
+      this._initLocalChannel(code);
+      if (this._localChannel) {
+        this._localChannel.onmessage = (ev) => {
+          const msg = ev.data;
+          if (!msg || msg.source !== 'display') return;
+          if (msg.type === 'state' && msg.state) {
+            this._handleStateUpdate(msg.state);
+          }
+        };
+        // Announce ourselves to the display
+        this._localChannel.postMessage({ source: 'controller', type: 'hello' });
+      }
+    }
 
     // Hide everything except controller
     document.getElementById('login').style.display = 'none';
@@ -13451,6 +13565,38 @@ const DJMode = {
     }
   },
 
+  // ── Handle state update from display (via BroadcastChannel) ──
+  _handleStateUpdate(state) {
+    if (!state) return;
+    // Update scene name
+    const sceneEl = document.getElementById('djcSceneName');
+    if (sceneEl && state.scene) {
+      sceneEl.textContent = state.scene.replace(/_/g, ' ');
+    }
+    // Update surprise variant labels for new scene
+    if (state.scene) {
+      const sc = state.scene;
+      document.querySelectorAll('#djcVariantRow .djc-btn').forEach(function(btn) {
+        const v = parseInt(btn.dataset.variant);
+        btn.textContent = '⚡ ' + getSurpriseLabel(sc, v);
+      });
+    }
+    // Update scene timer
+    if (state.sceneStart) {
+      this._updateSceneTimer(state.sceneStart);
+    }
+    // Update blackout state
+    if (state.blackout !== undefined) {
+      const bb = document.getElementById('djcBlackout');
+      if (bb) {
+        if (state.blackout) { bb.textContent = '■ LIVE'; bb.classList.add('toggled'); }
+        else { bb.textContent = '■ BLACK'; bb.classList.remove('toggled'); }
+      }
+    }
+    // Update connection status
+    this._setConnectionStatus(true);
+  },
+
   // ── Stop controller mode ──
   stopController() {
     if (this.stateRef) {
@@ -13463,6 +13609,8 @@ const DJMode = {
     }
     this._cmdQueue = [];
     this._controllerConnected = true;
+    this._closeLocalChannel();
+    this._isLocalController = false;
     if (this._sceneTimerInterval) clearInterval(this._sceneTimerInterval);
     const ctrl = document.getElementById('djController');
     if (ctrl) ctrl.classList.remove('active');
