@@ -12855,7 +12855,7 @@ MusicProviders.local = {
           return;
         }
         console.log('[' + label + '] NEW song:', result.title, '—', result.artist);
-        TransitionDetector.transitionCooldown = 45000;
+        TransitionDetector._transitionCooldownUntil = Date.now() + 45000;
         SongRecognizer.commitNewSong(result);
       });
     }
@@ -12907,7 +12907,7 @@ MusicProviders.local = {
           return;
         }
         console.log('[local] NEW song confirmed:', result.title, '—', result.artist);
-        TransitionDetector.transitionCooldown = 45000;
+        TransitionDetector._transitionCooldownUntil = Date.now() + 45000;
         SongRecognizer.commitNewSong(result);
       }).catch(e => {
         console.warn('[local] recognition error:', e);
@@ -13175,8 +13175,10 @@ MusicProviders.local = {
       this._lastBeatTime = now;
 
       // ── Fire beat reaction immediately from audio, not from render loop timer ──
-      // Suppress render-loop backup beat for the next full beatInterval to prevent double-fire.
-      MS.lastBeat = now;
+      // MS.lastBeat must use performance.now() — same clock as rAF timestamp 't' in render().
+      // Date.now() is Unix epoch (~1.7 trillion ms); rAF 't' is ms since page load (~tens of thousands).
+      // Mixing them causes t - MS.lastBeat to be a huge negative, breaking the backup beat timer.
+      MS.lastBeat = performance.now();
       triggerBeat();
     }
     this._prevBass = bass;
