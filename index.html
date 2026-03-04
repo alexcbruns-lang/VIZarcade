@@ -596,7 +596,10 @@ const pc = i => THEME.palette[((i % 4) + 4) % 4];
 
 let aiCache = {};
 
-const MS = { beatInterval: 500, lastBeat: 0, duration: 180000, analysisStart: 0, energy: 0.5 };
+const MS = { beatInterval: 500, lastBeat: 0, duration: 0, analysisStart: 0, energy: 0.5 };
+// NOTE: MS.lastBeat is set to performance.now() at runtime init below (same clock as rAF 't').
+// MS.duration starts at 0 so songProg stays 0 until first Spotify poll sets real duration.
+// MS.analysisStart is set to Date.now() at runtime so songProg doesn't jump to 1 on startup.
 const SM = { energy: 0.5, beatPulse: 0 };
 let SD = {};
 function resetSD() { SD = {}; return SD; }
@@ -615,7 +618,7 @@ let cpBounceVY = 0.5 + (Math.random() - 0.5) * 0.3;
 let cpDriftX = 0, cpDriftY = 0;
 let beatReactionIdx = 0, beatCount = 0;
 let energyHist = [], surpriseFired = false, surpriseArmed = false, midShifted = false;
-let _songStartTime = 0; // timestamp when current song transition completed — surprises blocked for 60s after
+let _songStartTime = Date.now(); // Initialize to now — suppresses surprises for 60s on startup before first song loads
 let energyPeak = 0, climaxArmed = false;
 let gridGlitch = false;
 let devSurpriseLock = false;
@@ -14027,6 +14030,13 @@ if (localBtn) localBtn.addEventListener('click', () => { showLoading('INITIALIZI
   });
   obs.observe(document.getElementById('login'), { attributes: true, attributeFilter: ['style'] });
 })();
+
+// ── Runtime initialization of time-sensitive MS fields ──
+// Must happen after page load, not at declaration time, to get accurate timestamps.
+// MS.lastBeat: use performance.now() — same clock as rAF 't', prevents beat firing on frame 1.
+// MS.analysisStart: use Date.now() — prevents songProg jumping to 1.0 before first Spotify poll.
+MS.lastBeat = performance.now();
+MS.analysisStart = Date.now();
 
 // ── Start render loop ──
 requestAnimationFrame(render);
