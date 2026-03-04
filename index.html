@@ -12157,12 +12157,19 @@ function spikeDetected() {
   return (nearPeak || bigSpike) && atPeak;
 }
 
-function triggerBeat() {
-  SM.beatPulse = 1; beatCount++;
+function triggerBeat(beatStrength) {
+  // beatStrength: 0–1, only provided by local audio detection (energy history algorithm).
+  // Backup timer (Spotify/Apple/fallback) passes undefined → defaults to 0.75 (moderate hit).
+  // Scales SM.beatPulse so strong kicks feel heavy and light hats feel light.
+  const _bs = (beatStrength !== undefined) ? beatStrength : 0.75;
+  SM.beatPulse = 0.35 + _bs * 0.65; // Range: 0.35 (softest) → 1.0 (hardest kick)
+  beatCount++;
   const reactions = THEME.beatReactions || ['speed_burst'];
   const reaction = reactions[beatReactionIdx % reactions.length];
   beatReactionIdx++;
-  const intensity = 0.5 + progMult * 0.7;
+  // Intensity already factors in song progress; also scale by beat strength so
+  // strong beats hit harder on reactions like speed_burst and bass_slam.
+  const intensity = (0.5 + progMult * 0.7) * (0.6 + _bs * 0.4);
 
   switch (reaction) {
     case 'speed_burst': beatFX.speedBoost = 1.5 * intensity; break;
@@ -12222,6 +12229,7 @@ async function transition(name,artist,theme){
   if(inTrans)return;inTrans=true;
   devSurpriseLock=false; // release dev lock — real playback takes over
   devSurpriseLock=false; // release dev lock — real playback takes over
+  clearSurpriseState(); // Kill any in-flight surprise timers IMMEDIATELY — before any await
   const wash=document.getElementById('wash'),splash=document.getElementById('splash');
   const c=h2r(theme.palette[0]);
   if (_washPrepped) {
@@ -12244,8 +12252,13 @@ async function transition(name,artist,theme){
   const isLocalLive = activeProvider === MusicProviders.local && (MusicProviders.local._mode === 'mic' || MusicProviders.local._mode === 'venue' || MusicProviders.local._mode === 'system');
   if (isLocalLive) { songProg=0.45;progMult=0.55+0.45*0.7; }
   else { songProg=0;progMult=0.55; }
-  clearSurpriseState(); // Cancel any in-flight surprise timers/overlays from previous scene
+  clearSurpriseState(); // Belt-and-suspenders: re-clear after scene state is fully initialized
   initScene();
+  _songStartTime = Date.now(); // Block surprises for 60s — set HERE, not after splash awaits.
+  // initScene() resets surpriseFired=false. Setting _songStartTime immediately ensures the
+  // 60s cooldown check in triggerBeat() is active before the 4.9s splash animation runs.
+  // Without this, the old _songStartTime (previous song) made cooldown appear expired
+  // during the splash, allowing surprises to fire seconds into every new song.
   document.getElementById('cur').style.background=theme.palette[0];
   document.getElementById('trackName').style.color=theme.palette[0];document.getElementById('trackName').style.textShadow=`0 0 20px ${theme.palette[0]},0 2px 4px rgba(0,0,0,0.95)`;
   document.getElementById('sceneTag').style.color=theme.palette[2]||theme.palette[0];document.getElementById('sceneTag').style.textShadow=`0 0 12px ${theme.palette[2]||theme.palette[0]},0 1px 3px rgba(0,0,0,0.9)`;
@@ -12263,7 +12276,6 @@ async function transition(name,artist,theme){
   splash.style.transition='opacity 0.8s ease';splash.style.opacity='0';
   await delay(900);
   splash.classList.remove('show');splash.style.opacity='';splash.style.transition='';
-  _songStartTime = Date.now(); // block surprises for 60s after song transition
   inTrans=false;
 }
 
@@ -12348,6 +12360,102 @@ async function spGet(ep){
 // All providers feed the same interface: MS, track metadata, poll cycle
 
 // ── Provider registry ──
+
+// ══════════════════════════════════════════════════════════════════
+// ── AUDIO WORKLET: Sub-frame beat detection ──
+// The BeatDetectorProcessor runs in the audio thread (not main thread).
+// It receives raw PCM samples every 128 frames (~2.9ms at 44.1kHz) and
+// computes bass RMS energy at audio-thread precision — immune to main-thread
+// jitter from GC, Firebase, DOM updates, or render loop stalls.
+//
+// Architecture:
+//   stream → source → AnalyserNode (existing: spectral features, transition detection)
+//                   ↘ BeatDetectorWorkletNode (new: bass energy → postMessage → main thread)
+//
+// The worklet posts { bass } messages. The main thread's _workletBassHandler()
+// receives them and feeds them directly into the existing beat detection pipeline
+// in poll(), replacing the getByteFrequencyData() bass computation there.
+//
+// Blob URL pattern: worklet code lives inline as a template string, converted to
+// a Blob so addModule() can load it without a separate file — single-file safe.
+// ══════════════════════════════════════════════════════════════════
+
+const _beatWorkletCode = `
+class BeatDetectorProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this._bassHistory = [];
+    this._prevBass = 0;
+  }
+
+  process(inputs) {
+    const input = inputs[0];
+    if (!input || !input.length) return true;
+
+    // Mix to mono, compute RMS across all channels
+    const numCh = input.length;
+    const len = input[0].length; // typically 128 samples
+    let rms = 0;
+
+    for (let i = 0; i < len; i++) {
+      let s = 0;
+      for (let c = 0; c < numCh; c++) s += input[c][i];
+      s /= numCh;
+      rms += s * s;
+    }
+    rms = Math.sqrt(rms / len);
+
+    // Bass emphasis: simple first-order low-pass filter (cutoff ~200Hz at 44.1kHz)
+    // α = 2πfc/sr ≈ 2π*200/44100 ≈ 0.0285; approximated as 0.03 for integer math
+    if (!this._lpState) this._lpState = 0;
+    this._lpState += 0.03 * (rms - this._lpState);
+    const bass = Math.min(1, this._lpState * 6.0); // scale to 0-1 range
+
+    // Post every block — main thread throttles to rAF rate, worklet just supplies data
+    this.port.postMessage({ bass });
+    return true; // keep processor alive
+  }
+}
+
+registerProcessor('beat-detector', BeatDetectorProcessor);
+`;
+
+// Load the worklet module from a Blob URL (single-file safe — no separate .js file needed)
+async function _loadBeatWorklet(audioCtx) {
+  try {
+    if (!audioCtx.audioWorklet) {
+      console.warn('[worklet] AudioWorklet not supported in this browser — falling back to rAF polling');
+      return null;
+    }
+    const blob = new Blob([_beatWorkletCode], { type: 'application/javascript' });
+    const url = URL.createObjectURL(blob);
+    await audioCtx.audioWorklet.addModule(url);
+    URL.revokeObjectURL(url); // free the blob URL immediately after load
+    const node = new AudioWorkletNode(audioCtx, 'beat-detector');
+    console.log('[worklet] BeatDetectorProcessor loaded — sub-frame beat detection active');
+    return node;
+  } catch (e) {
+    console.warn('[worklet] Failed to load:', e.message, '— falling back to rAF polling');
+    return null;
+  }
+}
+
+// The main-thread handler receives bass energy from the worklet audio thread.
+// It writes _workletBass so poll() can read it instead of re-computing from FFT bins.
+// Using a simple shared variable is safe: worklet posts at ~344Hz, poll reads at ~60Hz.
+let _workletBass = -1; // -1 = worklet not active (poll() uses its own computation)
+function _attachBeatWorklet(audioCtx, sourceNode, analyserNode, provider) {
+  _loadBeatWorklet(audioCtx).then(workletNode => {
+    if (!workletNode) return; // browser doesn't support it — rAF polling handles everything
+    provider._beatWorkletNode = workletNode;
+    sourceNode.connect(workletNode);
+    // workletNode intentionally NOT connected to destination — audio-only tap, no output
+    workletNode.port.onmessage = (e) => {
+      _workletBass = e.data.bass;
+    };
+  });
+}
+
 const MusicProviders = {};
 let activeProvider = null;
 
@@ -12730,7 +12838,7 @@ MusicProviders.local = {
     this._mode = mode;
 
     try {
-      this._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      this._audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
       this._analyser = this._audioCtx.createAnalyser();
       this._analyser.fftSize = 2048; // Higher resolution for clean bass bin isolation (21Hz/bin vs 172Hz/bin at 256)
       this._analyser.smoothingTimeConstant = 0.25; // Beat detection needs sharp transients — smoothing applied manually in poll()
@@ -12746,6 +12854,8 @@ MusicProviders.local = {
         this._stream = stream;
         this._source = this._audioCtx.createMediaStreamSource(stream);
         this._source.connect(this._analyser);
+        // Wire AudioWorklet as a parallel tap for sub-frame bass energy (falls back gracefully)
+        _attachBeatWorklet(this._audioCtx, this._source, this._analyser, this);
         this._startTime = Date.now();
         songProg = 0.45;
         progMult = 0.55 + songProg * 0.7;
@@ -12786,6 +12896,8 @@ MusicProviders.local = {
         }
         this._source = this._audioCtx.createMediaStreamSource(stream);
         this._source.connect(this._analyser);
+        // Wire AudioWorklet as a parallel tap for sub-frame bass energy (falls back gracefully)
+        _attachBeatWorklet(this._audioCtx, this._source, this._analyser, this);
         this._startTime = Date.now();
         songProg = 0.45;
         progMult = 0.55 + songProg * 0.7;
@@ -13067,7 +13179,7 @@ MusicProviders.local = {
   async _handleFile(file) {
     try {
       if (!this._audioCtx) {
-        this._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        this._audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
         this._analyser = this._audioCtx.createAnalyser();
         this._analyser.fftSize = 2048; // Higher resolution for clean bass bin isolation
         this._analyser.smoothingTimeConstant = 0.25; // Beat detection needs sharp transients — smoothing applied manually in poll()
@@ -13140,7 +13252,11 @@ MusicProviders.local = {
       if (i < bassEnd) bassSum += bins[i];
     }
     const rawEnergy = Math.min(1, (sum / bins.length / 255) * 2.0);
-    const bass = bassEnd > 0 ? (bassSum / bassEnd / 255) : 0;
+    // Bass source: prefer AudioWorklet value (audio-thread precision, ~2.9ms latency)
+    // over FFT bin average (rAF-aligned, ~16ms latency + main-thread jitter).
+    // _workletBass is -1 when worklet is not loaded or not yet active.
+    const _fftBass = bassEnd > 0 ? (bassSum / bassEnd / 255) : 0;
+    const bass = (_workletBass >= 0) ? _workletBass : _fftBass;
 
     // ── Change 4: Asymmetric energy lerp — fast attack (0.25), slow release (0.05) ──
     // Scenes respond within ~3 frames (~50ms) to a spike, but settle smoothly on decay.
@@ -13156,15 +13272,32 @@ MusicProviders.local = {
     if (!this._smoothBass) this._smoothBass = bass;
     this._smoothBass += (bass - this._smoothBass) * 0.15;
 
-    // ── Change 3 + Change 5: Beat detection — direct triggerBeat() call on transient ──
-    // With smoothingTimeConstant=0.25, raw bass spikes sharply on kick drum attacks.
-    // Threshold lowered from 0.15→0.08 to match the less-smoothed signal.
-    // Cooldown is timestamp-based (ms) so it's immune to interval rate changes.
+    // ── Beat detection: adaptive energy history threshold (Patin algorithm) ──
+    // Instead of static thresholds (bass > 0.25, rise > 0.08), we compare current bass
+    // to a rolling 1-second average. A beat fires when bass exceeds localAvg * 1.5.
+    // This self-calibrates across quiet jazz, compressed EDM, and everything in between.
+    // ~43 poll frames per second at 60fps → 43-slot ring covers ~1 second of history.
+    if (!this._bassHistory) this._bassHistory = [];
     if (!this._prevBass) this._prevBass = 0;
     if (!this._beatCooldownUntil) this._beatCooldownUntil = 0;
+
+    // Maintain ring buffer — push current bass, evict oldest if over 43 slots
+    this._bassHistory.push(bass);
+    if (this._bassHistory.length > 43) this._bassHistory.shift();
+
+    // Local average over the history window
+    const _histLen = this._bassHistory.length;
+    let _histSum = 0;
+    for (let i = 0; i < _histLen; i++) _histSum += this._bassHistory[i];
+    const localAvg = _histLen > 0 ? _histSum / _histLen : 0.1;
+
     const now = Date.now();
-    const bassRise = bass - this._prevBass;
-    if (bassRise > 0.08 && now > this._beatCooldownUntil && bass > 0.25) {
+    const bassRise = bass - this._prevBass; // Must be rising (attack edge, not sustain)
+
+    // Beat threshold: bass must exceed localAvg * 1.5 AND be rising AND signal must be audible.
+    // Minimum localAvg guard (0.05) prevents noise triggering in near-silence.
+    const _beatThreshold = localAvg * 1.5;
+    if (bassRise > 0 && bass > _beatThreshold && localAvg > 0.05 && now > this._beatCooldownUntil) {
       // Minimum cooldown scales with estimated BPM — prevents double-trigger on sustain
       const minCooldown = Math.max(180, MS.beatInterval * 0.6);
       this._beatCooldownUntil = now + minCooldown;
@@ -13177,12 +13310,28 @@ MusicProviders.local = {
       }
       this._lastBeatTime = now;
 
-      // ── Fire beat reaction immediately from audio, not from render loop timer ──
+      // ── Beat strength: how far above the local average (0=barely above, 1=very strong) ──
+      // Normalized so a hit at 1.5× avg = 0 strength, 3× avg = 1.0 strength.
+      // This drives SM.beatPulse scaling — strong kicks hit hard, soft hats hit softly.
+      const beatStrength = Math.min(1, Math.max(0, (bass - _beatThreshold) / (localAvg * 1.5)));
+
+      // ── Priority 3: Beat clock — phase maintenance ──
+      // Every confirmed real beat anchors the clock. _beatClockNext holds the
+      // performance.now() timestamp of the expected NEXT beat. The render loop
+      // reads this to fire ghost-beat ticks during quiet sections (breakdowns,
+      // transitions) — keeping the visual rhythm alive even with no bass signal.
+      // Ghost ticks fire at strength=0.5 so they're felt but don't overpower.
+      const _nowPerf = performance.now();
+      if (!this._beatClockNext) this._beatClockNext = _nowPerf;
+      // Anchor clock to this real beat regardless of whether it confirmed the
+      // previous prediction (handles tempo changes and new sections cleanly).
+      this._beatClockNext = _nowPerf + MS.beatInterval;
+
       // MS.lastBeat must use performance.now() — same clock as rAF timestamp 't' in render().
       // Date.now() is Unix epoch (~1.7 trillion ms); rAF 't' is ms since page load (~tens of thousands).
       // Mixing them causes t - MS.lastBeat to be a huge negative, breaking the backup beat timer.
-      MS.lastBeat = performance.now();
-      triggerBeat();
+      MS.lastBeat = _nowPerf;
+      triggerBeat(beatStrength);
     }
     this._prevBass = bass;
 
@@ -13235,6 +13384,11 @@ MusicProviders.local = {
     if (this._audioEl) { this._audioEl.pause(); this._audioEl.src = ''; this._audioEl = null; }
     if (this._source) { try { this._source.disconnect(); } catch (e) { /* ok */ } this._source = null; }
     if (this._audioCtx) { try { this._audioCtx.close(); } catch (e) { /* ok */ } this._audioCtx = null; }
+    if (this._beatWorkletNode) {
+      try { this._beatWorkletNode.port.onmessage = null; this._beatWorkletNode.disconnect(); } catch(e) {}
+      this._beatWorkletNode = null;
+    }
+    _workletBass = -1; // Deactivate worklet bass path — poll() falls back to FFT
     this._analyser = null;
     this._freqData = null;
     // Reset beat detection state
@@ -13243,6 +13397,8 @@ MusicProviders.local = {
     this._lastBeatTime = 0;
     this._smoothEnergy = 0;
     this._smoothBass = 0;
+    this._bassHistory = [];
+    this._beatClockNext = 0; // Beat clock reset on cleanup
   },
 
   destroy() {
@@ -13478,10 +13634,25 @@ function render(t){
   SM.energy += _eDiff * (activeProvider === MusicProviders.local ? 1.0 : (_eDiff > 0 ? 0.15 : 0.05));
   SM.beatPulse*=0.87;
   updateDJSigMorph(); // Update DJ signature morph animation state
-  // Backup beat timer — fires only when local audio hasn't detected a beat recently (e.g. quiet passage,
-  // or Spotify/Apple Music mode which has no audio analysis). Uses 1.5x interval to avoid double-fire
-  // after a direct triggerBeat() call from poll().
-  if(t-MS.lastBeat>MS.beatInterval*1.5){MS.lastBeat=t;triggerBeat();}
+  // ── Beat clock (local audio) vs backup timer (Spotify/Apple) ──
+  // Local audio: uses the phase-locked beat clock set in poll(). During quiet sections
+  // (breakdowns, transitions), ghost beats fire at strength=0.5 to keep the visual
+  // rhythm alive. A guard of 0.5× beatInterval prevents double-fire immediately after
+  // a real detected beat already advanced the clock.
+  // Spotify/Apple: no audio analysis, so backup timer at full interval is the only source.
+  if (activeProvider === MusicProviders.local) {
+    const _provider = MusicProviders.local;
+    const _clockNext = _provider._beatClockNext || 0;
+    if (_clockNext > 0 && t >= _clockNext) {
+      // Advance clock first — prevents re-fire on same frame if render is slow
+      _provider._beatClockNext = t + MS.beatInterval;
+      MS.lastBeat = t;
+      triggerBeat(0.5); // Ghost beat: audible rhythm maintenance, not a full hit
+    }
+  } else {
+    // Spotify / Apple Music — backup timer is the primary (only) beat source
+    if(t - MS.lastBeat > MS.beatInterval){MS.lastBeat = t; triggerBeat();}
+  }
   if(MS.duration>0){songProg=Math.min(1,(Date.now()-MS.analysisStart)/MS.duration);progMult=0.55+songProg*0.7;}
   document.getElementById('pgBar').style.width=(songProg*100)+'%';
   const tc=h2r(pc(Math.floor(t/3000)%4));document.getElementById('cur').style.background=`rgb(${tc.r},${tc.g},${tc.b})`;
@@ -13778,7 +13949,7 @@ function initDevPanel(){
   });
 
   document.getElementById('dpSimBeat').addEventListener('click',()=>{
-    SM.beatPulse=1;beatCount++;triggerBeat();
+    triggerBeat(1.0); // Dev panel fires a max-strength beat
   });
 
   // ── Quick actions ──
@@ -14212,7 +14383,7 @@ const DJMode = {
     provider._mode = audioMode;
 
     try {
-      provider._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      provider._audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
       provider._analyser = provider._audioCtx.createAnalyser();
       provider._analyser.fftSize = 2048; // Higher resolution for clean bass bin isolation
       provider._analyser.smoothingTimeConstant = 0.25; // Beat detection needs sharp transients — smoothing applied manually in poll()
@@ -14230,6 +14401,7 @@ const DJMode = {
         }
         provider._source = provider._audioCtx.createMediaStreamSource(stream);
         provider._source.connect(provider._analyser);
+        _attachBeatWorklet(provider._audioCtx, provider._source, provider._analyser, provider);
         audioTracks[0].onended = () => {
           console.log('[djmode] system audio sharing stopped');
           this.stopDisplay();
@@ -14243,12 +14415,14 @@ const DJMode = {
         provider._stream = stream;
         provider._source = provider._audioCtx.createMediaStreamSource(stream);
         provider._source.connect(provider._analyser);
+        _attachBeatWorklet(provider._audioCtx, provider._source, provider._analyser, provider);
       } else {
         // mic mode
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         provider._stream = stream;
         provider._source = provider._audioCtx.createMediaStreamSource(stream);
         provider._source.connect(provider._analyser);
+        _attachBeatWorklet(provider._audioCtx, provider._source, provider._analyser, provider);
       }
     } catch (e) {
       console.error('[djmode] audio init failed:', e);
@@ -15690,7 +15864,7 @@ function _showVenueSignalCheck(deviceId, deviceLabel, parentOverlay, onConfirm) 
   // Start capturing from the selected device
   (async () => {
     try {
-      _checkCtx = new (window.AudioContext || window.webkitAudioContext)();
+      _checkCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
       _checkAnalyser = _checkCtx.createAnalyser();
       _checkAnalyser.fftSize = 256;
       _checkAnalyser.smoothingTimeConstant = 0.25; // Beat detection needs sharp transients — smoothing applied manually in poll()
