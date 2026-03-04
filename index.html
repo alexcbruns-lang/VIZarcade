@@ -4852,10 +4852,10 @@ function drawNeonCathedral(t){
   if(C.doorsOpen){C.doorsOpenTimer-=16;if(C.doorsOpenTimer<=0)C.doorsOpen=false;}
   if(C.gargoyleFireBreath){C.gargoyleFireTimer-=16;if(C.gargoyleFireTimer<=0)C.gargoyleFireBreath=false;}
 
-  // ── Helper: neon stroke ────────────────────────────────
+  // ── Helper: neon stroke (no shadowBlur — uses double-stroke for glow) ──
   const neon=(ci,alpha=0.7,blur=12)=>{
+    x0.shadowBlur=0;x0.shadowColor='transparent';
     x0.strokeStyle=rgba(pc(ci),Math.min(1,alpha*(1+beat*0.2)));
-    x0.shadowBlur=blur*(1+beat*0.3);x0.shadowColor=pc(ci);
   };
 
   // ══════════════════════════════════════════════════════
@@ -4951,9 +4951,7 @@ function drawNeonCathedral(t){
     const cpGlow=x0.createRadialGradient(cx,roseY,0,cx,roseY,cpSz2*3);
     cpGlow.addColorStop(0,rgba(pc(0),0.2*(1+beat*0.5)));cpGlow.addColorStop(0.5,rgba(pc(1),0.06));cpGlow.addColorStop(1,'transparent');
     x0.fillStyle=cpGlow;x0.fillRect(0,0,w,h);
-    x0.shadowBlur=Math.min(20,cpSz2*0.3);x0.shadowColor=rgba(pc(0),0.9);
     drawCPMini(x0,THEME.centerpiece,cx,roseY,cpSz2,cpRot);
-    x0.shadowBlur=0;
   }
 
   // Pointed arch windows flanking rose window
@@ -5024,7 +5022,6 @@ function drawNeonCathedral(t){
   // ══════════════════════════════════════════════════════
   for(let gi=0;gi<C.gargoyles.length;gi++){
     const g=C.gargoyles[gi];
-    x0.fillStyle='rgba(255,0,0,0.8)';x0.fillRect(g.x-30,g.y-200,60,200);
     // Head spin — continuous 360°, faster during fire breath
     g.headAngle+=0.008*(1+beat*0.15)*(C.gargoyleFireBreath?8:1);
     if(beat>0.5)g.lunge=Math.min(1,g.lunge+0.12);
@@ -5480,7 +5477,7 @@ function drawNeonCathedral(t){
       for(let lb=0;lb<2+Math.floor(beat);lb++){
         const lx=cx+(Math.random()-0.5)*facadeW*0.8;
         x0.strokeStyle=rgba(pc(ltCI),0.7+beat*0.3);
-        x0.lineWidth=3+beat*4;x0.shadowBlur=30+beat*25;x0.shadowColor=pc(ltCI);
+        x0.lineWidth=3+beat*4;
         x0.beginPath();let bx=lx,by=0;
         const segs=5+Math.floor(Math.random()*4);
         const tgtY=groundY-h*0.1-Math.random()*h*0.3;
