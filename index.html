@@ -4822,6 +4822,8 @@ function drawNeonCathedral(t){
         {x:cx+w*0.38, y:groundY, side:1,  ci:3, headAngle:Math.PI*1.5, wingFlare:0, lunge:0, flyMode:false, flyVx:0, flyVy:0, origX:cx+w*0.38, origY:groundY},
       ],
       motes:Array.from({length:35},()=>({x:Math.random()*w,y:Math.random()*h,vy:-(0.2+Math.random()*0.4),r:1+Math.random()*2,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)})),
+      bats:Array.from({length:8},()=>({x:Math.random()*w,y:Math.random()*h*0.5,vx:(Math.random()-0.5)*1.5,vy:(Math.random()-0.5)*0.6,wingPh:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4),sz:8+Math.random()*10})),
+      ghosts:Array.from({length:5},()=>({x:Math.random()*w,y:h*0.1+Math.random()*h*0.4,vx:(Math.random()-0.5)*0.4,vy:(Math.random()-0.5)*0.2,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4),sz:12+Math.random()*14,alpha:0.3+Math.random()*0.3})),
       gargoyleAlive:false, gargoyleAliveTimer:0,
       doorsOpen:false, doorsOpenTimer:0,
       gargoyleFireBreath:false, gargoyleFireTimer:0,
@@ -4835,7 +4837,7 @@ function drawNeonCathedral(t){
     C.gargoyleAliveTimer-=16;
     if(C.gargoyleAliveTimer<=0){
       C.gargoyleAlive=false;
-      C.gargoyles.forEach(g=>{g.flyMode=false;g.x=g.origX;g.y=g.origY;});
+      C.gargoyles.forEach(g=>{g.flyMode=false;g.returning=true;});
     } else {
       for(const g of C.gargoyles){
         if(g.flyMode){
@@ -4845,6 +4847,13 @@ function drawNeonCathedral(t){
           if(g.y<h*0.03||g.y>h*0.9){g.flyVy*=-0.92;g.y=Math.max(h*0.03,Math.min(h*0.9,g.y));}
         }
       }
+    }
+  }
+  // Smooth glide back to pedestal
+  for(const g of C.gargoyles){
+    if(g.returning){
+      g.x+=(g.origX-g.x)*0.04;g.y+=(g.origY-g.y)*0.04;
+      if(Math.abs(g.x-g.origX)<2&&Math.abs(g.y-g.origY)<2){g.x=g.origX;g.y=g.origY;g.returning=false;}
     }
   }
   if(C.doorsOpen){C.doorsOpenTimer-=16;if(C.doorsOpenTimer<=0)C.doorsOpen=false;}
@@ -4972,29 +4981,44 @@ function drawNeonCathedral(t){
   // ══════════════════════════════════════════════════════
   const dlx=cx-doorW/2, drx=cx+doorW/2;
 
-  // Door opening — dark interior
-  x0.fillStyle='rgba(0,0,0,0.85)';
-  x0.beginPath();
-  x0.moveTo(dlx,groundY);x0.lineTo(dlx,doorTopY+doorH*0.15);
-  x0.quadraticCurveTo(cx,doorTopY-doorH*0.08,drx,doorTopY+doorH*0.15);
-  x0.lineTo(drx,groundY);x0.closePath();x0.fill();
+  if(!C.doorsOpen){
+    // Door opening — dark interior
+    x0.fillStyle='rgba(0,0,0,0.85)';
+    x0.beginPath();
+    x0.moveTo(dlx,groundY);x0.lineTo(dlx,doorTopY+doorH*0.15);
+    x0.quadraticCurveTo(cx,doorTopY-doorH*0.08,drx,doorTopY+doorH*0.15);
+    x0.lineTo(drx,groundY);x0.closePath();x0.fill();
 
-  // Door arch outline
-  neon(3,0.6+beat*0.2,16);x0.lineWidth=2.5;
-  x0.beginPath();
-  x0.moveTo(dlx,groundY);x0.lineTo(dlx,doorTopY+doorH*0.15);
-  x0.quadraticCurveTo(cx,doorTopY-doorH*0.08,drx,doorTopY+doorH*0.15);
-  x0.lineTo(drx,groundY);
-  x0.stroke();
+    // Door arch outline
+    neon(3,0.6+beat*0.2,16);x0.lineWidth=2.5;
+    x0.beginPath();
+    x0.moveTo(dlx,groundY);x0.lineTo(dlx,doorTopY+doorH*0.15);
+    x0.quadraticCurveTo(cx,doorTopY-doorH*0.08,drx,doorTopY+doorH*0.15);
+    x0.lineTo(drx,groundY);
+    x0.stroke();
 
-  // Door detail — center split line
-  neon(3,0.3,6);x0.lineWidth=1;
-  x0.beginPath();x0.moveTo(cx,groundY);x0.lineTo(cx,doorTopY+doorH*0.2);x0.stroke();
+    // Door detail — center split line
+    neon(3,0.3,6);x0.lineWidth=1;
+    x0.beginPath();x0.moveTo(cx,groundY);x0.lineTo(cx,doorTopY+doorH*0.2);x0.stroke();
 
-  // Door iron bands
-  for(let db=0;db<3;db++){
-    const dby=groundY-doorH*0.2-db*doorH*0.22;
-    x0.beginPath();x0.moveTo(dlx+3,dby);x0.lineTo(drx-3,dby);x0.stroke();
+    // Door iron bands
+    for(let db=0;db<3;db++){
+      const dby=groundY-doorH*0.2-db*doorH*0.22;
+      x0.beginPath();x0.moveTo(dlx+3,dby);x0.lineTo(drx-3,dby);x0.stroke();
+    }
+  } else {
+    // Doors vanished — just dark opening
+    x0.fillStyle='rgba(0,0,0,0.95)';
+    x0.beginPath();
+    x0.moveTo(dlx,groundY);x0.lineTo(dlx,doorTopY+doorH*0.15);
+    x0.quadraticCurveTo(cx,doorTopY-doorH*0.08,drx,doorTopY+doorH*0.15);
+    x0.lineTo(drx,groundY);x0.closePath();x0.fill();
+    // Arch still glows
+    neon(0,0.4+beat*0.3,20);x0.lineWidth=2;
+    x0.beginPath();
+    x0.moveTo(dlx,groundY);x0.lineTo(dlx,doorTopY+doorH*0.15);
+    x0.quadraticCurveTo(cx,doorTopY-doorH*0.08,drx,doorTopY+doorH*0.15);
+    x0.lineTo(drx,groundY);x0.stroke();
   }
 
   // Ground line
@@ -5007,34 +5031,37 @@ function drawNeonCathedral(t){
   // ══════════════════════════════════════════════════════
   for(let gi=0;gi<C.gargoyles.length;gi++){
     const g=C.gargoyles[gi];
+    x0.fillStyle='rgba(255,0,0,0.8)';x0.fillRect(g.x-30,g.y-200,60,200);
     // Head spin — continuous 360°, faster during fire breath
-    g.headAngle+=0.008*(1+beat*0.15)*(C.gargoyleFireBreath?2.5:1);
+    g.headAngle+=0.008*(1+beat*0.15)*(C.gargoyleFireBreath?8:1);
     if(beat>0.5)g.lunge=Math.min(1,g.lunge+0.12);
     else g.lunge*=0.92;
     g.wingFlare+=(beat*0.6-g.wingFlare)*0.1;
 
     const gSz=Math.min(w,h)*0.26; // 2x body size
     const alive=C.gargoyleAlive&&g.flyMode;
-    const aliveVib=alive?1.5:1; // vibrance multiplier when alive
+    const aliveVib=alive?1.4:1; // vibrance multiplier when alive
+    const gAlpha=1.3; // opacity boost — makes gargoyles fully opaque neon
+    const gNeon=(ci,alpha=0.7,blur=12)=>{neon(ci,Math.min(1,alpha*gAlpha*aliveVib),blur*1.2);};
     const gx=g.x, gy=g.y;
 
     x0.save();x0.translate(gx,gy);
 
     // ── Pedestal / perch ──
-    neon(g.ci,0.5*aliveVib,10);x0.lineWidth=2.5;
+    gNeon(g.ci,0.5,10);x0.lineWidth=2.5;
     const pedW=gSz*0.6,pedH=gSz*0.12;
     x0.beginPath();
     x0.moveTo(-pedW/2,0);x0.lineTo(-pedW/2,-pedH);
     x0.lineTo(-pedW*0.35,-pedH-5);x0.lineTo(pedW*0.35,-pedH-5);
     x0.lineTo(pedW/2,-pedH);x0.lineTo(pedW/2,0);
     x0.stroke();
-    neon(g.ci,0.3,5);x0.lineWidth=1;
+    gNeon(g.ci,0.3,5);x0.lineWidth=1;
     x0.beginPath();x0.moveTo(-pedW*0.4,-pedH*0.5);x0.lineTo(pedW*0.4,-pedH*0.5);x0.stroke();
 
     const baseY=-pedH-5;
 
     // ── Clawed feet ──
-    neon(g.ci,0.6*aliveVib,8);x0.lineWidth=2;
+    gNeon(g.ci,0.6,8);x0.lineWidth=2;
     for(let foot=-1;foot<=1;foot+=2){
       const fx=foot*gSz*0.15;
       for(let c=0;c<3;c++){
@@ -5047,7 +5074,7 @@ function drawNeonCathedral(t){
     }
 
     // ── Legs (crouched) ──
-    neon(g.ci,0.55*aliveVib,10);x0.lineWidth=3;
+    gNeon(g.ci,0.55,10);x0.lineWidth=3;
     for(let leg=-1;leg<=1;leg+=2){
       const lx=leg*gSz*0.12;
       x0.beginPath();x0.moveTo(lx,baseY);x0.lineTo(lx+leg*gSz*0.04,baseY-gSz*0.16);x0.stroke();
@@ -5056,7 +5083,7 @@ function drawNeonCathedral(t){
 
     // ── Torso (hunched) ──
     const torsoY=baseY-gSz*0.28;
-    neon(g.ci,0.65*aliveVib,14);x0.lineWidth=3;
+    gNeon(g.ci,0.65,14);x0.lineWidth=3;
     x0.beginPath();
     x0.moveTo(-gSz*0.18,torsoY+gSz*0.06);
     x0.bezierCurveTo(-gSz*0.22,torsoY-gSz*0.04,-gSz*0.18,torsoY-gSz*0.15,-gSz*0.08,torsoY-gSz*0.2);
@@ -5064,7 +5091,7 @@ function drawNeonCathedral(t){
     x0.bezierCurveTo(gSz*0.18,torsoY-gSz*0.15,gSz*0.22,torsoY-gSz*0.04,gSz*0.18,torsoY+gSz*0.06);
     x0.stroke();
     // Spine + rib lines
-    neon(g.ci,0.3,5);x0.lineWidth=1;
+    gNeon(g.ci,0.3,5);x0.lineWidth=1;
     x0.beginPath();x0.moveTo(0,torsoY+gSz*0.04);x0.lineTo(0,torsoY-gSz*0.18);x0.stroke();
     for(let rib=0;rib<3;rib++){
       const ry=torsoY-gSz*(0.05+rib*0.05);
@@ -5072,7 +5099,7 @@ function drawNeonCathedral(t){
     }
 
     // ── Arms ──
-    neon(g.ci,0.55*aliveVib,8);x0.lineWidth=2.5;
+    gNeon(g.ci,0.55,8);x0.lineWidth=2.5;
     for(let arm=-1;arm<=1;arm+=2){
       const ax=arm*gSz*0.19;
       x0.beginPath();x0.moveTo(ax,torsoY-gSz*0.08);x0.lineTo(ax+arm*gSz*0.1,torsoY+gSz*0.06);x0.stroke();
@@ -5085,7 +5112,7 @@ function drawNeonCathedral(t){
 
     // ── Wings ──
     const wFlare=0.15+g.wingFlare*0.35;
-    neon(g.ci,0.55*aliveVib+beat*0.2,14);x0.lineWidth=2.5;
+    gNeon(g.ci,0.55+beat*0.2,14);x0.lineWidth=2.5;
     for(let wing=-1;wing<=1;wing+=2){
       const wx=wing*gSz*0.17;
       const wingSpan=gSz*0.55*(1+wFlare);
@@ -5093,17 +5120,17 @@ function drawNeonCathedral(t){
       x0.beginPath();x0.moveTo(wx,torsoY-gSz*0.12);
       x0.bezierCurveTo(wx+wing*wingSpan*0.4,wingTipY-gSz*0.08,wx+wing*wingSpan*0.7,wingTipY,wx+wing*wingSpan,wingTipY+gSz*0.08);
       x0.stroke();
-      neon(g.ci,0.3+beat*0.15,8);x0.lineWidth=1.2;
+      gNeon(g.ci,0.3+beat*0.15,8);x0.lineWidth=1.2;
       for(let r=0;r<3;r++){const rt=(r+1)/4;const ribX=wx+wing*wingSpan*rt;const ribY=lerp(torsoY-gSz*0.12,wingTipY+gSz*0.08,rt);
         x0.beginPath();x0.moveTo(wx,torsoY-gSz*0.08);x0.lineTo(ribX,ribY+gSz*0.04*r);x0.stroke();}
-      neon(g.ci,0.25,6);x0.lineWidth=1;
+      gNeon(g.ci,0.25,6);x0.lineWidth=1;
       x0.beginPath();x0.moveTo(wx,torsoY+gSz*0.04);
       x0.bezierCurveTo(wx+wing*wingSpan*0.3,torsoY+gSz*0.015,wx+wing*wingSpan*0.6,wingTipY+gSz*0.15,wx+wing*wingSpan,wingTipY+gSz*0.08);
       x0.stroke();
     }
 
     // ── Tail ──
-    neon(g.ci,0.4,8);x0.lineWidth=2;
+    gNeon(g.ci,0.4,8);x0.lineWidth=2;
     x0.beginPath();x0.moveTo(0,torsoY+gSz*0.04);
     x0.bezierCurveTo(g.side*gSz*0.12,torsoY+gSz*0.12,g.side*gSz*0.2,baseY-gSz*0.04,g.side*gSz*0.15,baseY+gSz*0.015);
     x0.stroke();
@@ -5115,13 +5142,14 @@ function drawNeonCathedral(t){
     const headY=torsoY-gSz*0.26;
     const headSz=gSz*0.36; // 4x original
     const hAngle=g.headAngle;
-    const hOffX=Math.cos(hAngle)*headSz*0.06;
-    const hOffY=Math.sin(hAngle)*headSz*0.03;
+    const hOffX=C.gargoyleFireBreath?0:Math.cos(hAngle)*headSz*0.06;
+    const hOffY=C.gargoyleFireBreath?0:Math.sin(hAngle)*headSz*0.03;
 
     x0.save();x0.translate(hOffX,headY+hOffY);
+    if(C.gargoyleFireBreath) x0.rotate(hAngle); // full 360 spin during fire breath
 
     // Skull — angular, not round
-    neon(g.ci,0.7*aliveVib,16);x0.lineWidth=2.5;
+    gNeon(g.ci,0.7,16);x0.lineWidth=2.5;
     x0.beginPath();
     x0.moveTo(0,-headSz*0.9);
     x0.bezierCurveTo(-headSz*0.5,-headSz*0.85,-headSz*0.75,-headSz*0.5,-headSz*0.8,-headSz*0.1);
@@ -5134,13 +5162,13 @@ function drawNeonCathedral(t){
     x0.stroke();
 
     // Horns — large, curved, ridged
-    neon(g.ci,0.65*aliveVib,12);x0.lineWidth=2.5;
+    gNeon(g.ci,0.65,12);x0.lineWidth=2.5;
     for(let horn=-1;horn<=1;horn+=2){
       x0.beginPath();
       x0.moveTo(horn*headSz*0.45,-headSz*0.7);
       x0.bezierCurveTo(horn*headSz*0.8,-headSz*1.3,horn*headSz*1.1,-headSz*1.15,horn*headSz*0.95,-headSz*0.55);
       x0.stroke();
-      neon(g.ci,0.3,4);x0.lineWidth=1;
+      gNeon(g.ci,0.3,4);x0.lineWidth=1;
       for(let hr=0;hr<4;hr++){
         const hy=-headSz*(0.75+hr*0.12);
         x0.beginPath();x0.moveTo(horn*headSz*(0.5+hr*0.06),hy);x0.lineTo(horn*headSz*(0.55+hr*0.07),hy-headSz*0.03);x0.stroke();
@@ -5148,14 +5176,14 @@ function drawNeonCathedral(t){
     }
 
     // Heavy brow ridge — deep furrow
-    neon(g.ci,0.6*aliveVib,10);x0.lineWidth=3;
+    gNeon(g.ci,0.6,10);x0.lineWidth=3;
     x0.beginPath();
     x0.moveTo(-headSz*0.65,-headSz*0.25);
     x0.bezierCurveTo(-headSz*0.4,-headSz*0.5,-headSz*0.1,-headSz*0.42,0,-headSz*0.35);
     x0.bezierCurveTo(headSz*0.1,-headSz*0.42,headSz*0.4,-headSz*0.5,headSz*0.65,-headSz*0.25);
     x0.stroke();
     // Brow wrinkle lines
-    neon(g.ci,0.25,4);x0.lineWidth=1;
+    gNeon(g.ci,0.25,4);x0.lineWidth=1;
     for(let wr=0;wr<3;wr++){
       const wy=-headSz*(0.32+wr*0.04);
       x0.beginPath();x0.moveTo(-headSz*0.2,wy);x0.lineTo(headSz*0.2,wy-headSz*0.02);x0.stroke();
@@ -5166,11 +5194,11 @@ function drawNeonCathedral(t){
     const eyePulse=1+beat*0.6;
     for(let eye=-1;eye<=1;eye+=2){
       const ex=eye*headSz*0.32, ey=-headSz*0.15;
-      neon(g.ci,0.4,6);x0.lineWidth=1.5;
+      gNeon(g.ci,0.4,6);x0.lineWidth=1.5;
       x0.beginPath();x0.ellipse(ex,ey,headSz*0.2,headSz*0.12,eye*0.25,0,Math.PI*2);x0.stroke();
       const eR=headSz*0.14*eyePulse;
-      x0.fillStyle=rgba(pc(eyeCI),(0.8+beat*0.2)*aliveVib);
-      x0.shadowBlur=(15+beat*20)*aliveVib;x0.shadowColor=pc(eyeCI);
+      x0.fillStyle=rgba(pc(eyeCI),(0.8+beat*0.2));
+      x0.shadowBlur=(15+beat*20);x0.shadowColor=pc(eyeCI);
       x0.beginPath();x0.ellipse(ex,ey,eR,eR*0.7,eye*0.25,0,Math.PI*2);x0.fill();
       x0.fillStyle=rgba(pc(eyeCI),0.98);
       x0.beginPath();x0.ellipse(ex,ey,eR*0.15,eR*0.55,eye*0.25,0,Math.PI*2);x0.fill();
@@ -5178,22 +5206,22 @@ function drawNeonCathedral(t){
     }
 
     // Nose — flat, wide, flared nostrils
-    neon(g.ci,0.5*aliveVib,8);x0.lineWidth=2;
+    gNeon(g.ci,0.5,8);x0.lineWidth=2;
     x0.beginPath();x0.moveTo(0,headSz*0.05);x0.lineTo(-headSz*0.12,headSz*0.2);
     x0.lineTo(0,headSz*0.28);x0.lineTo(headSz*0.12,headSz*0.2);x0.lineTo(0,headSz*0.05);x0.stroke();
-    neon(g.ci,0.6,6);x0.lineWidth=1.5;
+    gNeon(g.ci,0.6,6);x0.lineWidth=1.5;
     x0.beginPath();x0.ellipse(-headSz*0.08,headSz*0.22,headSz*0.05,headSz*0.035,0.2,0,Math.PI*2);x0.stroke();
     x0.beginPath();x0.ellipse(headSz*0.08,headSz*0.22,headSz*0.05,headSz*0.035,-0.2,0,Math.PI*2);x0.stroke();
 
     // Mouth — wide grimace with exposed teeth, always visible
     const mouthOpen=0.3+beat*0.4;
-    neon(g.ci,0.7*aliveVib,12);x0.lineWidth=2;
+    gNeon(g.ci,0.7,12);x0.lineWidth=2;
     x0.beginPath();x0.moveTo(-headSz*0.45,headSz*0.4);
     x0.bezierCurveTo(-headSz*0.2,headSz*0.35,headSz*0.2,headSz*0.35,headSz*0.45,headSz*0.4);x0.stroke();
     x0.beginPath();x0.moveTo(-headSz*0.4,headSz*(0.4+mouthOpen*0.15));
     x0.bezierCurveTo(-headSz*0.15,headSz*(0.45+mouthOpen*0.2),headSz*0.15,headSz*(0.45+mouthOpen*0.2),headSz*0.4,headSz*(0.4+mouthOpen*0.15));x0.stroke();
     // Teeth — upper row always showing
-    neon((g.ci+1)%4,0.5*aliveVib,6);x0.lineWidth=1.5;
+    gNeon((g.ci+1)%4,0.5,6);x0.lineWidth=1.5;
     for(let tooth=-3;tooth<=3;tooth++){
       const tx=tooth*headSz*0.06;
       const tLen=Math.abs(tooth)<=1?headSz*0.1:headSz*0.06;
@@ -5204,41 +5232,61 @@ function drawNeonCathedral(t){
       x0.lineTo(fang*headSz*0.13,headSz*0.36);x0.stroke();
     }
     // Cheek creases
-    neon(g.ci,0.25,4);x0.lineWidth=1;
+    gNeon(g.ci,0.25,4);x0.lineWidth=1;
     for(let side=-1;side<=1;side+=2){
       x0.beginPath();x0.moveTo(side*headSz*0.55,headSz*0.1);
       x0.bezierCurveTo(side*headSz*0.5,headSz*0.25,side*headSz*0.48,headSz*0.35,side*headSz*0.45,headSz*0.4);x0.stroke();
     }
 
     // Pointed ears
-    neon(g.ci,0.45*aliveVib,8);x0.lineWidth=2;
+    gNeon(g.ci,0.45,8);x0.lineWidth=2;
     for(let ear=-1;ear<=1;ear+=2){
       x0.beginPath();x0.moveTo(ear*headSz*0.65,-headSz*0.35);
       x0.lineTo(ear*headSz*0.85,-headSz*0.75);x0.lineTo(ear*headSz*0.55,-headSz*0.5);x0.stroke();
     }
 
-    // ── Fire breath — traditional flame shape, rotates with head ──
+    // ── Fire breath — realistic flame, spins with head rotation ──
     if(C.gargoyleFireBreath){
-      const fireW=gSz*0.35*(0.7+beat*0.3+Math.sin(t*0.004+gi)*0.15);
-      const fireH=gSz*0.2*(0.6+beat*0.4);
+      const fireW=gSz*0.3*(0.7+beat*0.3);
+      const fireLen=gSz*0.45*(0.6+beat*0.4+Math.sin(t*0.005+gi)*0.1);
       const fireBaseY=headSz*(0.45+mouthOpen*0.15);
-      x0.save();x0.translate(0,fireBaseY);x0.rotate(hAngle*0.3);
-      for(let fl=3;fl>=0;fl--){
-        const fScale=1-fl*0.15;
-        const fCI=(fl+Math.floor(t*0.01)+gi)%4;
-        const fAlpha=(0.5+beat*0.3-fl*0.08)*aliveVib;
+      x0.save();x0.translate(0,fireBaseY); // fire inherits head rotation
+      // Multi-layer teardrop flames — outer to inner
+      for(let fl=4;fl>=0;fl--){
+        const frac=fl/4;
+        const fCI=(fl+Math.floor(t*0.012)+gi)%4;
+        const fAlpha=(0.6+beat*0.35-frac*0.1);
+        const fw=fireW*(1-frac*0.2);
+        const fh=fireLen*(1-frac*0.15);
+        // Flickering offset
+        const flick=Math.sin(t*0.015+fl*1.5+gi*2)*fw*0.08;
         x0.fillStyle=rgba(pc(fCI),fAlpha);
-        x0.shadowBlur=(20+beat*15-fl*3)*aliveVib;x0.shadowColor=pc(fCI);
-        x0.beginPath();x0.moveTo(0,0);
-        x0.bezierCurveTo(-fireW*fScale*0.6,fireH*fScale*0.3,-fireW*fScale*0.5,fireH*fScale*0.7,-fireW*fScale*0.15,fireH*fScale);
-        x0.bezierCurveTo(0,fireH*fScale*1.05,0,fireH*fScale*1.05,fireW*fScale*0.15,fireH*fScale);
-        x0.bezierCurveTo(fireW*fScale*0.5,fireH*fScale*0.7,fireW*fScale*0.6,fireH*fScale*0.3,0,0);
+        x0.shadowBlur=(25+beat*18-fl*3);x0.shadowColor=pc(fCI);
+        x0.beginPath();
+        x0.moveTo(flick,0);
+        // Left curve out
+        x0.bezierCurveTo(flick-fw*0.7,fh*0.2,flick-fw*0.55,fh*0.55,flick-fw*0.1,fh*0.85);
+        // Pointed tip
+        x0.quadraticCurveTo(flick,fh*1.08,flick+fw*0.1,fh*0.85);
+        // Right curve back
+        x0.bezierCurveTo(flick+fw*0.55,fh*0.55,flick+fw*0.7,fh*0.2,flick,0);
         x0.fill();
       }
-      for(let e=0;e<5;e++){
-        const ex=(Math.random()-0.5)*fireW*0.8, ey=fireH*(0.3+Math.random()*0.7);
-        x0.fillStyle=rgba(pc(e%4),(0.5+beat*0.3)*aliveVib);x0.shadowBlur=4;
-        x0.beginPath();x0.arc(ex,ey,1.5+Math.random()*2,0,Math.PI*2);x0.fill();
+      // Inner white-hot core
+      x0.fillStyle=`rgba(255,255,200,${(0.3+beat*0.2)})`;
+      x0.shadowBlur=8;x0.shadowColor='rgba(255,255,200,0.8)';
+      x0.beginPath();
+      x0.moveTo(0,fireLen*0.05);
+      x0.bezierCurveTo(-fireW*0.15,fireLen*0.2,-fireW*0.08,fireLen*0.4,0,fireLen*0.55);
+      x0.bezierCurveTo(fireW*0.08,fireLen*0.4,fireW*0.15,fireLen*0.2,0,fireLen*0.05);
+      x0.fill();
+      // Sparks and embers radiating out
+      for(let e=0;e<7;e++){
+        const ea=Math.random()*Math.PI*0.8-Math.PI*0.4+Math.PI*0.5;
+        const ed=fireLen*(0.4+Math.random()*0.6);
+        const ex=Math.cos(ea)*ed*0.3, ey=Math.sin(ea)*ed;
+        x0.fillStyle=rgba(pc(e%4),(0.5+beat*0.3));x0.shadowBlur=4;
+        x0.beginPath();x0.arc(ex,ey,1.5+Math.random()*2.5,0,Math.PI*2);x0.fill();
       }
       x0.shadowBlur=0;x0.restore();
     }
@@ -5263,61 +5311,182 @@ function drawNeonCathedral(t){
   // ══════════════════════════════════════════════════════
   if(C.doorsOpen){
     const dAlpha=Math.min(1,(30000-C.doorsOpenTimer)/800);
-    // Frankenstein head revealed in doorway
-    const fkX=cx, fkY=groundY-doorH*0.45, fkSz=doorW*0.35;
-    const fkGlow=x0.createRadialGradient(fkX,fkY,0,fkX,fkY,fkSz*3);
-    fkGlow.addColorStop(0,`rgba(80,255,80,${dAlpha*0.15+beat*0.08})`);fkGlow.addColorStop(1,'transparent');
+    // Frankenstein revealed in doorway — large and detailed
+    const fkX=cx, fkY=groundY-doorH*0.42, fkSz=doorW*0.55;
+    // Eerie green glow from doorway
+    const fkGlow=x0.createRadialGradient(fkX,fkY,0,fkX,fkY,fkSz*4);
+    fkGlow.addColorStop(0,`rgba(60,255,60,${dAlpha*0.12+beat*0.06})`);
+    fkGlow.addColorStop(0.4,`rgba(40,180,40,${dAlpha*0.05})`);
+    fkGlow.addColorStop(1,'transparent');
     x0.fillStyle=fkGlow;x0.fillRect(0,0,w,h);
+
     x0.save();x0.translate(fkX,fkY);
-    const fkA=dAlpha*0.9;
-    // Flat-top head shape
-    neon(1,fkA,18);x0.lineWidth=3;
+    const fkA=dAlpha*0.95;
+
+    // ── Head outline — angular Frankenstein shape ──
+    neon(1,fkA,22);x0.lineWidth=3.5;
     x0.beginPath();
-    x0.moveTo(-fkSz*0.7,fkSz*0.5);x0.lineTo(-fkSz*0.72,-fkSz*0.3);
-    x0.lineTo(-fkSz*0.65,-fkSz*0.7);x0.lineTo(-fkSz*0.5,-fkSz*0.85);
-    x0.lineTo(fkSz*0.5,-fkSz*0.85);x0.lineTo(fkSz*0.65,-fkSz*0.7);
-    x0.lineTo(fkSz*0.72,-fkSz*0.3);x0.lineTo(fkSz*0.7,fkSz*0.5);
+    // Left jaw up to flat top
+    x0.moveTo(-fkSz*0.5,fkSz*0.55);
+    x0.lineTo(-fkSz*0.52,fkSz*0.35);
+    x0.lineTo(-fkSz*0.58,fkSz*0.15); // jaw angle
+    x0.lineTo(-fkSz*0.62,-fkSz*0.05);
+    x0.lineTo(-fkSz*0.6,-fkSz*0.35); // temple
+    x0.lineTo(-fkSz*0.55,-fkSz*0.6);
+    x0.lineTo(-fkSz*0.42,-fkSz*0.78);
+    x0.lineTo(-fkSz*0.35,-fkSz*0.82); // top-left corner
+    x0.lineTo(fkSz*0.35,-fkSz*0.82); // flat top
+    x0.lineTo(fkSz*0.42,-fkSz*0.78);
+    x0.lineTo(fkSz*0.55,-fkSz*0.6);
+    x0.lineTo(fkSz*0.6,-fkSz*0.35);
+    x0.lineTo(fkSz*0.62,-fkSz*0.05);
+    x0.lineTo(fkSz*0.58,fkSz*0.15);
+    x0.lineTo(fkSz*0.52,fkSz*0.35);
+    x0.lineTo(fkSz*0.5,fkSz*0.55);
     x0.stroke();
-    // Flat top
-    neon(1,fkA*0.7,10);x0.lineWidth=2;
-    x0.beginPath();x0.moveTo(-fkSz*0.5,-fkSz*0.85);x0.lineTo(fkSz*0.5,-fkSz*0.85);x0.stroke();
-    // Forehead scar/stitches
-    neon(2,fkA*0.5,6);x0.lineWidth=1.5;
-    x0.beginPath();x0.moveTo(-fkSz*0.3,-fkSz*0.65);x0.lineTo(fkSz*0.3,-fkSz*0.65);x0.stroke();
-    for(let st=0;st<5;st++){
-      const sx2=-fkSz*0.25+st*fkSz*0.12;
-      x0.beginPath();x0.moveTo(sx2,-fkSz*0.7);x0.lineTo(sx2,-fkSz*0.6);x0.stroke();
+    // Chin
+    neon(1,fkA*0.7,12);x0.lineWidth=2.5;
+    x0.beginPath();x0.moveTo(-fkSz*0.5,fkSz*0.55);
+    x0.bezierCurveTo(-fkSz*0.3,fkSz*0.68,fkSz*0.3,fkSz*0.68,fkSz*0.5,fkSz*0.55);
+    x0.stroke();
+
+    // ── Flat top with hair texture ──
+    neon(1,fkA*0.6,8);x0.lineWidth=2;
+    x0.beginPath();x0.moveTo(-fkSz*0.35,-fkSz*0.82);x0.lineTo(fkSz*0.35,-fkSz*0.82);x0.stroke();
+    // Hair lines on top
+    neon(1,fkA*0.25,4);x0.lineWidth=1;
+    for(let hl=0;hl<7;hl++){
+      const hx=-fkSz*0.28+hl*fkSz*0.09;
+      x0.beginPath();x0.moveTo(hx,-fkSz*0.82);x0.lineTo(hx+(Math.sin(hl)*fkSz*0.02),-fkSz*0.92);x0.stroke();
     }
-    // Neck bolts
-    neon(0,fkA*0.8,14);x0.lineWidth=2.5;
-    for(let bolt=-1;bolt<=1;bolt+=2){
-      x0.beginPath();x0.arc(bolt*fkSz*0.8,fkSz*0.15,fkSz*0.1,0,Math.PI*2);x0.stroke();
-      x0.fillStyle=rgba(pc(0),fkA*0.6);x0.shadowBlur=10;x0.shadowColor=pc(0);
-      x0.beginPath();x0.arc(bolt*fkSz*0.8,fkSz*0.15,fkSz*0.06,0,Math.PI*2);x0.fill();x0.shadowBlur=0;
+
+    // ── Forehead scar — prominent horizontal with cross-stitches ──
+    neon(2,fkA*0.7,10);x0.lineWidth=2.5;
+    x0.beginPath();x0.moveTo(-fkSz*0.35,-fkSz*0.58);
+    x0.bezierCurveTo(-fkSz*0.15,-fkSz*0.62,fkSz*0.15,-fkSz*0.62,fkSz*0.35,-fkSz*0.58);
+    x0.stroke();
+    // Cross-stitches
+    neon(2,fkA*0.5,6);x0.lineWidth=1.8;
+    for(let st=0;st<7;st++){
+      const sx2=-fkSz*0.3+st*fkSz*0.1;
+      const sy2=-fkSz*0.6+Math.sin(st*0.5)*fkSz*0.01;
+      x0.beginPath();x0.moveTo(sx2,sy2-fkSz*0.06);x0.lineTo(sx2,sy2+fkSz*0.06);x0.stroke();
     }
-    // Eyes — angry, glowing
+
+    // ── Brow ridge — heavy, shadowed ──
+    neon(1,fkA*0.65,10);x0.lineWidth=3;
+    x0.beginPath();
+    x0.moveTo(-fkSz*0.5,-fkSz*0.2);
+    x0.bezierCurveTo(-fkSz*0.35,-fkSz*0.38,-fkSz*0.1,-fkSz*0.32,0,-fkSz*0.28);
+    x0.bezierCurveTo(fkSz*0.1,-fkSz*0.32,fkSz*0.35,-fkSz*0.38,fkSz*0.5,-fkSz*0.2);
+    x0.stroke();
+
+    // ── Eyes — deep sockets, angry, glowing ──
     const fkEyeCI=Math.floor(t*0.008)%4;
     for(let eye=-1;eye<=1;eye+=2){
-      const ex=eye*fkSz*0.3, ey=-fkSz*0.35;
-      neon(1,fkA*0.5,8);x0.lineWidth=2;
-      x0.beginPath();x0.ellipse(ex,ey,fkSz*0.18,fkSz*0.12,0,0,Math.PI*2);x0.stroke();
-      x0.beginPath();x0.moveTo(ex-fkSz*0.2,ey-fkSz*0.08);x0.lineTo(ex+eye*fkSz*0.05,ey-fkSz*0.16);x0.lineTo(ex+fkSz*0.2,ey-fkSz*0.08);x0.stroke();
-      x0.fillStyle=rgba(pc(fkEyeCI),(0.85+beat*0.15)*dAlpha);
-      x0.shadowBlur=20+beat*15;x0.shadowColor=pc(fkEyeCI);
-      x0.beginPath();x0.arc(ex,ey,fkSz*0.09,0,Math.PI*2);x0.fill();x0.shadowBlur=0;
+      const ex=eye*fkSz*0.28, ey=-fkSz*0.22;
+      // Deep socket outline
+      neon(1,fkA*0.5,10);x0.lineWidth=2.5;
+      x0.beginPath();x0.ellipse(ex,ey,fkSz*0.16,fkSz*0.1,0,0,Math.PI*2);x0.stroke();
+      // Heavy brow over each eye
+      x0.lineWidth=2;
+      x0.beginPath();x0.moveTo(ex-fkSz*0.18,ey-fkSz*0.04);
+      x0.lineTo(ex+eye*fkSz*0.02,ey-fkSz*0.14);
+      x0.lineTo(ex+fkSz*0.18,ey-fkSz*0.04);x0.stroke();
+      // Glowing iris
+      x0.fillStyle=rgba(pc(fkEyeCI),(0.9+beat*0.1)*dAlpha);
+      x0.shadowBlur=22+beat*18;x0.shadowColor=pc(fkEyeCI);
+      x0.beginPath();x0.arc(ex,ey,fkSz*0.08,0,Math.PI*2);x0.fill();
+      // Pupil
+      x0.fillStyle=`rgba(0,0,0,${fkA*0.8})`;x0.shadowBlur=0;
+      x0.beginPath();x0.arc(ex,ey,fkSz*0.035,0,Math.PI*2);x0.fill();
+      // Pupil highlight
+      x0.fillStyle=`rgba(255,255,255,${fkA*0.6})`;
+      x0.beginPath();x0.arc(ex+fkSz*0.02,ey-fkSz*0.02,fkSz*0.015,0,Math.PI*2);x0.fill();
+      // Under-eye creases
+      neon(1,fkA*0.25,3);x0.lineWidth=1;
+      x0.beginPath();x0.moveTo(ex-fkSz*0.12,ey+fkSz*0.08);
+      x0.bezierCurveTo(ex-fkSz*0.05,ey+fkSz*0.1,ex+fkSz*0.05,ey+fkSz*0.1,ex+fkSz*0.12,ey+fkSz*0.08);
+      x0.stroke();
     }
-    // Nose
-    neon(1,fkA*0.4,6);x0.lineWidth=1.5;
-    x0.beginPath();x0.moveTo(-fkSz*0.08,-fkSz*0.15);x0.lineTo(0,fkSz*0.05);x0.lineTo(fkSz*0.08,-fkSz*0.15);x0.stroke();
-    // Mouth — stitched shut
-    neon(2,fkA*0.6,8);x0.lineWidth=2;
-    x0.beginPath();x0.moveTo(-fkSz*0.35,fkSz*0.25);
-    x0.bezierCurveTo(-fkSz*0.15,fkSz*0.3,fkSz*0.15,fkSz*0.3,fkSz*0.35,fkSz*0.25);x0.stroke();
-    neon(2,fkA*0.4,4);x0.lineWidth=1.2;
-    for(let ms=0;ms<6;ms++){
-      const mx=-fkSz*0.28+ms*fkSz*0.11;
-      x0.beginPath();x0.moveTo(mx,fkSz*0.22);x0.lineTo(mx,fkSz*0.32);x0.stroke();
+
+    // ── Nose — wide, blocky, with bridge detail ──
+    neon(1,fkA*0.55,8);x0.lineWidth=2;
+    x0.beginPath();
+    x0.moveTo(-fkSz*0.06,-fkSz*0.12);
+    x0.lineTo(-fkSz*0.1,fkSz*0.06);
+    x0.lineTo(-fkSz*0.14,fkSz*0.1);
+    x0.lineTo(fkSz*0.14,fkSz*0.1);
+    x0.lineTo(fkSz*0.1,fkSz*0.06);
+    x0.lineTo(fkSz*0.06,-fkSz*0.12);
+    x0.stroke();
+    // Nostrils
+    neon(1,fkA*0.45,5);x0.lineWidth=1.5;
+    x0.beginPath();x0.ellipse(-fkSz*0.06,fkSz*0.08,fkSz*0.035,fkSz*0.025,0.2,0,Math.PI*2);x0.stroke();
+    x0.beginPath();x0.ellipse(fkSz*0.06,fkSz*0.08,fkSz*0.035,fkSz*0.025,-0.2,0,Math.PI*2);x0.stroke();
+
+    // ── Cheekbones — angular lines ──
+    neon(1,fkA*0.3,5);x0.lineWidth=1.5;
+    for(let cs=-1;cs<=1;cs+=2){
+      x0.beginPath();x0.moveTo(cs*fkSz*0.48,fkSz*0.0);
+      x0.bezierCurveTo(cs*fkSz*0.4,fkSz*0.1,cs*fkSz*0.3,fkSz*0.18,cs*fkSz*0.2,fkSz*0.22);
+      x0.stroke();
     }
+
+    // ── Mouth — grimacing, stitched shut ──
+    neon(2,fkA*0.7,12);x0.lineWidth=2.5;
+    x0.beginPath();
+    x0.moveTo(-fkSz*0.32,fkSz*0.28);
+    x0.bezierCurveTo(-fkSz*0.2,fkSz*0.22,0,fkSz*0.2,0,fkSz*0.24);
+    x0.bezierCurveTo(0,fkSz*0.2,fkSz*0.2,fkSz*0.22,fkSz*0.32,fkSz*0.28);
+    x0.stroke();
+    // Lower lip
+    neon(1,fkA*0.35,5);x0.lineWidth=1.5;
+    x0.beginPath();x0.moveTo(-fkSz*0.28,fkSz*0.3);
+    x0.bezierCurveTo(-fkSz*0.1,fkSz*0.36,fkSz*0.1,fkSz*0.36,fkSz*0.28,fkSz*0.3);
+    x0.stroke();
+    // Stitches across mouth
+    neon(2,fkA*0.55,6);x0.lineWidth=1.8;
+    for(let ms=0;ms<8;ms++){
+      const mx=-fkSz*0.28+ms*fkSz*0.08;
+      const my=fkSz*0.25+Math.sin(ms*0.7)*fkSz*0.02;
+      x0.beginPath();x0.moveTo(mx,my-fkSz*0.04);x0.lineTo(mx,my+fkSz*0.06);x0.stroke();
+    }
+
+    // ── Neck bolts — prominent, industrial ──
+    neon(0,fkA*0.85,16);x0.lineWidth=3;
+    for(let bolt=-1;bolt<=1;bolt+=2){
+      const bx=bolt*fkSz*0.68, by=fkSz*0.45;
+      // Bolt cylinder
+      x0.beginPath();x0.arc(bx,by,fkSz*0.09,0,Math.PI*2);x0.stroke();
+      // Inner bolt head
+      x0.fillStyle=rgba(pc(0),fkA*0.7);x0.shadowBlur=14;x0.shadowColor=pc(0);
+      x0.beginPath();x0.arc(bx,by,fkSz*0.055,0,Math.PI*2);x0.fill();
+      // Bolt slot
+      x0.strokeStyle=rgba(pc(0),fkA*0.4);x0.lineWidth=1.5;x0.shadowBlur=0;
+      x0.beginPath();x0.moveTo(bx-fkSz*0.035,by);x0.lineTo(bx+fkSz*0.035,by);x0.stroke();
+      // Bolt base ring
+      neon(0,fkA*0.4,6);x0.lineWidth=1.5;
+      x0.beginPath();x0.arc(bx,by,fkSz*0.12,0,Math.PI*2);x0.stroke();
+    }
+
+    // ── Neck — thick, with tendons ──
+    neon(1,fkA*0.4,8);x0.lineWidth=2;
+    x0.beginPath();x0.moveTo(-fkSz*0.38,fkSz*0.55);x0.lineTo(-fkSz*0.4,fkSz*0.8);x0.stroke();
+    x0.beginPath();x0.moveTo(fkSz*0.38,fkSz*0.55);x0.lineTo(fkSz*0.4,fkSz*0.8);x0.stroke();
+    // Neck tendons
+    neon(1,fkA*0.2,4);x0.lineWidth=1;
+    x0.beginPath();x0.moveTo(-fkSz*0.15,fkSz*0.55);x0.lineTo(-fkSz*0.18,fkSz*0.78);x0.stroke();
+    x0.beginPath();x0.moveTo(fkSz*0.15,fkSz*0.55);x0.lineTo(fkSz*0.18,fkSz*0.78);x0.stroke();
+
+    // ── Vertical scar on right cheek ──
+    neon(2,fkA*0.35,5);x0.lineWidth=1.5;
+    x0.beginPath();x0.moveTo(fkSz*0.35,-fkSz*0.1);x0.lineTo(fkSz*0.32,fkSz*0.2);x0.stroke();
+    for(let sc2=0;sc2<3;sc2++){
+      const sy=-fkSz*0.05+sc2*fkSz*0.08;
+      x0.beginPath();x0.moveTo(fkSz*0.3,sy);x0.lineTo(fkSz*0.37,sy);x0.stroke();
+    }
+
     x0.restore();
 
     // ── Lightning strikes — vibrant zaps on beat ──
@@ -5338,6 +5507,75 @@ function drawNeonCathedral(t){
       x0.shadowBlur=0;
       x0.fillStyle=rgba(pc(ltCI),beat*0.15);x0.fillRect(0,0,w,h);
     }
+  }
+
+  // ══════════════════════════════════════════════════════
+  // NEON BATS — small, fluttering across the sky
+  // ══════════════════════════════════════════════════════
+  for(const bat of C.bats){
+    bat.x+=bat.vx*(1+beat*0.3);bat.y+=bat.vy+Math.sin(bat.wingPh*0.3)*0.3;
+    bat.wingPh+=0.2+beat*0.1;
+    if(bat.x<-30)bat.x=w+30;if(bat.x>w+30)bat.x=-30;
+    if(bat.y<-20)bat.y=h*0.5;if(bat.y>h*0.6)bat.y=-20;
+    // Randomly change direction
+    if(Math.random()<0.005){bat.vx=(Math.random()-0.5)*1.5;bat.vy=(Math.random()-0.5)*0.6;}
+    const bSz=bat.sz*(1+beat*0.15);
+    const wingA=Math.sin(bat.wingPh)*0.7;
+    x0.save();x0.translate(bat.x,bat.y);
+    neon(bat.ci,0.5+beat*0.2,8);x0.lineWidth=1.5;
+    // Body
+    x0.beginPath();x0.ellipse(0,0,bSz*0.2,bSz*0.35,0,0,Math.PI*2);x0.stroke();
+    // Wings
+    for(let wing=-1;wing<=1;wing+=2){
+      x0.beginPath();x0.moveTo(wing*bSz*0.15,-bSz*0.05);
+      x0.bezierCurveTo(wing*bSz*0.5,-bSz*(0.3+wingA*0.4),wing*bSz*0.8,-bSz*(0.15+wingA*0.3),wing*bSz*0.9,-bSz*0.05);
+      x0.bezierCurveTo(wing*bSz*0.7,bSz*0.05,wing*bSz*0.4,bSz*0.08,wing*bSz*0.15,bSz*0.05);
+      x0.stroke();
+    }
+    // Ears
+    x0.beginPath();x0.moveTo(-bSz*0.1,-bSz*0.3);x0.lineTo(-bSz*0.05,-bSz*0.5);x0.lineTo(0,-bSz*0.3);x0.stroke();
+    x0.beginPath();x0.moveTo(bSz*0.1,-bSz*0.3);x0.lineTo(bSz*0.05,-bSz*0.5);x0.lineTo(0,-bSz*0.3);x0.stroke();
+    // Eyes — tiny glowing dots
+    x0.fillStyle=rgba(pc((bat.ci+2)%4),0.8+beat*0.2);x0.shadowBlur=4;x0.shadowColor=pc((bat.ci+2)%4);
+    x0.beginPath();x0.arc(-bSz*0.07,-bSz*0.15,bSz*0.04,0,Math.PI*2);x0.fill();
+    x0.beginPath();x0.arc(bSz*0.07,-bSz*0.15,bSz*0.04,0,Math.PI*2);x0.fill();
+    x0.shadowBlur=0;x0.restore();
+  }
+
+  // ══════════════════════════════════════════════════════
+  // NEON GHOSTS — drifting translucent shapes
+  // ══════════════════════════════════════════════════════
+  for(const gh of C.ghosts){
+    gh.x+=gh.vx;gh.y+=gh.vy+Math.sin(gh.ph)*0.15;gh.ph+=0.02;
+    if(gh.x<-40)gh.x=w+40;if(gh.x>w+40)gh.x=-40;
+    if(gh.y<-30)gh.y=h*0.4;if(gh.y>h*0.5)gh.y=-30;
+    const gSz2=gh.sz*(1+Math.sin(gh.ph*0.5)*0.1);
+    const gAlpha=gh.alpha*(0.7+Math.sin(gh.ph)*0.3+beat*0.2);
+    x0.save();x0.translate(gh.x,gh.y);
+    // Ghost body — rounded top, wavy bottom
+    neon(gh.ci,gAlpha,10);x0.lineWidth=1.5;
+    x0.beginPath();
+    x0.moveTo(-gSz2*0.5,gSz2*0.4);
+    x0.lineTo(-gSz2*0.5,-gSz2*0.1);
+    x0.bezierCurveTo(-gSz2*0.5,-gSz2*0.6,gSz2*0.5,-gSz2*0.6,gSz2*0.5,-gSz2*0.1);
+    x0.lineTo(gSz2*0.5,gSz2*0.4);
+    // Wavy bottom
+    for(let wv=0;wv<4;wv++){
+      const wx=gSz2*(0.5-wv*0.25);
+      const wy=gSz2*(0.4+(wv%2===0?0.12:-0.02)+Math.sin(gh.ph+wv)*0.04);
+      x0.lineTo(wx-gSz2*0.12,wy);
+    }
+    x0.stroke();
+    // Ghost fill — faint
+    x0.fillStyle=rgba(pc(gh.ci),gAlpha*0.15);
+    x0.fill();
+    // Eyes — dark hollow circles
+    neon(gh.ci,gAlpha*1.3,6);x0.lineWidth=1.2;
+    x0.beginPath();x0.arc(-gSz2*0.18,-gSz2*0.15,gSz2*0.1,0,Math.PI*2);x0.stroke();
+    x0.beginPath();x0.arc(gSz2*0.18,-gSz2*0.15,gSz2*0.1,0,Math.PI*2);x0.stroke();
+    // Mouth — small O
+    x0.beginPath();x0.arc(0,gSz2*0.1,gSz2*0.07,0,Math.PI*2);x0.stroke();
+    x0.shadowBlur=0;x0.restore();
   }
 
   // ══════════════════════════════════════════════════════
@@ -11190,6 +11428,7 @@ function clearSurpriseState() {
     SD.cath.gargoyleAlive = false; SD.cath.gargoyleAliveTimer = 0;
     SD.cath.doorsOpen = false; SD.cath.doorsOpenTimer = 0;
     SD.cath.gargoyleFireBreath = false; SD.cath.gargoyleFireTimer = 0;
+    if(SD.cath.gargoyles)SD.cath.gargoyles.forEach(g=>{g.flyMode=false;g.returning=true;});
   }
   if (SD.ef) {
     SD.ef.laserOverload = false; SD.ef.laserOverloadTimer = 0;
