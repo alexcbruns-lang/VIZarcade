@@ -103,6 +103,8 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
 #backBtn:hover{border-color:#ff006e;color:#ff006e}
 #nextSceneBtn{position:fixed;top:2rem;right:2.5rem;z-index:85;background:none;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.28);font-family:'Share Tech Mono',monospace;font-size:0.85rem;padding:0.2rem 0.65rem;cursor:pointer;transition:all 0.2s;display:none;pointer-events:all}
 #nextSceneBtn:hover{border-color:#06ffd8;color:#06ffd8;text-shadow:0 0 8px #06ffd8}
+#liteBadge{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);z-index:85;background:rgba(255,190,11,0.12);border:1px solid rgba(255,190,11,0.35);color:rgba(255,190,11,0.7);font-family:'Share Tech Mono',monospace;font-size:0.55rem;letter-spacing:0.2em;padding:0.25rem 0.7rem;pointer-events:none;animation:litePulse 3s ease-in-out infinite}
+@keyframes litePulse{0%,100%{opacity:0.6}50%{opacity:1}}
 
 /* ═══ DEV PANEL ═══ */
 #devPanel{position:fixed;top:0;right:0;width:320px;max-height:100vh;z-index:300;background:rgba(8,8,16,0.94);border-left:1px solid rgba(0,255,65,0.2);font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:#b0ffb0;overflow-y:auto;display:none;backdrop-filter:blur(8px);scrollbar-width:thin;scrollbar-color:rgba(0,255,65,0.3) transparent;pointer-events:all;cursor:default}
@@ -289,6 +291,7 @@ body.djmode-display{cursor:none!important;user-select:none!important}
       <div class="lp-divider"></div>
       <button class="lp-cta" id="lpGetStarted2">GET STARTED</button>
       <div class="lp-bottom-text">Works on desktop &amp; mobile · Install as an app · Free to use</div>
+      <div class="lp-bottom-text" style="margin-top:0.5rem;color:rgba(255,255,255,0.18)">🌐 Best experienced in <strong style="color:rgba(255,255,255,0.35)">Google Chrome</strong> for optimal performance</div>
     </div>
 
   </div>
@@ -324,6 +327,7 @@ body.djmode-display{cursor:none!important;user-select:none!important}
   <img id="albumArt" src="" alt=""/>
   <div id="pgWrap"><div id="pgBar"></div></div>
 </div>
+<div id="liteBadge" style="display:none">⚡ LITE MODE</div>
 <button id="fsBtn">⛶ FS</button>
 <button id="backBtn">← BACK</button>
 <button id="nextSceneBtn">▶</button>
@@ -338,7 +342,7 @@ body.djmode-display{cursor:none!important;user-select:none!important}
     Scene: <span id="dpCurScene">—</span> &nbsp;│&nbsp; CP: <span id="dpCurCP">—</span><br>
     Energy: <span id="dpEnergy">0</span> &nbsp;│&nbsp; BPM: <span id="dpBPM">0</span> &nbsp;│&nbsp; Beat: <span id="dpBeatCt">0</span><br>
     Prog: <span id="dpProg">0%</span> &nbsp;│&nbsp; Surprise: <span id="dpSurprise">—</span><br>
-    DJ Sig: <span id="dpDJSig">—</span>
+    DJ Sig: <span id="dpDJSig">—</span> &nbsp;│&nbsp; FPS: <span id="dpFPS">—</span> &nbsp;│&nbsp; Lite: <span id="dpLite">OFF</span>
   </div>
   <div class="dp-section">
     <h3>▸ Jump to Scene</h3>
@@ -2944,23 +2948,25 @@ function initScene(){
   Object.keys(SD).forEach(k => delete SD[k]);
   _clearStaticCache();
   const w=W(),h=H(),sc=THEME.scene;
-  if(sc==='WARP_SPEED'||sc==='SPACE_STATION')SD.stars=Array.from({length:500},()=>({x:(Math.random()-0.5)*2,y:(Math.random()-0.5)*2,z:Math.random(),ci:Math.floor(Math.random()*4),trail:[]}));
+  const _lp=_liteMode; // snapshot lite mode at init time
+  const _pc=(full,lite)=>_lp?lite:full; // particle count helper: full vs lite
+  if(sc==='WARP_SPEED'||sc==='SPACE_STATION')SD.stars=Array.from({length:_pc(500,250)},()=>({x:(Math.random()-0.5)*2,y:(Math.random()-0.5)*2,z:Math.random(),ci:Math.floor(Math.random()*4),trail:[]}));
   if(sc==='WARP_SPEED')SD.warp={hyperspeed:false,hyperTimer:0,asteroids:false,asteroidTimer:0,asteroidWaveTimer:0,rocks:[],fragments:[],overdrive:false,overdriveTimer:0,overdriveDir:1,overdriveCycleTimer:0};
-  if(sc==='LAVA_WORLD'){SD.embers=Array.from({length:200},()=>mkEmber(true));SD.eruptions=[];}
-  if(sc==='CYBER_GRID'){SD.gridZ=0;SD.buildings=Array.from({length:30},(_,i)=>({x:(i%6-2.5)*w*0.18,h:Math.random()*h*0.6+h*0.15,w:Math.random()*80+30,z:i/30,ci:i%4}));SD.dataStreams=Array.from({length:40},()=>({x:Math.random()*w,y:Math.random()*h,speed:Math.random()*4+2,ci:Math.floor(Math.random()*4)}));}
-  if(sc==='DEEP_SEA'){SD.creatures=Array.from({length:5},()=>mkDeepCreature(w,h));SD.plankton=Array.from({length:150},()=>({x:Math.random()*w,y:Math.random()*h,r:Math.random()*3+0.5,vy:-(Math.random()*0.4+0.1),vx:(Math.random()-0.5)*0.3,ci:Math.floor(Math.random()*4),ph:Math.random()*Math.PI*2}));}
-  if(sc==='STORM_CHASER'){SD.debris=Array.from({length:80},()=>mkDebris());SD.lightnings=[];SD.ltTimer=0;SD.tornadoA=0;}
-  if(sc==='TULUM'){const groundY=h*0.78;SD.tulum={fireflies:Array.from({length:60},()=>({x:Math.random()*w,y:Math.random()*h*0.85,vx:(Math.random()-0.5)*0.6,vy:(Math.random()-0.5)*0.3,r:1.5+Math.random()*2.5,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)})),stars:Array.from({length:80},()=>({x:Math.random()*w,y:Math.random()*h*0.3,r:0.5+Math.random()*1.5,ph:Math.random()*Math.PI*2,twinkle:0.3+Math.random()*0.7})),trees:[{x:w*0.03,trunkW:48+Math.random()*15,height:h*0.78,canopyR:85+Math.random()*30,sway:Math.random()*Math.PI*2,ci:0},{x:w*0.14,trunkW:38+Math.random()*12,height:h*0.68,canopyR:70+Math.random()*25,sway:Math.random()*Math.PI*2,ci:1},{x:w*0.86,trunkW:38+Math.random()*12,height:h*0.70,canopyR:72+Math.random()*25,sway:Math.random()*Math.PI*2,ci:2},{x:w*0.97,trunkW:48+Math.random()*15,height:h*0.80,canopyR:88+Math.random()*30,sway:Math.random()*Math.PI*2,ci:3}],vines:_initTulumVines(w,h,groundY),cenoteX:w/2,cenoteY:h*0.84,cenoteW:w*0.55,cenoteH:h*0.18,waterPh:0,vortexAngle:0,vortexRise:0,groundY,jaguarX:w/2,jaguarY:groundY-h*0.25,jaguarStrobe:0,eclipsePhase:0,ruinStrobe:0,cpSink:0,glyphs:Array.from({length:20},()=>({x:w/2+(Math.random()-0.5)*w*0.5,y:h*0.35+Math.random()*h*0.3,vy:-(0.12+Math.random()*0.3),r:8+Math.random()*12,ph:Math.random()*Math.PI*2,glyph:Math.floor(Math.random()*8),ci:Math.floor(Math.random()*4),alpha:0.1+Math.random()*0.3})),fallenBlocks:Array.from({length:14},()=>({x:Math.random()*w,y:groundY+Math.random()*(h-groundY)*0.25,bw:10+Math.random()*25,bh:8+Math.random()*18,rot:(Math.random()-0.5)*0.4,shade:0.4+Math.random()*0.3})),lasers:Array.from({length:6},(_,i)=>({x:w*(0.2+i*0.12),originY:groundY-h*0.48,angle:0,speed:0.008+Math.random()*0.012,range:0.8+Math.random()*0.5,ci:i%4,offset:i*Math.PI/3,width:1.5+Math.random()})),stringLights:_initTulumStringLights(w,h,groundY),uplights:Array.from({length:8},(_,i)=>({x:w/2-w*0.3+i*(w*0.6/7),y:groundY,group:i%2,ci:i%4,ph:Math.random()*Math.PI*2})),uplightPhase:0};}
-  if(sc==='DISCO_DIMENSION'){SD.tileZ=0;SD.chandeliers=Array.from({length:3},(_,i)=>({x:w*(0.2+i*0.3),y:h*0.05,rot:Math.random()*Math.PI*2,rotS:0.006+Math.random()*0.01,size:Math.random()*80+60,drop:false}));SD.beams=Array.from({length:20},()=>({x:Math.random()*w,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)}));}
+  if(sc==='LAVA_WORLD'){SD.embers=Array.from({length:_pc(200,100)},()=>mkEmber(true));SD.eruptions=[];}
+  if(sc==='CYBER_GRID'){SD.gridZ=0;SD.buildings=Array.from({length:30},(_,i)=>({x:(i%6-2.5)*w*0.18,h:Math.random()*h*0.6+h*0.15,w:Math.random()*80+30,z:i/30,ci:i%4}));SD.dataStreams=Array.from({length:_pc(40,20)},()=>({x:Math.random()*w,y:Math.random()*h,speed:Math.random()*4+2,ci:Math.floor(Math.random()*4)}));}
+  if(sc==='DEEP_SEA'){SD.creatures=Array.from({length:5},()=>mkDeepCreature(w,h));SD.plankton=Array.from({length:_pc(150,70)},()=>({x:Math.random()*w,y:Math.random()*h,r:Math.random()*3+0.5,vy:-(Math.random()*0.4+0.1),vx:(Math.random()-0.5)*0.3,ci:Math.floor(Math.random()*4),ph:Math.random()*Math.PI*2}));}
+  if(sc==='STORM_CHASER'){SD.debris=Array.from({length:_pc(80,40)},()=>mkDebris());SD.lightnings=[];SD.ltTimer=0;SD.tornadoA=0;}
+  if(sc==='TULUM'){const groundY=h*0.78;SD.tulum={fireflies:Array.from({length:_pc(60,30)},()=>({x:Math.random()*w,y:Math.random()*h*0.85,vx:(Math.random()-0.5)*0.6,vy:(Math.random()-0.5)*0.3,r:1.5+Math.random()*2.5,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)})),stars:Array.from({length:_pc(80,40)},()=>({x:Math.random()*w,y:Math.random()*h*0.3,r:0.5+Math.random()*1.5,ph:Math.random()*Math.PI*2,twinkle:0.3+Math.random()*0.7})),trees:[{x:w*0.03,trunkW:48+Math.random()*15,height:h*0.78,canopyR:85+Math.random()*30,sway:Math.random()*Math.PI*2,ci:0},{x:w*0.14,trunkW:38+Math.random()*12,height:h*0.68,canopyR:70+Math.random()*25,sway:Math.random()*Math.PI*2,ci:1},{x:w*0.86,trunkW:38+Math.random()*12,height:h*0.70,canopyR:72+Math.random()*25,sway:Math.random()*Math.PI*2,ci:2},{x:w*0.97,trunkW:48+Math.random()*15,height:h*0.80,canopyR:88+Math.random()*30,sway:Math.random()*Math.PI*2,ci:3}],vines:_initTulumVines(w,h,groundY),cenoteX:w/2,cenoteY:h*0.84,cenoteW:w*0.55,cenoteH:h*0.18,waterPh:0,vortexAngle:0,vortexRise:0,groundY,jaguarX:w/2,jaguarY:groundY-h*0.25,jaguarStrobe:0,eclipsePhase:0,ruinStrobe:0,cpSink:0,glyphs:Array.from({length:_pc(20,10)},()=>({x:w/2+(Math.random()-0.5)*w*0.5,y:h*0.35+Math.random()*h*0.3,vy:-(0.12+Math.random()*0.3),r:8+Math.random()*12,ph:Math.random()*Math.PI*2,glyph:Math.floor(Math.random()*8),ci:Math.floor(Math.random()*4),alpha:0.1+Math.random()*0.3})),fallenBlocks:Array.from({length:14},()=>({x:Math.random()*w,y:groundY+Math.random()*(h-groundY)*0.25,bw:10+Math.random()*25,bh:8+Math.random()*18,rot:(Math.random()-0.5)*0.4,shade:0.4+Math.random()*0.3})),lasers:Array.from({length:_pc(6,4)},(_,i)=>({x:w*(0.2+i*0.12),originY:groundY-h*0.48,angle:0,speed:0.008+Math.random()*0.012,range:0.8+Math.random()*0.5,ci:i%4,offset:i*Math.PI/3,width:1.5+Math.random()})),stringLights:_initTulumStringLights(w,h,groundY),uplights:Array.from({length:8},(_,i)=>({x:w/2-w*0.3+i*(w*0.6/7),y:groundY,group:i%2,ci:i%4,ph:Math.random()*Math.PI*2})),uplightPhase:0};}
+  if(sc==='DISCO_DIMENSION'){SD.tileZ=0;SD.chandeliers=Array.from({length:3},(_,i)=>({x:w*(0.2+i*0.3),y:h*0.05,rot:Math.random()*Math.PI*2,rotS:0.006+Math.random()*0.01,size:Math.random()*80+60,drop:false}));SD.beams=Array.from({length:_pc(20,10)},()=>({x:Math.random()*w,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)}));}
   if(sc==='ACID_TRIP'){SD.fracPh=0;SD.colorCyc=0;SD.warpGrid=[];for(let gx=0;gx<=20;gx++)for(let gy=0;gy<=14;gy++)SD.warpGrid.push({gx,gy,ph:Math.random()*Math.PI*2});}
-  if(sc==='SPACE_STATION'){SD.debris=Array.from({length:12},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.5,vy:(Math.random()-0.5)*0.3,rot:Math.random()*Math.PI*2,rotS:(Math.random()-0.5)*0.01,sz:Math.random()*40+10,ci:Math.floor(Math.random()*4)}));}
+  if(sc==='SPACE_STATION'){SD.debris=Array.from({length:_pc(12,6)},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.5,vy:(Math.random()-0.5)*0.3,rot:Math.random()*Math.PI*2,rotS:(Math.random()-0.5)*0.01,sz:Math.random()*40+10,ci:Math.floor(Math.random()*4)}));}
   // NEON_CATHEDRAL self-initializes via SD.cath in drawNeonCathedral
-  if(sc==='CLASSIC_ARCADE'){SD.pixels=Array.from({length:200},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*2,vy:(Math.random()-0.5)*2,size:Math.floor(Math.random()*3+1)*8,ci:Math.floor(Math.random()*4),type:Math.floor(Math.random()*4)}));SD.scanLine=0;SD.mazeLines=Array.from({length:20},()=>{const mx=Math.random()*w,my=Math.random()*h;return{x1:mx,y1:my,x2:mx+(Math.random()-0.5)*200,y2:my+(Math.random()-0.5)*200,ci:Math.floor(Math.random()*4)};});}
+  if(sc==='CLASSIC_ARCADE'){SD.pixels=Array.from({length:_pc(200,100)},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*2,vy:(Math.random()-0.5)*2,size:Math.floor(Math.random()*3+1)*8,ci:Math.floor(Math.random()*4),type:Math.floor(Math.random()*4)}));SD.scanLine=0;SD.mazeLines=Array.from({length:_pc(20,10)},()=>{const mx=Math.random()*w,my=Math.random()*h;return{x1:mx,y1:my,x2:mx+(Math.random()-0.5)*200,y2:my+(Math.random()-0.5)*200,ci:Math.floor(Math.random()*4)};});}
   if(sc==='ELECTRIC_FOREST'){
   const cx2=w/2;
-  SD.ef={trees:[],lasers:[],fairies:Array.from({length:45},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.6,vy:(Math.random()-0.5)*0.4,r:Math.random()*3+1.5,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)})),
-  fog:Array.from({length:25},()=>({x:Math.random()*w,y:h*(0.5+Math.random()*0.5),w:w*(0.15+Math.random()*0.25),h2:h*(0.04+Math.random()*0.06),vx:(Math.random()-0.5)*0.3,alpha:0.03+Math.random()*0.04,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)})),
-  vines:Array.from({length:18},()=>({x:Math.random()*w,len:h*(0.08+Math.random()*0.15),sway:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4),width:1+Math.random()*2})),
+  SD.ef={trees:[],lasers:[],fairies:Array.from({length:_pc(45,22)},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.6,vy:(Math.random()-0.5)*0.4,r:Math.random()*3+1.5,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)})),
+  fog:Array.from({length:_pc(25,12)},()=>({x:Math.random()*w,y:h*(0.5+Math.random()*0.5),w:w*(0.15+Math.random()*0.25),h2:h*(0.04+Math.random()*0.06),vx:(Math.random()-0.5)*0.3,alpha:0.03+Math.random()*0.04,ph:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4)})),
+  vines:Array.from({length:_pc(18,9)},()=>({x:Math.random()*w,len:h*(0.08+Math.random()*0.15),sway:Math.random()*Math.PI*2,ci:Math.floor(Math.random()*4),width:1+Math.random()*2})),
   mushrooms:Array.from({length:12},()=>({x:w*(0.05+Math.random()*0.9),y:h*(0.74+Math.random()*0.2),sz:6+Math.random()*10,ci:Math.floor(Math.random()*4),ph:Math.random()*Math.PI*2})),
   laserOverload:false,laserOverloadTimer:0,mushroomBloom:false,mushroomBloomTimer:0,windstorm:false,windstormTimer:0};
   // Layer 0: FAR background trees — thicker, staggered
@@ -2973,15 +2979,15 @@ function initScene(){
   for(let i=0;i<6;i++){const side=i<3?-1:1;const idx=i%3;const spread=0.42+idx*0.1;
     SD.ef.trees.push({x:side<0?cx2-w*spread:cx2+w*spread,side,layer:2,trunkW:45+Math.random()*25,trunkH:h*(1.05+Math.random()*0.15),ci:Math.floor(Math.random()*4),ph:Math.random()*Math.PI*2,glowMult:1,swayOffset:0,branchSeed:Math.random()*100});}
   // Lasers
-  for(let i=0;i<20;i++)SD.ef.lasers.push({angle:Math.random()*Math.PI*2,speed:0.006+Math.random()*0.018,ci:i%4,width:1+Math.random()*2,baseY:0.3+Math.random()*0.2});}
-  if(sc==='OMNIA_NIGHTCLUB'){SD.crowdPeople=Array.from({length:60},()=>({x:Math.random()*w,y:h*0.55+Math.random()*h*0.35,ph:Math.random()*Math.PI*2,sz:Math.random()*25+15,ci:Math.floor(Math.random()*4)}));SD.chandelierY=h*0.05;SD.chandelierRot=0;SD.beams=Array.from({length:24},(_,i)=>({angle:i/24*Math.PI*2,ci:i%4,ph:Math.random()*Math.PI*2,len:Math.random()*h*0.5+h*0.3}));}
-  if(sc==='JUNKYARD'){SD.sparks=Array.from({length:60},()=>mkSpark(true));SD.arms=Array.from({length:4},(_,i)=>({x:w*(0.15+i*0.23),baseY:h*0.6,angle:-Math.PI*0.6,targetAngle:-Math.PI*0.4,speed:0.02+i*0.005,sz:Math.random()*80+60,ci:i%4}));SD.carStacks=Array.from({length:8},(_,i)=>({x:i/7,cars:Math.floor(Math.random()*3+2),ci:i%4}));}
+  for(let i=0;i<_pc(20,10);i++)SD.ef.lasers.push({angle:Math.random()*Math.PI*2,speed:0.006+Math.random()*0.018,ci:i%4,width:1+Math.random()*2,baseY:0.3+Math.random()*0.2});}
+  if(sc==='OMNIA_NIGHTCLUB'){SD.crowdPeople=Array.from({length:_pc(60,30)},()=>({x:Math.random()*w,y:h*0.55+Math.random()*h*0.35,ph:Math.random()*Math.PI*2,sz:Math.random()*25+15,ci:Math.floor(Math.random()*4)}));SD.chandelierY=h*0.05;SD.chandelierRot=0;SD.beams=Array.from({length:_pc(24,12)},(_,i)=>({angle:i/24*Math.PI*2,ci:i%4,ph:Math.random()*Math.PI*2,len:Math.random()*h*0.5+h*0.3}));}
+  if(sc==='JUNKYARD'){SD.sparks=Array.from({length:_pc(60,30)},()=>mkSpark(true));SD.arms=Array.from({length:4},(_,i)=>({x:w*(0.15+i*0.23),baseY:h*0.6,angle:-Math.PI*0.6,targetAngle:-Math.PI*0.4,speed:0.02+i*0.005,sz:Math.random()*80+60,ci:i%4}));SD.carStacks=Array.from({length:8},(_,i)=>({x:i/7,cars:Math.floor(Math.random()*3+2),ci:i%4}));}
   if(sc==='GOTHAM'){SD.cityBuildings=Array.from({length:20},(_,i)=>({x:i*w/19,h:Math.random()*h*0.55+h*0.1,w:Math.random()*60+25,ci:i%4,windows:[]}));SD.cityBuildings.forEach(b=>{for(let wy=5;wy<b.h;wy+=18)for(let wx=4;wx<b.w-4;wx+=14)if(Math.random()<0.6)b.windows.push({x:wx,y:wy,on:Math.random()<0.8});});SD.spotlightA=0;}
-  if(sc==='DAY_OF_DEAD'){SD.petals=Array.from({length:120},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*1.5,vy:Math.random()*1.5+0.3,rot:Math.random()*Math.PI*2,rotS:(Math.random()-0.5)*0.05,sz:Math.random()*10+4,ci:Math.floor(Math.random()*4)}));SD.candles=Array.from({length:12},(_,i)=>({x:w*(i/11),flicker:Math.random()*Math.PI*2,sz:Math.random()*15+10}));SD.skulls=Array.from({length:6},(_,i)=>({x:w*(0.1+i*0.16),y:h*0.4+Math.random()*h*0.2,ph:Math.random()*Math.PI*2,sz:Math.random()*40+25,ci:i%4}));}
+  if(sc==='DAY_OF_DEAD'){SD.petals=Array.from({length:_pc(120,60)},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*1.5,vy:Math.random()*1.5+0.3,rot:Math.random()*Math.PI*2,rotS:(Math.random()-0.5)*0.05,sz:Math.random()*10+4,ci:Math.floor(Math.random()*4)}));SD.candles=Array.from({length:12},(_,i)=>({x:w*(i/11),flicker:Math.random()*Math.PI*2,sz:Math.random()*15+10}));SD.skulls=Array.from({length:6},(_,i)=>({x:w*(0.1+i*0.16),y:h*0.4+Math.random()*h*0.2,ph:Math.random()*Math.PI*2,sz:Math.random()*40+25,ci:i%4}));}
   // DEACTIVATED: if(sc==='MOUNT_OLYMPUS'){...}
-  if(sc==='ATLANTIS'){SD.fish=Array.from({length:30},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*1.5,vy:(Math.random()-0.5)*0.5,sz:Math.random()*20+8,ci:Math.floor(Math.random()*4)}));SD.bubbles=Array.from({length:60},()=>({x:Math.random()*w,y:Math.random()*h,r:Math.random()*8+2,vy:-(Math.random()*0.8+0.2),ph:Math.random()*Math.PI*2}));SD.ruins=Array.from({length:10},(_,i)=>({x:i/9,h:Math.random()*h*0.4+h*0.1,w:Math.random()*80+30,ci:i%4}));SD.lightShafts=Array.from({length:6},(_,i)=>({x:w*(0.05+i*0.18),ph:Math.random()*Math.PI*2}));}
-  if(sc==='CARNIVAL'){SD.ferrisSegs=Array.from({length:12},(_,i)=>({angle:i/12*Math.PI*2,ci:i%4}));SD.ferrisRot=0;SD.confetti=Array.from({length:150},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*2,vy:Math.random()*2+0.5,rot:Math.random()*Math.PI*2,rotS:(Math.random()-0.5)*0.1,sz:Math.random()*8+3,ci:Math.floor(Math.random()*4)}));}
-  if(sc==='EGYPTIAN_TOMB'){SD.hieroglyphs=Array.from({length:40},()=>({x:Math.random()*w,y:Math.random()*h,char:Math.floor(Math.random()*12),ci:Math.floor(Math.random()*4),alpha:Math.random()*0.5+0.2}));SD.torches=Array.from({length:6},(_,i)=>({x:(i/5)*0.9+0.05,ph:Math.random()*Math.PI*2}));SD.tunnelZ=0;SD.traps=[];}
+  if(sc==='ATLANTIS'){SD.fish=Array.from({length:_pc(30,15)},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*1.5,vy:(Math.random()-0.5)*0.5,sz:Math.random()*20+8,ci:Math.floor(Math.random()*4)}));SD.bubbles=Array.from({length:_pc(60,30)},()=>({x:Math.random()*w,y:Math.random()*h,r:Math.random()*8+2,vy:-(Math.random()*0.8+0.2),ph:Math.random()*Math.PI*2}));SD.ruins=Array.from({length:10},(_,i)=>({x:i/9,h:Math.random()*h*0.4+h*0.1,w:Math.random()*80+30,ci:i%4}));SD.lightShafts=Array.from({length:6},(_,i)=>({x:w*(0.05+i*0.18),ph:Math.random()*Math.PI*2}));}
+  if(sc==='CARNIVAL'){SD.ferrisSegs=Array.from({length:12},(_,i)=>({angle:i/12*Math.PI*2,ci:i%4}));SD.ferrisRot=0;SD.confetti=Array.from({length:_pc(150,70)},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*2,vy:Math.random()*2+0.5,rot:Math.random()*Math.PI*2,rotS:(Math.random()-0.5)*0.1,sz:Math.random()*8+3,ci:Math.floor(Math.random()*4)}));}
+  if(sc==='EGYPTIAN_TOMB'){SD.hieroglyphs=Array.from({length:_pc(40,20)},()=>({x:Math.random()*w,y:Math.random()*h,char:Math.floor(Math.random()*12),ci:Math.floor(Math.random()*4),alpha:Math.random()*0.5+0.2}));SD.torches=Array.from({length:6},(_,i)=>({x:(i/5)*0.9+0.05,ph:Math.random()*Math.PI*2}));SD.tunnelZ=0;SD.traps=[];}
   beatFX={invertA:0,slamS:1,speedBoost:0,gravityWave:0};
   energyHist=[];surpriseFired=false;surpriseArmed=false;midShifted=false;energyPeak=0;climaxArmed=false;beatReactionIdx=0;beatCount=0;cpRot=0;cpPh=0;cpOrbit=0;cpBounceX=0;cpBounceY=0;cpBounceVX=0.7+(Math.random()-0.5)*0.4;cpBounceVY=0.5+(Math.random()-0.5)*0.3;cpDriftX=0;cpDriftY=0;
   // Reset DJ signature morph on scene change (artist match persists per song)
@@ -13293,6 +13299,31 @@ document.addEventListener('fullscreenchange', () => {
 // (tab backgrounded briefly, OS intervention) this kicks it back awake.
 // Fires every 500ms — lightweight, just a timestamp check + one rAF call if stalled.
 let _lastRenderTime = 0;
+// ── Lite Mode: FPS-based performance degradation detection ──
+let _fpsHistory = [];
+let _fpsLastT = 0;
+let _liteMode = false;
+let _liteFrameSkip = 0; // counts background-skip frames
+const _LITE_THRESHOLD = 42;   // avg FPS below this → enable lite mode
+const _FULL_THRESHOLD = 54;   // avg FPS above this → disable lite mode
+const _FPS_WINDOW = 90;       // rolling window (frames ~= 1.5s at 60fps)
+const _FPS_SETTLE = 180;      // frames before first evaluation (3s warmup)
+let _fpsSettle = 0;
+function _enableLiteMode(){
+  if(_liteMode)return;
+  _liteMode=true;
+  const b=document.getElementById('liteBadge');
+  if(b)b.style.display='block';
+  console.log('[perf] Lite mode ENABLED — avg FPS below',_LITE_THRESHOLD);
+}
+function _disableLiteMode(){
+  if(!_liteMode)return;
+  _liteMode=false;
+  _liteFrameSkip=0;
+  const b=document.getElementById('liteBadge');
+  if(b)b.style.display='none';
+  console.log('[perf] Lite mode DISABLED — avg FPS above',_FULL_THRESHOLD);
+}
 const _heartbeatInterval = setInterval(() => {
   if (!token || !activeProvider) return; // Only active when visualizer is running
   const staleMs = performance.now() - _lastRenderTime;
@@ -13306,6 +13337,23 @@ const _heartbeatInterval = setInterval(() => {
 function render(t){
   requestAnimationFrame(render);
   _lastRenderTime = performance.now(); // Heartbeat timestamp — proves loop is alive
+  // ── FPS tracking for lite mode ──
+  if(_fpsLastT>0){
+    const fps=1000/(t-_fpsLastT);
+    if(fps>1&&fps<250){ // sanity-clamp outliers
+      _fpsHistory.push(fps);
+      if(_fpsHistory.length>_FPS_WINDOW)_fpsHistory.shift();
+    }
+  }
+  _fpsLastT=t;
+  _fpsSettle++;
+  if(_fpsSettle>_FPS_SETTLE&&_fpsHistory.length>=30){
+    const avg=_fpsHistory.reduce((a,b)=>a+b,0)/_fpsHistory.length;
+    if(!_liteMode&&avg<_LITE_THRESHOLD)_enableLiteMode();
+    else if(_liteMode&&avg>_FULL_THRESHOLD)_disableLiteMode();
+  }
+  // ── Lite mode: skip every other background frame, run beat/CP at full rate ──
+  const _skipBg=_liteMode&&(++_liteFrameSkip%2===0);
   if(!token)return;
   // ── rAF-aligned audio poll — freshest possible FFT data every frame ──
   _vizAudioPoll();
@@ -13348,7 +13396,7 @@ function render(t){
   const _hfExiting = (_hfObj&&_hfObj.active&&_hfObj.exiting);
   if ((_hfActive && _hfProg >= 1) || _hfExiting) {
     x0.fillStyle='#000000';x0.fillRect(0,0,w,h);
-  } else {
+  } else if(!_skipBg) {
     switch(THEME.scene){
       case 'WARP_SPEED':drawWarpSpeed(t);break;case 'LAVA_WORLD':drawLavaWorld(t);break;
       case 'CYBER_GRID':drawCyberGrid(t);break;case 'DEEP_SEA':drawDeepSea(t);break;
@@ -13674,6 +13722,10 @@ function initDevPanel(){
       document.getElementById('dpProg').textContent=Math.round(songProg*100)+'%';
       document.getElementById('dpSurprise').textContent=activeSurpriseVariant!==null?(getSurpriseLabel(THEME.scene,activeSurpriseVariant)+' ACTIVE'):(surpriseFired?'FIRED':'armed');
       document.getElementById('dpDJSig').textContent=djSig.active?(djSig.artist.display+' ['+djSig.phase+(djSig.morph>0?' '+Math.round(djSig.morph*100)+'%':'')+']'):'—';
+      const _dpAvgFps=_fpsHistory.length>0?Math.round(_fpsHistory.reduce((a,b)=>a+b,0)/_fpsHistory.length):0;
+      document.getElementById('dpFPS').textContent=_dpAvgFps||'—';
+      const _dpLiteEl=document.getElementById('dpLite');
+      if(_dpLiteEl){_dpLiteEl.textContent=_liteMode?'ON':'OFF';_dpLiteEl.style.color=_liteMode?'#ffbe0b':'#00ff41';}
       // Highlight active scene button
       const btns=document.getElementById('dpSceneGrid').children;
       for(let i=0;i<btns.length;i++){
